@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-ferry",
+      "description": "A modern ferry cruising on blue water",
+      "imageUrl": "https://picsum.photos/seed/maritime1/1200/600",
+      "imageHint": "modern ferry"
+    },
+    {
+      "id": "roro-vessel",
+      "description": "Large RoRo vessel at port",
+      "imageUrl": "https://picsum.photos/seed/maritime2/600/400",
+      "imageHint": "roro ship"
+    },
+    {
+      "id": "fast-craft",
+      "description": "High speed passenger vessel",
+      "imageUrl": "https://picsum.photos/seed/maritime3/600/400",
+      "imageHint": "speed boat"
+    },
+    {
+      "id": "maritime-operator",
+      "description": "Maritime professional in uniform",
+      "imageUrl": "https://picsum.photos/seed/operator1/200/200",
+      "imageHint": "maritime captain"
+    }
+  ]
 }
