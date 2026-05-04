@@ -6,66 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Ship, 
   Search, 
-  SlidersHorizontal, 
   MapPin, 
   Clock, 
-  Calendar, 
-  CircleDollarSign,
+  Users, 
   ChevronRight,
   Filter
 } from "lucide-react";
 
 export default function TripsPage() {
-  const mockTrips = [
-    {
-      id: "T-001",
-      operator: "SeaVoyager Lines",
-      vessel: "MV Princess of the Sea",
-      vesselType: "RoRo",
-      from: "Manila",
-      to: "Cebu",
-      departure: "Oct 24, 08:00 PM",
-      arrival: "Oct 25, 06:00 PM",
-      price: 1250,
-      availability: 145,
-    },
-    {
-      id: "T-002",
-      operator: "FastTrack Ferries",
-      vessel: "FastJet 2",
-      vesselType: "FastCraft",
-      from: "Iloilo",
-      to: "Bacolod",
-      departure: "Oct 24, 10:30 AM",
-      arrival: "Oct 24, 12:00 PM",
-      price: 350,
-      availability: 24,
-    },
-    {
-      id: "T-003",
-      operator: "OceanConnect",
-      vessel: "MV Island Dreamer",
-      vesselType: "RoRo",
-      from: "Batangas",
-      to: "Calapan",
-      departure: "Oct 24, 02:00 PM",
-      arrival: "Oct 24, 04:30 PM",
-      price: 480,
-      availability: 88,
-    },
-    {
-      id: "T-004",
-      operator: "SeaVoyager Lines",
-      vessel: "MV Queen of Cebu",
-      vesselType: "RoRo",
-      from: "Manila",
-      to: "Cebu",
-      departure: "Oct 25, 09:00 PM",
-      arrival: "Oct 26, 07:00 PM",
-      price: 1350,
-      availability: 200,
-    }
-  ];
+  const trips: any[] = [];
 
   return (
     <div className="min-h-screen bg-background font-body">
@@ -78,7 +27,6 @@ export default function TripsPage() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Filters */}
           <aside className="lg:col-span-1 space-y-6">
             <Card className="border-none shadow-sm">
               <CardContent className="p-6 space-y-6">
@@ -110,23 +58,10 @@ export default function TripsPage() {
                     <Input placeholder="Max" className="h-8 text-xs bg-secondary border-none" />
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Operator</label>
-                  <div className="space-y-2">
-                    {["SeaVoyager Lines", "FastTrack Ferries", "OceanConnect"].map((op) => (
-                      <div key={op} className="flex items-center gap-2">
-                        <input type="checkbox" id={op} className="rounded border-border text-accent focus:ring-accent" />
-                        <label htmlFor={op} className="text-sm">{op}</label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </aside>
 
-          {/* Search Results */}
           <main className="lg:col-span-3 space-y-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
@@ -139,7 +74,7 @@ export default function TripsPage() {
             </div>
 
             <div className="flex items-center justify-between text-sm text-muted-foreground py-2 border-b">
-              <p>Showing <span className="text-foreground font-bold">{mockTrips.length}</span> results</p>
+              <p>Showing <span className="text-foreground font-bold">{trips.length}</span> results</p>
               <div className="flex items-center gap-2">
                 <span>Sort by:</span>
                 <select className="bg-transparent font-bold text-foreground outline-none">
@@ -151,11 +86,10 @@ export default function TripsPage() {
             </div>
 
             <div className="space-y-4">
-              {mockTrips.map((trip) => (
+              {trips.length > 0 ? trips.map((trip) => (
                 <Card key={trip.id} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 bg-white">
                   <CardContent className="p-0">
                     <div className="flex flex-col md:flex-row">
-                      {/* Trip Path */}
                       <div className="p-6 flex-1">
                         <div className="flex items-center gap-3 mb-4">
                           <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
@@ -197,7 +131,6 @@ export default function TripsPage() {
                         </div>
                       </div>
 
-                      {/* Pricing & CTA */}
                       <div className="bg-secondary/30 p-6 md:w-64 border-t md:border-t-0 md:border-l flex flex-col justify-center items-center text-center gap-4">
                         <div>
                           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mb-1">Total Price</p>
@@ -210,7 +143,13 @@ export default function TripsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )) : (
+                <div className="py-20 text-center border-2 border-dashed rounded-xl opacity-50 bg-secondary/10">
+                  <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-bold">No trips found</h3>
+                  <p className="text-sm text-muted-foreground">Adjust your filters or search criteria to find available maritime trips.</p>
+                </div>
+              )}
             </div>
           </main>
         </div>

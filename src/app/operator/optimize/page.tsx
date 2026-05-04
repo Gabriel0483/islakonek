@@ -1,89 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Loader2, ArrowRight, Ship, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { Sparkles, Loader2, Ship, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { OperatorSidebar } from "@/components/operator-sidebar";
-import { optimizeSchedule, AIScheduleOptimizationOutput } from "@/ai/flows/ai-schedule-optimization-tool";
+import { optimizeSchedule, AIScheduleOptimizationOutput, AIScheduleOptimizationInput } from "@/ai/flows/ai-schedule-optimization-tool";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-
-// Mock data for initial state
-const MOCK_INPUT = {
-  existingSchedule: [
-    {
-      routeId: "R-001",
-      routeName: "Manila-Cebu",
-      origin: "Manila North Harbor",
-      destination: "Cebu Pier 1",
-      scheduledDeparture: new Date(Date.now() + 86400000).toISOString(),
-      scheduledArrival: new Date(Date.now() + 86400000 + 79200000).toISOString(),
-      vesselTypeRequired: "RoRo",
-      currentVesselId: "V-101",
-      expectedDurationHours: 22,
-    },
-    {
-      routeId: "R-002",
-      routeName: "Iloilo-Bacolod",
-      origin: "Iloilo Port",
-      destination: "Bacolod Port",
-      scheduledDeparture: new Date(Date.now() + 43200000).toISOString(),
-      scheduledArrival: new Date(Date.now() + 43200000 + 5400000).toISOString(),
-      vesselTypeRequired: "FastCraft",
-      currentVesselId: "V-201",
-      expectedDurationHours: 1.5,
-    }
-  ],
-  availableVessels: [
-    {
-      vesselId: "V-101",
-      vesselName: "MV Oceanic Express",
-      type: "RoRo",
-      passengerCapacity: 1200,
-      cargoCapacityTEU: 45,
-      currentLocation: "Manila",
-      availableFrom: new Date().toISOString()
-    },
-    {
-      vesselId: "V-201",
-      vesselName: "FastJet 1",
-      type: "FastCraft",
-      passengerCapacity: 350,
-      cargoCapacityTEU: 0,
-      currentLocation: "Iloilo",
-      availableFrom: new Date().toISOString()
-    },
-    {
-      vesselId: "V-102",
-      vesselName: "MV Sea Titan",
-      type: "RoRo",
-      passengerCapacity: 1500,
-      cargoCapacityTEU: 60,
-      currentLocation: "Manila",
-      availableFrom: new Date().toISOString()
-    }
-  ],
-  demandForecast: [
-    { routeId: "R-001", date: new Date().toISOString().split('T')[0], passengerDemand: 1350, cargoDemandTEU: 50 },
-    { routeId: "R-002", date: new Date().toISOString().split('T')[0], passengerDemand: 300, cargoDemandTEU: 0 }
-  ],
-  weatherForecast: [
-    { location: "Manila", date: new Date().toISOString().split('T')[0], conditions: "clear", windSpeedKts: 10 },
-    { location: "Visayas", date: new Date().toISOString().split('T')[0], conditions: "storm", windSpeedKts: 35, waveHeightMeters: 2.5 }
-  ],
-  operationalConstraints: ["Vessels cannot depart if wave height exceeds 2.5m", "V-101 is scheduled for minor engine check in 3 days"]
-};
 
 export default function OptimizePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AIScheduleOptimizationOutput | null>(null);
+  const [input, setInput] = useState<AIScheduleOptimizationInput>({
+    existingSchedule: [],
+    availableVessels: [],
+    demandForecast: [],
+    weatherForecast: [],
+    operationalConstraints: []
+  });
 
   async function handleOptimize() {
+    if (input.existingSchedule.length === 0) {
+      console.warn("No schedule data provided for optimization.");
+      return;
+    }
     setLoading(true);
     try {
-      const output = await optimizeSchedule(MOCK_INPUT);
+      const output = await optimizeSchedule(input);
       setResult(output);
     } catch (error) {
       console.error("Optimization failed", error);
@@ -113,7 +58,7 @@ export default function OptimizePage() {
               </div>
               <Button 
                 onClick={handleOptimize} 
-                disabled={loading}
+                disabled={loading || input.existingSchedule.length === 0}
                 className="bg-accent text-primary font-bold hover:bg-accent/90 px-6 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
               >
                 {loading ? (
@@ -132,36 +77,18 @@ export default function OptimizePage() {
           </section>
 
           {!result && !loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-80">
-              <Card className="border-dashed">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">Input Parameters</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span>Active Routes:</span> <span className="font-bold">2</span></div>
-                  <div className="flex justify-between"><span>Available Vessels:</span> <span className="font-bold">3</span></div>
-                  <div className="flex justify-between"><span>Demand Surge detected:</span> <Badge variant="secondary" className="text-green-600 bg-green-50">Yes</Badge></div>
-                </CardContent>
-              </Card>
-              <Card className="border-dashed">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">Environmental Context</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span>Storm Advisory:</span> <span className="font-bold">Visayas Region</span></div>
-                  <div className="flex justify-between"><span>Avg Wave Height:</span> <span className="font-bold">1.2m</span></div>
-                  <div className="flex justify-between"><span>Peak Wind Speed:</span> <span className="font-bold">35kts</span></div>
-                </CardContent>
-              </Card>
+            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl opacity-50">
+              <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-bold">No data to optimize</h3>
+              <p className="text-muted-foreground max-w-xs">Once you have active routes and vessels configured, our AI will help you find the most efficient schedule.</p>
             </div>
           )}
 
           {result && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* Rationale Card */}
               <Card className="bg-primary text-primary-foreground border-none">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Sparkles className="h-5 w-5 text-accent" />
                     AI Rationale
                   </CardTitle>
@@ -171,7 +98,6 @@ export default function OptimizePage() {
                 </CardContent>
               </Card>
 
-              {/* Warnings */}
               {result.warnings && result.warnings.length > 0 && (
                 <div className="space-y-3">
                   {result.warnings.map((warning, i) => (
@@ -183,11 +109,10 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {/* Optimized Schedule Table */}
               <div className="space-y-4">
                 <h3 className="text-xl font-bold font-headline">Proposed Schedule</h3>
                 <div className="grid grid-cols-1 gap-4">
-                  {result.optimizedSchedule.map((trip) => (
+                  {result.optimizedSchedule.length > 0 ? result.optimizedSchedule.map((trip) => (
                     <Card key={trip.routeId} className="border-none shadow-sm hover:shadow-md transition-shadow">
                       <CardContent className="p-0">
                         <div className="flex flex-col md:flex-row md:items-center">
@@ -240,11 +165,12 @@ export default function OptimizePage() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  )) : (
+                    <div className="p-12 text-center text-muted-foreground">No trips generated.</div>
+                  )}
                 </div>
               </div>
 
-              {/* Vessel Summaries */}
               <div className="space-y-4">
                 <h3 className="text-xl font-bold font-headline">Vessel Utilization Summary</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

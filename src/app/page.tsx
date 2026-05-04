@@ -9,12 +9,12 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
+  const popularRoutes: any[] = [];
 
   return (
     <div className="min-h-screen flex flex-col font-body">
       <Navbar />
       
-      {/* Hero Section */}
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
         <Image
           src={heroImage?.imageUrl || ""}
@@ -36,7 +36,6 @@ export default function Home() {
               Isla Konek is your modern bridge to the Philippine seas. Book ferry trips, manage schedules, and explore the islands with ease.
             </p>
             
-            {/* Search Box */}
             <Card className="bg-white/95 backdrop-blur p-4 md:p-6 shadow-2xl border-none text-foreground mt-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
@@ -68,7 +67,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Popular Routes */}
       <section className="py-20 bg-background">
         <div className="container px-4 mx-auto">
           <div className="flex justify-between items-end mb-12">
@@ -82,11 +80,7 @@ export default function Home() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { from: "Manila", to: "Cebu", price: "₱1,200", duration: "22h", type: "RoRo" },
-              { from: "Iloilo", to: "Bacolod", price: "₱350", duration: "1.5h", type: "FastCraft" },
-              { from: "Batangas", to: "Calapan", price: "₱500", duration: "2h", type: "RoRo" },
-            ].map((route, idx) => (
+            {popularRoutes.length > 0 ? popularRoutes.map((route, idx) => (
               <Card key={idx} className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-none bg-white">
                 <div className="relative h-48">
                   <Image
@@ -116,12 +110,16 @@ export default function Home() {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+            )) : (
+              <div className="col-span-1 md:col-span-3 py-20 text-center border-2 border-dashed rounded-2xl bg-secondary/20">
+                <Ship className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground">Stay tuned! New routes are being added daily.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* For Operators Section */}
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container px-4 mx-auto">
           <div className="flex flex-col md:flex-row items-center gap-12">
@@ -169,7 +167,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-12 bg-background border-t">
         <div className="container px-4 mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
