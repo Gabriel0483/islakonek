@@ -8,7 +8,7 @@ import {
   Trash2, 
   Loader2, 
   Search,
-  Globe
+  Anchor
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -54,8 +54,6 @@ export default function PortsPage() {
     code: "",
     city: "",
     country: "",
-    latitude: 0,
-    longitude: 0,
     description: ""
   });
 
@@ -73,8 +71,6 @@ export default function PortsPage() {
         code: port.code || "",
         city: port.city,
         country: port.country,
-        latitude: port.latitude || 0,
-        longitude: port.longitude || 0,
         description: port.description || ""
       });
     } else {
@@ -84,8 +80,6 @@ export default function PortsPage() {
         code: "",
         city: "",
         country: "",
-        latitude: 0,
-        longitude: 0,
         description: ""
       });
     }
@@ -130,7 +124,10 @@ export default function PortsPage() {
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger />
-          <h1 className="text-lg font-bold font-headline text-primary">Manage Ports</h1>
+          <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
+            <Anchor className="h-5 w-5 text-accent" />
+            Port Registry
+          </h1>
         </header>
 
         <main className="p-6 space-y-6">
@@ -175,12 +172,6 @@ export default function PortsPage() {
                     <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
                       {port.description || "No description provided."}
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                       <div className="flex items-center gap-1">
-                         <Globe className="h-3 w-3" />
-                         {port.latitude.toFixed(4)}, {port.longitude.toFixed(4)}
-                       </div>
-                    </div>
                     <div className="flex justify-end gap-2 pt-2 border-t">
                       <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(port)} className="h-8 w-8 p-0">
                         <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
@@ -219,6 +210,7 @@ export default function PortsPage() {
                       id="name" 
                       value={formData.name} 
                       onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                      placeholder="e.g. Port of Manila"
                     />
                   </div>
                   <div className="space-y-2">
@@ -227,6 +219,7 @@ export default function PortsPage() {
                       id="code" 
                       value={formData.code} 
                       onChange={(e) => setFormData({...formData, code: e.target.value})} 
+                      placeholder="e.g. MNL"
                     />
                   </div>
                 </div>
@@ -237,6 +230,7 @@ export default function PortsPage() {
                       id="city" 
                       value={formData.city} 
                       onChange={(e) => setFormData({...formData, city: e.target.value})} 
+                      placeholder="e.g. Manila"
                     />
                   </div>
                   <div className="space-y-2">
@@ -245,28 +239,7 @@ export default function PortsPage() {
                       id="country" 
                       value={formData.country} 
                       onChange={(e) => setFormData({...formData, country: e.target.value})} 
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="latitude">Latitude</Label>
-                    <Input 
-                      id="latitude" 
-                      type="number"
-                      step="any"
-                      value={formData.latitude} 
-                      onChange={(e) => setFormData({...formData, latitude: parseFloat(e.target.value) || 0})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="longitude">Longitude</Label>
-                    <Input 
-                      id="longitude" 
-                      type="number"
-                      step="any"
-                      value={formData.longitude} 
-                      onChange={(e) => setFormData({...formData, longitude: parseFloat(e.target.value) || 0})} 
+                      placeholder="e.g. Philippines"
                     />
                   </div>
                 </div>
@@ -276,11 +249,13 @@ export default function PortsPage() {
                     id="description" 
                     value={formData.description} 
                     onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                    placeholder="Brief details about port facilities..."
+                    className="min-h-[100px]"
                   />
                 </div>
               </div>
             </ScrollArea>
-            <DialogFooter>
+            <DialogFooter className="pt-4 border-t">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSave} className="bg-primary text-white">
                 {editingPort ? "Save Changes" : "Create Port"}
