@@ -4,20 +4,42 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, MapPin, Calendar, Ship, LayoutDashboard, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, MapPin, Calendar, Ship, LayoutDashboard, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Navbar } from "@/components/navbar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { collection } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 
 export default function Home() {
+  const router = useRouter();
   const [year, setYear] = useState<number | null>(null);
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
+  
+  const [searchData, setSearchData] = useState({
+    origin: "",
+    destination: "",
+    date: ""
+  });
+
+  const db = useFirestore();
+  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
+  const { data: routes } = useCollection(routesRef);
 
   useEffect(() => {
     setYear(new Date().getFullYear());
   }, []);
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (searchData.origin) params.set("origin", searchData.origin);
+    if (searchData.destination) params.set("destination", searchData.destination);
+    if (searchData.date) params.set("date", searchData.date);
+    router.push(`/trips?${params.toString()}`);
+  };
 
   return (
     <div className="min-h-screen flex flex-col font-body">
@@ -50,22 +72,40 @@ export default function Home() {
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <MapPin className="h-3 w-3 text-accent" /> Origin
                   </label>
-                  <Input placeholder="Manila" className="border-none bg-secondary focus-visible:ring-accent" />
+                  <Input 
+                    placeholder="e.g. Manila" 
+                    value={searchData.origin}
+                    onChange={(e) => setSearchData({...searchData, origin: e.target.value})}
+                    className="border-none bg-secondary focus-visible:ring-accent" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <MapPin className="h-3 w-3 text-accent" /> Destination
                   </label>
-                  <Input placeholder="Cebu" className="border-none bg-secondary focus-visible:ring-accent" />
+                  <Input 
+                    placeholder="e.g. Cebu" 
+                    value={searchData.destination}
+                    onChange={(e) => setSearchData({...searchData, destination: e.target.value})}
+                    className="border-none bg-secondary focus-visible:ring-accent" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <Calendar className="h-3 w-3 text-accent" /> Date
                   </label>
-                  <Input type="date" className="border-none bg-secondary focus-visible:ring-accent" />
+                  <Input 
+                    type="date" 
+                    value={searchData.date}
+                    onChange={(e) => setSearchData({...searchData, date: e.target.value})}
+                    className="border-none bg-secondary focus-visible:ring-accent" 
+                  />
                 </div>
                 <div className="flex items-end">
-                  <Button className="w-full h-10 gap-2 font-bold bg-accent hover:bg-accent/90 text-primary">
+                  <Button 
+                    onClick={handleSearch}
+                    className="w-full h-10 gap-2 font-bold bg-accent hover:bg-accent/90 text-primary"
+                  >
                     <Search className="h-4 w-4" /> Search Trips
                   </Button>
                 </div>
@@ -87,9 +127,33 @@ export default function Home() {
             </Link>
           </div>
           
-          <div className="py-20 text-center border-2 border-dashed rounded-2xl bg-secondary/20">
-            <Ship className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-muted-foreground">Stay tuned! New routes are being added daily.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {routes && routes.length > 0 ? (
+              routes.slice(0, 3).map((route) => (
+                <Card key={route.id} className="border-none shadow-sm hover:shadow-lg transition-all group overflow-hidden bg-white">
+                  <div className="h-3 bg-accent/20 group-hover:bg-accent transition-colors" />
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-bold text-primary mb-2">{route.name}</h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                      <span>Duration: {Math.floor(route.estimatedDurationMinutes / 60)}h {route.estimatedDurationMinutes % 60}m</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-black text-primary">₱{route.basePrice?.toLocaleString()}</span>
+                      <Link href={`/trips?origin=${route.name.split(' - ')[0]}`}>
+                        <Button size="sm" variant="ghost" className="text-accent gap-1 group-hover:gap-2 transition-all">
+                          Book Now <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center border-2 border-dashed rounded-2xl bg-secondary/20">
+                <Ship className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground">Stay tuned! New routes are being added daily.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -107,7 +171,7 @@ export default function Home() {
               </p>
               <Link href="/admin">
                 <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4 px-8 py-6 text-lg">
-                  Join as Admin
+                  Admin Portal
                 </Button>
               </Link>
             </div>
