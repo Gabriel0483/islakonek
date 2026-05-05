@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Ship, LayoutDashboard, AlertCircle, CheckCircle2, MapPin, Waypoints, Banknote, Wrench } from "lucide-react";
+import { Ship, LayoutDashboard, AlertCircle, CheckCircle2, MapPin, Waypoints, Banknote, Wrench, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { OperatorSidebar } from "@/components/operator-sidebar";
@@ -32,10 +32,16 @@ export default function OperatorDashboard() {
     return collection(db, "vessels");
   }, [db, user]);
 
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return collection(db, "schedules");
+  }, [db, user]);
+
   const { data: ports } = useCollection(portsRef);
   const { data: routes } = useCollection(routesRef);
   const { data: fares } = useCollection(faresRef);
   const { data: vessels } = useCollection(vesselsRef);
+  const { data: schedules } = useCollection(schedulesRef);
 
   const stats = [
     {
@@ -53,11 +59,11 @@ export default function OperatorDashboard() {
       bg: "bg-accent/10"
     },
     {
-      label: "Configured Fares",
-      value: fares?.length || 0,
-      icon: Banknote,
-      color: "text-green-500",
-      bg: "bg-green-500/10"
+      label: "Trip Schedules",
+      value: schedules?.length || 0,
+      icon: CalendarDays,
+      color: "text-orange-500",
+      bg: "bg-orange-500/10"
     },
     {
       label: "Fleet Size",
@@ -108,7 +114,7 @@ export default function OperatorDashboard() {
                 </div>
                 <h2 className="text-3xl font-black font-headline tracking-tight">Welcome to Isla Konek Ops</h2>
                 <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                  Your maritime data is synchronized and secure. Manage your vessels, ports, routes, and pricing rules from a unified interface.
+                  Your maritime data is synchronized and secure. Manage your vessels, ports, routes, and schedules from a unified interface.
                 </p>
               </div>
             </Card>

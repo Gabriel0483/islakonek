@@ -11,7 +11,8 @@ import {
   LogOut,
   Waypoints,
   Banknote,
-  Wrench
+  Wrench,
+  CalendarDays
 } from "lucide-react";
 import {
   Sidebar,
@@ -109,6 +110,19 @@ export function OperatorSidebar() {
                   <Link href="/operator/fleet">
                     <Wrench />
                     <span>Fleet & Maintenance</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === "/operator/schedules"}
+                  tooltip="Trip Schedules"
+                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
+                >
+                  <Link href="/operator/schedules">
+                    <CalendarDays />
+                    <span>Trip Schedules</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

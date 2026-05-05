@@ -158,6 +158,24 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "vesselId", "description", "scheduledDate", "status"]
+    },
+    "TripSchedule": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TripSchedule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "routeId": { "type": "string" },
+        "vesselId": { "type": "string" },
+        "departureTime": { "type": "string", "description": "Time in HH:mm format" },
+        "type": { "type": "string", "enum": ["Daily", "Special"] },
+        "specialDates": { "type": "array", "items": { "type": "string", "format": "date" } },
+        "description": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "routeId", "vesselId", "departureTime", "type"]
     }
   },
   "auth": {
@@ -216,6 +234,16 @@
             "$ref": "#/backend/entities/MaintenanceRecord"
           },
           "description": "Historical and scheduled maintenance records for vessels."
+        }
+      },
+      {
+        "path": "/schedules/{scheduleId}",
+        "definition": {
+          "entityName": "TripSchedule",
+          "schema": {
+            "$ref": "#/backend/entities/TripSchedule"
+          },
+          "description": "Daily and special trip schedules for maritime routes."
         }
       }
     ]
