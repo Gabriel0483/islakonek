@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -119,10 +118,10 @@ export function OperatorSidebar() {
                 <LogOut />
                 <span>Logout</span>
               </Link>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
