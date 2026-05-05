@@ -109,6 +109,25 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "Fare": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Fare",
+      "type": "object",
+      "description": "Detailed fare configuration for a specific route and passenger segment.",
+      "properties": {
+        "id": { "type": "string" },
+        "routeId": { "type": "string" },
+        "segmentId": { "type": "string" },
+        "segmentLabel": { "type": "string" },
+        "baseFare": { "type": "number" },
+        "isVatExempt": { "type": "boolean" },
+        "vatRate": { "type": "number", "default": 0.12 },
+        "discountPercentage": { "type": "number", "enum": [0, 20, 50, 100] },
+        "finalFare": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "routeId", "segmentId", "baseFare", "finalFare"]
     }
   },
   "auth": {
@@ -147,6 +166,22 @@
             {
               "name": "routeId",
               "description": "The unique identifier for a specific Route."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/fares/{fareId}",
+        "definition": {
+          "entityName": "Fare",
+          "schema": {
+            "$ref": "#/backend/entities/Fare"
+          },
+          "description": "A collection containing fare pricing rules for route segments.",
+          "params": [
+            {
+              "name": "fareId",
+              "description": "Unique identifier for a fare rule."
             }
           ]
         }

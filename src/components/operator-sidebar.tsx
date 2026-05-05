@@ -9,7 +9,8 @@ import {
   MapPin,
   Settings, 
   LogOut,
-  Waypoints
+  Waypoints,
+  Banknote
 } from "lucide-react";
 import {
   Sidebar,
@@ -84,6 +85,19 @@ export function OperatorSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === "/operator/fares"}
+                  tooltip="Fares"
+                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
+                >
+                  <Link href="/operator/fares">
+                    <Banknote />
+                    <span>Fares</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -105,10 +119,10 @@ export function OperatorSidebar() {
                 <LogOut />
                 <span>Logout</span>
               </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
     </Sidebar>
   );
 }
