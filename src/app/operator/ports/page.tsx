@@ -11,7 +11,7 @@ import {
   Globe
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
@@ -35,8 +35,16 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function PortsPage() {
   const db = useFirestore();
-  const portsCollection = useMemoFirebase(() => collection(db, "ports"), [db]);
-  const { data: ports, isLoading } = useCollection(portsCollection);
+  const { user, isUserLoading } = useUser();
+  
+  // Only create the collection reference once the user is authenticated.
+  // This prevents permission errors during initial load.
+  const portsCollection = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return collection(db, "ports");
+  }, [db, user]);
+  
+  const { data: ports, isLoading: isPortsLoading } = useCollection(portsCollection);
 
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -86,6 +94,8 @@ export default function PortsPage() {
   };
 
   const handleSave = () => {
+    if (!portsCollection) return;
+    
     const timestamp = new Date().toISOString();
     if (editingPort) {
       const portRef = doc(db, "ports", editingPort.id);
@@ -113,6 +123,8 @@ export default function PortsPage() {
     }
   };
 
+  const isLoading = isUserLoading || isPortsLoading;
+
   return (
     <SidebarProvider>
       <OperatorSidebar />
@@ -133,14 +145,15 @@ export default function PortsPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90">
+            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90" disabled={!user}>
               <Plus className="h-4 w-4 mr-2" /> Add New Port
             </Button>
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-accent" />
+              <p className="text-sm text-muted-foreground">Synchronizing with maritime registry...</p>
             </div>
           ) : filteredPorts && filteredPorts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo, type ReactNode } from 'react';
+import React, { useMemo, type ReactNode, useEffect } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -13,6 +14,20 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     // Initialize Firebase on the client side, once per component mount.
     return initializeFirebase();
   }, []); // Empty dependency array ensures this runs only once on mount
+
+  useEffect(() => {
+    const { auth } = firebaseServices;
+    // Automatically sign in anonymously if no user is present.
+    // This is helpful for prototyping and ensuring requests have an auth context.
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        signInAnonymously(auth).catch((error) => {
+          console.error("Auto anonymous sign-in failed:", error);
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [firebaseServices]);
 
   return (
     <FirebaseProvider
