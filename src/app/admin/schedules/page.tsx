@@ -106,11 +106,11 @@ export default function SchedulesPage() {
       setEditingSchedule(schedule);
       setFormData({
         tripCode: schedule.tripCode || "",
-        routeId: schedule.routeId,
-        vesselId: schedule.vesselId,
-        departureTime: schedule.departureTime,
-        passengerCapacity: schedule.passengerCapacity || vessels?.find(v => v.id === schedule.vesselId)?.passengerCapacity || 0,
-        type: schedule.type,
+        routeId: schedule.routeId || "",
+        vesselId: schedule.vesselId || "",
+        departureTime: schedule.departureTime || "08:00",
+        passengerCapacity: schedule.passengerCapacity || 0,
+        type: schedule.type || "Daily",
         specialDates: schedule.specialDates || [],
         description: schedule.description || "",
         isActive: schedule.isActive !== undefined ? schedule.isActive : true
@@ -153,7 +153,7 @@ export default function SchedulesPage() {
   };
 
   const handleSave = () => {
-    if (!db || !schedulesCollection || !formData.tripCode) return;
+    if (!db || !formData.tripCode || !formData.routeId || !formData.vesselId) return;
     
     const tripType = formData.specialDates.length > 0 ? "Special" : "Daily";
     const timestamp = new Date().toISOString();
@@ -169,16 +169,20 @@ export default function SchedulesPage() {
       const scheduleRef = doc(db, "schedules", editingSchedule.id);
       updateDocumentNonBlocking(scheduleRef, payload);
     } else {
-      const newId = Math.random().toString(36).substr(2, 9);
+      const newId = Math.random().toString(36).substring(2, 10).toUpperCase();
       const scheduleRef = doc(db, "schedules", newId);
-      setDocumentNonBlocking(scheduleRef, { ...payload, id: newId, createdAt: timestamp }, { merge: true });
+      setDocumentNonBlocking(scheduleRef, { 
+        ...payload, 
+        id: newId, 
+        createdAt: timestamp 
+      }, { merge: true });
     }
     setIsDialogOpen(false);
   };
 
   const handleDelete = (id: string) => {
     if (!db) return;
-    if (confirm("Are you sure you want to delete this trip schedule?")) {
+    if (confirm("Are you sure you want to delete this trip schedule? This cannot be undone.")) {
       const scheduleRef = doc(db, "schedules", id);
       deleteDocumentNonBlocking(scheduleRef);
     }
@@ -355,8 +359,10 @@ export default function SchedulesPage() {
                         <SelectValue placeholder="Select Vessel" />
                       </SelectTrigger>
                       <SelectContent>
-                        {vessels?.filter(v => v.status === 'Operational').map(v => (
-                          <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                        {vessels?.map(v => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.name} {v.status !== 'Operational' ? `(${v.status})` : ''}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
