@@ -1,6 +1,9 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, MapPin, Calendar, Users, Ship, Anchor, Clock, LayoutDashboard } from "lucide-react";
+import { Search, MapPin, Calendar, Ship, LayoutDashboard, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,8 +11,12 @@ import { Navbar } from "@/components/navbar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
+  const [year, setYear] = useState<number | null>(null);
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
-  const popularRoutes: any[] = [];
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col font-body">
@@ -79,43 +86,9 @@ export default function Home() {
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {popularRoutes.length > 0 ? popularRoutes.map((route, idx) => (
-              <Card key={idx} className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-none bg-white">
-                <div className="relative h-48">
-                  <Image
-                    src={`https://picsum.photos/seed/route${idx}/600/400`}
-                    alt={`${route.from} to ${route.to}`}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-4 right-4 bg-accent/90 backdrop-blur text-primary font-bold px-3 py-1 rounded-full text-sm">
-                    {route.price}
-                  </div>
-                </div>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="font-bold text-lg text-primary">{route.from} → {route.to}</div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-6">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" /> {route.duration}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Ship className="h-4 w-4" /> {route.type}
-                    </div>
-                  </div>
-                  <Button className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors border-none">
-                    Book Trip
-                  </Button>
-                </CardContent>
-              </Card>
-            )) : (
-              <div className="col-span-1 md:col-span-3 py-20 text-center border-2 border-dashed rounded-2xl bg-secondary/20">
-                <Ship className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-muted-foreground">Stay tuned! New routes are being added daily.</p>
-              </div>
-            )}
+          <div className="py-20 text-center border-2 border-dashed rounded-2xl bg-secondary/20">
+            <Ship className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-muted-foreground">Stay tuned! New routes are being added daily.</p>
           </div>
         </div>
       </section>
@@ -131,23 +104,6 @@ export default function Home() {
               <p className="text-lg text-primary-foreground/80">
                 A unified platform to manage vessels, optimize schedules with AI, and reach thousands of passengers daily. Modernize your fleet management today.
               </p>
-              <ul className="space-y-4">
-                {[
-                  "AI-Powered Schedule Optimization",
-                  "Real-time Inventory Tracking",
-                  "Detailed Analytics & Reporting",
-                  "Secure Automated Payments"
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <div className="bg-accent rounded-full p-1 text-primary">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
               <Link href="/operator">
                 <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4 px-8 py-6 text-lg">
                   Join as Operator
@@ -184,7 +140,6 @@ export default function Home() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/trips" className="hover:text-accent">Search Trips</Link></li>
                 <li><Link href="/operator" className="hover:text-accent">Operator Login</Link></li>
-                <li><Link href="/privacy" className="hover:text-accent">Privacy Policy</Link></li>
               </ul>
             </div>
             <div>
@@ -192,7 +147,6 @@ export default function Home() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/faq" className="hover:text-accent">Help Center</Link></li>
                 <li><Link href="/contact" className="hover:text-accent">Contact Us</Link></li>
-                <li><Link href="/terms" className="hover:text-accent">Terms of Service</Link></li>
               </ul>
             </div>
             <div>
@@ -205,7 +159,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Isla Konek. All rights reserved.
+            © {year} Isla Konek. All rights reserved.
           </div>
         </div>
       </footer>

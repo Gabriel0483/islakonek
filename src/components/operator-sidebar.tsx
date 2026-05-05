@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { 
   Ship, 
   LayoutDashboard, 
+  MapPin,
   Settings, 
   LogOut
 } from "lucide-react";
@@ -52,6 +53,19 @@ export function OperatorSidebar() {
                   <Link href="/operator">
                     <LayoutDashboard />
                     <span>Overview</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === "/operator/ports"}
+                  tooltip="Ports"
+                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
+                >
+                  <Link href="/operator/ports">
+                    <MapPin />
+                    <span>Ports</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
