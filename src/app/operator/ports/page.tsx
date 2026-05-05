@@ -51,16 +51,16 @@ export default function PortsPage() {
 
   const [formData, setFormData] = useState({
     name: "",
-    code: "",
-    city: "",
-    country: "",
+    cityMunicipality: "",
+    province: "",
+    country: "Philippines",
     description: ""
   });
 
   const filteredPorts = ports?.filter(port => 
     port.name.toLowerCase().includes(search.toLowerCase()) ||
-    port.city.toLowerCase().includes(search.toLowerCase()) ||
-    port.code.toLowerCase().includes(search.toLowerCase())
+    port.province.toLowerCase().includes(search.toLowerCase()) ||
+    port.cityMunicipality.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleOpenDialog = (port: any = null) => {
@@ -68,18 +68,18 @@ export default function PortsPage() {
       setEditingPort(port);
       setFormData({
         name: port.name,
-        code: port.code || "",
-        city: port.city,
-        country: port.country,
+        cityMunicipality: port.cityMunicipality || "",
+        province: port.province || "",
+        country: port.country || "Philippines",
         description: port.description || ""
       });
     } else {
       setEditingPort(null);
       setFormData({
         name: "",
-        code: "",
-        city: "",
-        country: "",
+        cityMunicipality: "",
+        province: "",
+        country: "Philippines",
         description: ""
       });
     }
@@ -135,7 +135,7 @@ export default function PortsPage() {
             <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search ports by name, city, or code..." 
+                placeholder="Search ports by name, province, or city..." 
                 className="pl-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -160,11 +160,11 @@ export default function PortsPage() {
                       <div className="space-y-1">
                         <CardTitle className="text-lg font-bold text-primary">{port.name}</CardTitle>
                         <CardDescription className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" /> {port.city}, {port.country}
+                          <MapPin className="h-3 w-3" /> {port.cityMunicipality}, {port.province}
                         </CardDescription>
                       </div>
-                      <div className="bg-secondary px-2 py-1 rounded text-[10px] font-bold text-primary">
-                        {port.code}
+                      <div className="bg-secondary px-2 py-1 rounded text-[10px] font-bold text-primary uppercase">
+                        {port.country}
                       </div>
                     </div>
                   </CardHeader>
@@ -203,45 +203,43 @@ export default function PortsPage() {
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] pr-4">
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Port Name</Label>
-                    <Input 
-                      id="name" 
-                      value={formData.name} 
-                      onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                      placeholder="e.g. Port of Manila"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="code">Port Code</Label>
-                    <Input 
-                      id="code" 
-                      value={formData.code} 
-                      onChange={(e) => setFormData({...formData, code: e.target.value})} 
-                      placeholder="e.g. MNL"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Port Name</Label>
+                  <Input 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    placeholder="e.g. Port of Manila"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
+                    <Label htmlFor="cityMunicipality">City/Municipality</Label>
                     <Input 
-                      id="city" 
-                      value={formData.city} 
-                      onChange={(e) => setFormData({...formData, city: e.target.value})} 
+                      id="cityMunicipality" 
+                      value={formData.cityMunicipality} 
+                      onChange={(e) => setFormData({...formData, cityMunicipality: e.target.value})} 
                       placeholder="e.g. Manila"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
+                    <Label htmlFor="province">Province</Label>
                     <Input 
-                      id="country" 
-                      value={formData.country} 
-                      onChange={(e) => setFormData({...formData, country: e.target.value})} 
-                      placeholder="e.g. Philippines"
+                      id="province" 
+                      value={formData.province} 
+                      onChange={(e) => setFormData({...formData, province: e.target.value})} 
+                      placeholder="e.g. Metro Manila"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Input 
+                    id="country" 
+                    value={formData.country} 
+                    onChange={(e) => setFormData({...formData, country: e.target.value})} 
+                    placeholder="e.g. Philippines"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
