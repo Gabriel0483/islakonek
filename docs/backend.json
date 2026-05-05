@@ -168,6 +168,7 @@
         "routeId": { "type": "string" },
         "vesselId": { "type": "string" },
         "departureTime": { "type": "string", "description": "Time in HH:mm format" },
+        "passengerCapacity": { "type": "number", "description": "Seat capacity for this specific schedule." },
         "type": { "type": "string", "enum": ["Daily", "Special"] },
         "specialDates": { "type": "array", "items": { "type": "string", "format": "date" } },
         "description": { "type": "string" },
@@ -175,7 +176,7 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "routeId", "vesselId", "departureTime", "type"]
+      "required": ["id", "routeId", "vesselId", "departureTime", "type", "passengerCapacity"]
     }
   },
   "auth": {
