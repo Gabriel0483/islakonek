@@ -1,23 +1,20 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { 
   Ticket, 
   Plus, 
-  Search, 
   Loader2, 
-  Calendar, 
   User, 
   Phone, 
   CheckCircle2, 
   Ship,
   Clock,
-  Waypoints,
-  CreditCard,
-  AlertCircle,
-  Banknote
+  Banknote,
+  ClipboardList
 } from "lucide-react";
+import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { 
@@ -46,10 +43,9 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export default function BookingsPage() {
+export default function DeskBookingsPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   
@@ -66,7 +62,6 @@ export default function BookingsPage() {
   const { data: vessels } = useCollection(vesselsRef);
 
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
-  const [search, setSearch] = useState("");
   
   // Form State
   const [formData, setFormData] = useState({
@@ -87,7 +82,7 @@ export default function BookingsPage() {
   const handleCreateBooking = () => {
     if (!db || !formData.routeId || !formData.scheduleId || !formData.fareId || !formData.passengerName) return;
 
-    const newId = Math.random().toString(36).substr(2, 9);
+    const newId = Math.random().toString(36).substr(2, 9).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 
@@ -112,10 +107,9 @@ export default function BookingsPage() {
     });
   };
 
-  const filteredBookings = bookings?.filter(b => 
-    b.passengerName.toLowerCase().includes(search.toLowerCase()) ||
-    b.id.toLowerCase().includes(search.toLowerCase())
-  ).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const deskBookings = bookings?.filter(b => b.bookingSource === "Desk")
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10);
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
 
@@ -129,90 +123,78 @@ export default function BookingsPage() {
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
-            <Ticket className="h-5 w-5 text-accent" />
-            Desk Bookings
-          </h1>
+        <header className="flex h-16 shrink-0 items-center justify-between border-b px-4">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
+              <Ticket className="h-5 w-5 text-accent" />
+              Desk Bookings (Counter)
+            </h1>
+          </div>
+          <Link href="/admin/manage-bookings">
+            <Button variant="outline" size="sm" className="gap-2">
+              <ClipboardList className="h-4 w-4" /> View Full Manifest
+            </Button>
+          </Link>
         </header>
 
-        <main className="p-6 space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="relative flex-1 w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search by passenger name or Ticket ID..." 
-                className="pl-10 h-10 bg-white"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Button onClick={() => setIsNewBookingOpen(true)} className="bg-accent text-primary font-bold hover:bg-accent/90">
-              <Plus className="h-4 w-4 mr-2" /> New Ticket Booking
-            </Button>
-          </div>
+        <main className="p-6 space-y-6 max-w-5xl mx-auto w-full">
+          <Card className="border-none shadow-md overflow-hidden bg-white">
+            <CardHeader className="bg-primary text-primary-foreground">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Counter Sales</CardTitle>
+                  <CardDescription className="text-primary-foreground/70">Process a new ticket for walk-in passengers.</CardDescription>
+                </div>
+                <Button onClick={() => setIsNewBookingOpen(true)} className="bg-accent text-primary font-bold hover:bg-accent/90">
+                  <Plus className="h-4 w-4 mr-2" /> New Ticket
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+               <div className="p-12 text-center">
+                 <Ticket className="h-16 w-16 text-accent/20 mx-auto mb-4" />
+                 <h2 className="text-2xl font-black text-primary mb-2">Ready to Issue?</h2>
+                 <p className="text-muted-foreground mb-6 max-w-sm mx-auto">Select the trip and demographic to generate a valid ticket ID and manifest entry.</p>
+                 <Button onClick={() => setIsNewBookingOpen(true)} size="lg" className="bg-primary px-8">
+                   Start Ticket Booking
+                 </Button>
+               </div>
+            </CardContent>
+          </Card>
 
           <Card className="border-none shadow-sm overflow-hidden">
             <CardHeader className="bg-white border-b">
-              <CardTitle className="text-lg font-bold">Recent Desk Bookings</CardTitle>
-              <CardDescription>Live manifest of ticket issued at this counter.</CardDescription>
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Recently Issued (Desk)</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-accent" />
-                  <p className="text-sm text-muted-foreground">Synchronizing manifest...</p>
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-accent" />
                 </div>
-              ) : filteredBookings && filteredBookings.length > 0 ? (
+              ) : deskBookings && deskBookings.length > 0 ? (
                 <Table>
                   <TableHeader className="bg-secondary/30">
                     <TableRow>
                       <TableHead>Ticket ID</TableHead>
                       <TableHead>Passenger</TableHead>
-                      <TableHead>Route & Schedule</TableHead>
-                      <TableHead>Segment</TableHead>
-                      <TableHead>Fare</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Route</TableHead>
+                      <TableHead>Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredBookings.map((booking) => (
-                      <TableRow key={booking.id} className="hover:bg-accent/5">
+                    {deskBookings.map((booking) => (
+                      <TableRow key={booking.id}>
                         <TableCell className="font-mono text-[10px] font-bold">#{booking.id}</TableCell>
-                        <TableCell>
-                          <div className="font-bold">{booking.passengerName}</div>
-                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <Phone className="h-2 w-2" /> {booking.passengerContact || "No contact"}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs font-bold">{getRouteName(booking.routeId)}</div>
-                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                             <Clock className="h-2 w-2" /> {schedules?.find(s => s.id === booking.scheduleId)?.departureTime}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tighter">
-                            {booking.segmentLabel}
-                          </Badge>
-                        </TableCell>
+                        <TableCell className="font-bold">{booking.passengerName}</TableCell>
+                        <TableCell className="text-xs">{getRouteName(booking.routeId)}</TableCell>
                         <TableCell className="font-black text-primary">₱{booking.finalFare?.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={booking.paymentStatus === 'Paid' ? 'bg-green-500' : 'bg-yellow-500'}>
-                            {booking.paymentStatus}
-                          </Badge>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               ) : (
-                <div className="text-center py-20 opacity-50">
-                  <Ticket className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-xl font-bold">No bookings found</h3>
-                  <p className="text-sm">Issued tickets will appear here.</p>
-                </div>
+                <div className="text-center py-10 opacity-30 text-xs font-bold uppercase">No recent counter sales</div>
               )}
             </CardContent>
           </Card>
@@ -222,9 +204,9 @@ export default function BookingsPage() {
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Ticket className="h-5 w-5 text-accent" /> New Counter Booking
+                <Ticket className="h-5 w-5 text-accent" /> Counter Issuance
               </DialogTitle>
-              <DialogDescription>Process a walk-in passenger booking for active trips.</DialogDescription>
+              <DialogDescription>Process walk-in booking for active trips.</DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[80vh] pr-4">
               <div className="grid gap-6 py-4">
@@ -269,7 +251,7 @@ export default function BookingsPage() {
                       </div>
                     </div>
                     <Badge variant="outline" className="bg-white">
-                      Capacity: {selectedSchedule?.passengerCapacity}
+                      Max: {selectedSchedule?.passengerCapacity}
                     </Badge>
                   </div>
                 )}
@@ -285,7 +267,7 @@ export default function BookingsPage() {
                         id="passengerName" 
                         value={formData.passengerName} 
                         onChange={(e) => setFormData({...formData, passengerName: e.target.value})}
-                        placeholder="e.g. Juan Dela Cruz"
+                        placeholder="Juan Dela Cruz"
                       />
                     </div>
                     <div className="space-y-2">
@@ -294,7 +276,7 @@ export default function BookingsPage() {
                         id="contact" 
                         value={formData.passengerContact} 
                         onChange={(e) => setFormData({...formData, passengerContact: e.target.value})}
-                        placeholder="e.g. 0912 345 6789"
+                        placeholder="0912 345 6789"
                       />
                     </div>
                   </div>
@@ -344,7 +326,6 @@ export default function BookingsPage() {
                         <Badge variant="outline" className="bg-white/10 text-white border-white/20">
                           {selectedFare.isVatExempt ? "VAT Exempt" : "VAT Inclusive"}
                         </Badge>
-                        <p className="text-[10px] mt-1 opacity-70">Segment: {selectedFare.segmentLabel}</p>
                       </div>
                     </div>
                   </div>

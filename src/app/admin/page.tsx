@@ -13,7 +13,8 @@ import {
   CalendarDays,
   ArrowRight,
   LayoutGrid,
-  Ticket
+  Ticket,
+  ClipboardList
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -66,10 +67,18 @@ export default function AdminDashboard() {
   const managementModules = [
     {
       title: "Desk Bookings",
-      description: "Manage counter ticket sales, passenger manifests, and payments.",
+      description: "Counter ticket sales and instant passenger check-in.",
       icon: Ticket,
       link: "/admin/bookings",
       color: "text-green-600",
+      count: "Issue New"
+    },
+    {
+      title: "Manage Bookings",
+      description: "Full manifest review, reservation confirmation, and cancellations.",
+      icon: ClipboardList,
+      link: "/admin/manage-bookings",
+      color: "text-indigo-600",
       count: bookings?.length || 0
     },
     {
@@ -166,7 +175,7 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent className="pt-4 flex justify-between items-center">
                       <span className="text-xs font-bold text-muted-foreground bg-secondary px-2 py-0.5 rounded">
-                        {typeof module.count === 'number' ? `${module.count} items` : module.count}
+                        {typeof module.count === 'number' ? `${module.count} records` : module.count}
                       </span>
                       <div className="flex items-center gap-1 text-xs font-bold text-accent group-hover:gap-2 transition-all">
                         Configure <ArrowRight className="h-3 w-3" />
