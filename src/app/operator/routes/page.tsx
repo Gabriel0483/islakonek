@@ -74,7 +74,7 @@ export default function RoutesPage() {
     passengerSegments: []
   });
 
-  const [newSegment, setNewSegment] = useState({ label: "", discountPercentage: 0 });
+  const [newSegment, setNewSegment] = useState({ label: "" });
 
   const filteredRoutes = routes?.filter(route => 
     route.name.toLowerCase().includes(search.toLowerCase())
@@ -109,7 +109,7 @@ export default function RoutesPage() {
     if (!newSegment.label) return;
     const segments = [...formData.passengerSegments, { ...newSegment, id: Math.random().toString(36).substr(2, 9) }];
     setFormData({ ...formData, passengerSegments: segments });
-    setNewSegment({ label: "", discountPercentage: 0 });
+    setNewSegment({ label: "" });
   };
 
   const handleRemoveSegment = (id: string) => {
@@ -213,11 +213,11 @@ export default function RoutesPage() {
                     <div className="flex flex-wrap gap-2">
                       {route.passengerSegments?.map((seg: any) => (
                         <Badge key={seg.id} variant="outline" className="text-[10px] bg-accent/5 border-accent/20">
-                          {seg.label} ({seg.discountPercentage}%)
+                          {seg.label}
                         </Badge>
                       ))}
                       {(!route.passengerSegments || route.passengerSegments.length === 0) && (
-                        <span className="text-xs text-muted-foreground italic">No segments defined</span>
+                        <span className="text-xs text-muted-foreground italic">No demographics defined</span>
                       )}
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t">
@@ -325,27 +325,17 @@ export default function RoutesPage() {
                 <div className="space-y-4 border-t pt-4">
                   <div className="flex items-center gap-2">
                     <UserCheck className="h-4 w-4 text-accent" />
-                    <Label className="font-bold">Passenger Segments & Demographics</Label>
+                    <Label className="font-bold">Passenger Demographics</Label>
                   </div>
                   
                   <div className="bg-secondary/30 p-4 rounded-lg space-y-4">
-                    <div className="grid grid-cols-5 gap-3 items-end">
+                    <div className="grid grid-cols-3 gap-3 items-end">
                       <div className="col-span-2 space-y-1">
-                        <Label className="text-[10px] uppercase text-muted-foreground">Label</Label>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Demographic Label</Label>
                         <Input 
                           placeholder="e.g. Student" 
                           value={newSegment.label}
                           onChange={(e) => setNewSegment({...newSegment, label: e.target.value})}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="col-span-2 space-y-1">
-                        <Label className="text-[10px] uppercase text-muted-foreground">Disc %</Label>
-                        <Input 
-                          type="number" 
-                          placeholder="20"
-                          value={newSegment.discountPercentage}
-                          onChange={(e) => setNewSegment({...newSegment, discountPercentage: Number(e.target.value)})}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -355,7 +345,7 @@ export default function RoutesPage() {
                     <div className="space-y-2">
                       {formData.passengerSegments.map((seg: any) => (
                         <div key={seg.id} className="flex items-center justify-between bg-white p-2 rounded border text-sm">
-                          <span>{seg.label} <span className="text-muted-foreground text-xs">({seg.discountPercentage}% off)</span></span>
+                          <span>{seg.label}</span>
                           <Button variant="ghost" size="sm" onClick={() => handleRemoveSegment(seg.id)} className="h-6 w-6 p-0 text-destructive">
                             <X className="h-3 w-3" />
                           </Button>

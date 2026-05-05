@@ -87,8 +87,7 @@
             "type": "object",
             "properties": {
               "id": { "type": "string" },
-              "label": { "type": "string", "description": "Segment name, e.g., Senior, Student, PWD." },
-              "discountPercentage": { "type": "number" }
+              "label": { "type": "string", "description": "Segment name, e.g., Senior, Student, PWD." }
             }
           }
         },
