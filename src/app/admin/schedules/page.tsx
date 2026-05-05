@@ -133,11 +133,14 @@ export default function SchedulesPage() {
   };
 
   const handleVesselChange = (vesselId: string) => {
-    const selectedVessel = vessels?.find(v => v.id === vesselId);
+    const realVesselId = vesselId === "unassigned" ? "" : vesselId;
+    const selectedVessel = vessels?.find(v => v.id === realVesselId);
+    
     setFormData({
       ...formData,
-      vesselId,
-      passengerCapacity: selectedVessel?.passengerCapacity || 0
+      vesselId: realVesselId,
+      // Only override capacity if a vessel is actually selected
+      passengerCapacity: selectedVessel ? selectedVessel.passengerCapacity : formData.passengerCapacity
     });
   };
 
@@ -153,7 +156,7 @@ export default function SchedulesPage() {
   };
 
   const handleSave = () => {
-    if (!db || !formData.tripCode || !formData.routeId || !formData.vesselId) return;
+    if (!db || !formData.tripCode || !formData.routeId) return;
     
     const tripType = formData.specialDates.length > 0 ? "Special" : "Daily";
     const timestamp = new Date().toISOString();
@@ -189,7 +192,10 @@ export default function SchedulesPage() {
   };
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
-  const getVesselName = (id: string) => vessels?.find(v => v.id === id)?.name || "Unknown Vessel";
+  const getVesselName = (id: string) => {
+    if (!id) return "Pending Assignment";
+    return vessels?.find(v => v.id === id)?.name || "Unknown Vessel";
+  };
 
   const isLoading = isUserLoading || isSchedulesLoading;
 
@@ -250,7 +256,7 @@ export default function SchedulesPage() {
                     <div className="bg-secondary/20 p-3 rounded-lg space-y-2">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground uppercase font-bold tracking-tighter">Vessel</span>
-                        <span className="font-bold flex items-center gap-1">
+                        <span className={`font-bold flex items-center gap-1 ${!schedule.vesselId ? 'text-orange-600 italic' : ''}`}>
                           <Ship className="h-3 w-3" /> {getVesselName(schedule.vesselId)}
                         </span>
                       </div>
@@ -350,15 +356,16 @@ export default function SchedulesPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Assigned Vessel</Label>
+                    <Label>Assigned Vessel (Optional)</Label>
                     <Select 
-                      value={formData.vesselId} 
+                      value={formData.vesselId || "unassigned"} 
                       onValueChange={handleVesselChange}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select Vessel" />
+                        <SelectValue placeholder="Pending Assignment" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="unassigned" className="text-orange-600 italic">TBA / Pending Assignment</SelectItem>
                         {vessels?.map(v => (
                           <SelectItem key={v.id} value={v.id}>
                             {v.name} {v.status !== 'Operational' ? `(${v.status})` : ''}
@@ -366,6 +373,7 @@ export default function SchedulesPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-[10px] text-muted-foreground italic">Vessel assignment can be finalized on the day of departure.</p>
                   </div>
                 </div>
 
@@ -460,7 +468,7 @@ export default function SchedulesPage() {
               <Button 
                 onClick={handleSave} 
                 className="bg-primary text-white"
-                disabled={!formData.tripCode || !formData.routeId || !formData.vesselId}
+                disabled={!formData.tripCode || !formData.routeId}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" /> {editingSchedule ? "Save Changes" : "Create Schedule"}
               </Button>

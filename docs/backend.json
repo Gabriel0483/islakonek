@@ -167,7 +167,7 @@
         "id": { "type": "string" },
         "tripCode": { "type": "string", "description": "User-defined trip code, e.g. ML-101." },
         "routeId": { "type": "string" },
-        "vesselId": { "type": "string" },
+        "vesselId": { "type": "string", "description": "ID of the assigned vessel. Optional if assignment is pending." },
         "departureTime": { "type": "string", "description": "Time in HH:mm format" },
         "passengerCapacity": { "type": "number", "description": "Seat capacity for this specific schedule." },
         "type": { "type": "string", "enum": ["Daily", "Special"] },
@@ -177,7 +177,7 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "tripCode", "routeId", "vesselId", "departureTime", "type", "passengerCapacity"]
+      "required": ["id", "tripCode", "routeId", "departureTime", "type", "passengerCapacity"]
     },
     "Booking": {
       "$schema": "http://json-schema.org/draft-07/schema#",
