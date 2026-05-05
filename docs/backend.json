@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "Port": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Port",
+      "type": "object",
+      "description": "Represents a maritime port or terminal where vessels can depart from or arrive at. Admin staff can manage these entries.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Port entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The official or common name of the port."
+        },
+        "code": {
+          "type": "string",
+          "description": "A unique short code or identifier for the port, if applicable (e.g., an internal operational code)."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city where the port is geographically located."
+        },
+        "country": {
+          "type": "string",
+          "description": "The country where the port is geographically located."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "The geographic latitude coordinate of the port, useful for mapping and location services."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "The geographic longitude coordinate of the port, useful for mapping and location services."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description or additional information about the port facilities or location."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the port record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the port record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "city",
+        "country",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/ports/{portId}",
+        "definition": {
+          "entityName": "Port",
+          "schema": {
+            "$ref": "#/backend/entities/Port"
+          },
+          "description": "A top-level collection containing all maritime port definitions. Access (create, read, update, delete) is restricted exclusively to admin staff. Authorization is managed via a global admin roles collection (e.g., /roles_admin/{userId}), meaning no denormalized authorization fields are included within the 'Port' document itself.",
+          "params": [
+            {
+              "name": "portId",
+              "description": "The unique identifier for a specific Port entity."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for managing 'Port' entities leverages a top-level collection to ensure clear security boundaries and adhere to core design principles. All 'Port' documents will reside in the `/ports` collection. This design ensures that all documents within the `/ports` collection share a homogeneous security posture, meaning every port entry requires the same level of authorization for access.\n\n**Authorization Independence:** To achieve authorization independence for 'Port' management, access control will rely on a global role system rather than hierarchical document checks. Admin staff authorization will be determined by checking for the existence of a document in a dedicated global roles collection, typically `/roles_admin/{userId}`. The presence of a document at `/roles_admin/$(request.auth.uid)` indicates that the requesting user is an administrator. This approach completely eliminates the need for `get()` operations within security rules for the `/ports` collection, as authorization is resolved externally and atomically. Consequently, 'Port' documents do not require any denormalized authorization fields (like `ownerId` or `members` map) within their own structure, simplifying the schema and reducing data redundancy at the document level.\n\n**QAPs (Query Access Patterns):** By segregating all 'Port' entities into the `/ports` collection and applying an admin-only access rule based on the global `/roles_admin` collection, 'list' operations are inherently secure and efficient. Since all documents in `/ports` have the same security requirements, security rules can grant or deny access to the entire collection based on the user's admin status. This means a client application can perform `list` queries without needing to implement client-side filtering or relying on server-side filters (as rules are not filters), directly supporting the QAP principle. If an admin user queries `/ports`, they will receive all documents; if a non-admin user queries, access will be denied by the rules, ensuring data integrity and performance."
+  }
+}

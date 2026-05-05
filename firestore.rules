@@ -1,0 +1,109 @@
+/**
+ * FIRESTORE SECURITY RULES
+ *
+ * Core Philosophy:
+ * This ruleset implements a centralized administrative security model. Access to sensitive
+ * maritime data is restricted to verified personnel whose accounts are authorized via a 
+ * global administrative roles registry.
+ *
+ * Data Structure:
+ * - /ports/{portId}: A top-level collection containing global maritime port definitions.
+ * - /roles_admin/{userId}: A restricted collection used as an authorization registry to 
+ *   identify users with administrative privileges.
+ *
+ * Key Security Decisions:
+ * 1. Global Admin Authorization: Access to create, read, update, or delete port data is 
+ *    contingent upon the user's UID being present in the `/roles_admin` collection.
+ * 2. Relational Integrity: On creation, the internal document `id` must match the Firestore 
+ *    document ID to ensure data consistency.
+ * 3. Immutable Identifiers: The `id` field of a port is immutable once created to prevent 
+ *    orphaned records or data corruption.
+ * 4. Prototyping Flexibility: While authorization is strictly enforced based on roles, 
+ *    the schema of the port data (names, coordinates, descriptions) remains flexible to 
+ *    support rapid feature iteration.
+ *
+ * Denormalization for Authorization:
+ * This model utilizes a "Global Role" pattern. By checking for the existence of a document 
+ * in `/roles_admin/$(request.auth.uid)`, the rules perform a high-performance check for 
+ * administrative status without requiring complex query-based authorization logic within 
+ * the port documents themselves.
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if the request is made by an authenticated user.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user has an entry in the admin roles collection.
+     * This is the primary gatekeeper for administrative actions.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * @description Verifies that the document exists in the database.
+     * Used to prevent operations on non-existent records.
+     */
+    function isExisting(resource) {
+      return resource != null;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the admin roles registry. 
+     * In a production environment, this collection is typically managed by a super-admin 
+     * or a secure backend process.
+     * @path /roles_admin/{userId}
+     */
+    match /roles_admin/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list: if isAdmin();
+      allow create, update, delete: if false; // Managed by backend/super-admin only
+    }
+
+    /**
+     * @description Controls access to the maritime ports collection. All operations 
+     * require administrative privileges verified via the isAdmin() check.
+     * @path /ports/{portId}
+     * @allow (get) If user is an admin.
+     * @allow (create) If user is an admin and the data 'id' matches the path 'portId'.
+     * @deny (list) If the user is not authenticated or lacks an admin role document.
+     * @principle Role-based access control using a global admin registry and path-data integrity.
+     */
+    match /ports/{portId} {
+      
+      // Read Operations
+      allow get, list: if isAdmin();
+
+      // Write Operations
+      
+      /**
+       * On creation, we ensure the user is an admin and that the document's 
+       * internal ID field matches the Firestore document ID.
+       */
+      allow create: if isAdmin() && request.resource.data.id == portId;
+
+      /**
+       * On update, we ensure the user is an admin, the document exists, 
+       * and the critical 'id' field has not been changed.
+       */
+      allow update: if isAdmin() && isExisting(resource) && request.resource.data.id == resource.data.id;
+
+      /**
+       * On delete, we ensure the user is an admin and the document exists.
+       */
+      allow delete: if isAdmin() && isExisting(resource);
+    }
+  }
+}
