@@ -83,7 +83,8 @@ export default function DeskBookingsPage() {
   const handleCreateBooking = () => {
     if (!db || !formData.routeId || !formData.scheduleId || !formData.fareId || !formData.passengerName) return;
 
-    const newId = Math.random().toString(36).substr(2, 9).toUpperCase();
+    // Generate 6-digit alpha-numeric booking ID
+    const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 

@@ -133,7 +133,8 @@ export default function TripsPage() {
     if (!db || !selectedSchedule || !bookingFormData.fareId || !bookingFormData.passengerName) return;
 
     const selectedFare = fares?.find(f => f.id === bookingFormData.fareId);
-    const newId = Math.random().toString(36).substr(2, 9).toUpperCase();
+    // Generate 6-digit alpha-numeric booking ID
+    const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 
@@ -154,7 +155,7 @@ export default function TripsPage() {
 
     setIsBookingOpen(false);
     setBookingFormData({ passengerName: "", passengerContact: "", fareId: "" });
-    alert("Booking requested successfully! Please proceed to the terminal to confirm your payment.");
+    alert(`Booking requested successfully! Your Reservation ID is ${newId}. Please proceed to the terminal to confirm your payment.`);
   };
 
   const availableFares = fares?.filter(f => f.routeId === selectedSchedule?.routeId);
