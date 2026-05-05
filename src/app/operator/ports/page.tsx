@@ -13,7 +13,7 @@ import {
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { 
-  addDocumentNonBlocking, 
+  setDocumentNonBlocking,
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from "@/firebase/non-blocking-updates";
@@ -32,13 +32,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function PortsPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   
-  // Only create the collection reference once the user is authenticated.
-  // This prevents permission errors during initial load.
   const portsCollection = useMemoFirebase(() => {
     if (!db || !user) return null;
     return collection(db, "ports");
@@ -94,7 +93,7 @@ export default function PortsPage() {
   };
 
   const handleSave = () => {
-    if (!portsCollection) return;
+    if (!db || !portsCollection) return;
     
     const timestamp = new Date().toISOString();
     if (editingPort) {
@@ -106,12 +105,12 @@ export default function PortsPage() {
     } else {
       const newId = Math.random().toString(36).substr(2, 9);
       const portRef = doc(db, "ports", newId);
-      addDocumentNonBlocking(portsCollection, {
+      setDocumentNonBlocking(portRef, {
         ...formData,
         id: newId,
         createdAt: timestamp,
         updatedAt: timestamp
-      });
+      }, { merge: true });
     }
     setIsDialogOpen(false);
   };
@@ -211,74 +210,76 @@ export default function PortsPage() {
                 Fill in the details below to define a maritime port.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Port Name</Label>
-                  <Input 
-                    id="name" 
-                    value={formData.name} 
-                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  />
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Port Name</Label>
+                    <Input 
+                      id="name" 
+                      value={formData.name} 
+                      onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="code">Port Code</Label>
+                    <Input 
+                      id="code" 
+                      value={formData.code} 
+                      onChange={(e) => setFormData({...formData, code: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input 
+                      id="city" 
+                      value={formData.city} 
+                      onChange={(e) => setFormData({...formData, city: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <Input 
+                      id="country" 
+                      value={formData.country} 
+                      onChange={(e) => setFormData({...formData, country: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="latitude">Latitude</Label>
+                    <Input 
+                      id="latitude" 
+                      type="number"
+                      step="any"
+                      value={formData.latitude} 
+                      onChange={(e) => setFormData({...formData, latitude: parseFloat(e.target.value) || 0})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="longitude">Longitude</Label>
+                    <Input 
+                      id="longitude" 
+                      type="number"
+                      step="any"
+                      value={formData.longitude} 
+                      onChange={(e) => setFormData({...formData, longitude: parseFloat(e.target.value) || 0})} 
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="code">Port Code</Label>
-                  <Input 
-                    id="code" 
-                    value={formData.code} 
-                    onChange={(e) => setFormData({...formData, code: e.target.value})} 
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea 
+                    id="description" 
+                    value={formData.description} 
+                    onChange={(e) => setFormData({...formData, description: e.target.value})} 
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input 
-                    id="city" 
-                    value={formData.city} 
-                    onChange={(e) => setFormData({...formData, city: e.target.value})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input 
-                    id="country" 
-                    value={formData.country} 
-                    onChange={(e) => setFormData({...formData, country: e.target.value})} 
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="latitude">Latitude</Label>
-                  <Input 
-                    id="latitude" 
-                    type="number"
-                    step="any"
-                    value={formData.latitude} 
-                    onChange={(e) => setFormData({...formData, latitude: parseFloat(e.target.value) || 0})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="longitude">Longitude</Label>
-                  <Input 
-                    id="longitude" 
-                    type="number"
-                    step="any"
-                    value={formData.longitude} 
-                    onChange={(e) => setFormData({...formData, longitude: parseFloat(e.target.value) || 0})} 
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description" 
-                  value={formData.description} 
-                  onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                />
-              </div>
-            </div>
+            </ScrollArea>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSave} className="bg-primary text-white">
