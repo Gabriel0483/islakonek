@@ -1,8 +1,20 @@
 
 "use client";
 
-import { Ship, LayoutDashboard, AlertCircle, CheckCircle2, MapPin, Waypoints, Banknote, Wrench, CalendarDays } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { 
+  Ship, 
+  AlertCircle, 
+  CheckCircle2, 
+  MapPin, 
+  Waypoints, 
+  Banknote, 
+  Wrench, 
+  CalendarDays,
+  ArrowRight,
+  LayoutGrid
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { OperatorSidebar } from "@/components/operator-sidebar";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -22,11 +34,6 @@ export default function OperatorDashboard() {
     return collection(db, "routes");
   }, [db, user]);
 
-  const faresRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return collection(db, "fares");
-  }, [db, user]);
-
   const vesselsRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return collection(db, "vessels");
@@ -39,38 +46,56 @@ export default function OperatorDashboard() {
 
   const { data: ports } = useCollection(portsRef);
   const { data: routes } = useCollection(routesRef);
-  const { data: fares } = useCollection(faresRef);
   const { data: vessels } = useCollection(vesselsRef);
   const { data: schedules } = useCollection(schedulesRef);
 
   const stats = [
+    { label: "Active Ports", value: ports?.length || 0, icon: MapPin, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "Routes Defined", value: routes?.length || 0, icon: Waypoints, color: "text-accent", bg: "bg-accent/10" },
+    { label: "Trip Schedules", value: schedules?.length || 0, icon: CalendarDays, color: "text-orange-500", bg: "bg-orange-500/10" },
+    { label: "Fleet Size", value: vessels?.length || 0, icon: Ship, color: "text-primary", bg: "bg-primary/10" }
+  ];
+
+  const managementModules = [
     {
-      label: "Active Ports",
-      value: ports?.length || 0,
+      title: "Port Registry",
+      description: "Manage maritime terminals and port facilities across the islands.",
       icon: MapPin,
+      link: "/operator/ports",
       color: "text-blue-500",
-      bg: "bg-blue-500/10"
+      count: ports?.length || 0
     },
     {
-      label: "Routes Defined",
-      value: routes?.length || 0,
+      title: "Route Management",
+      description: "Establish shipping routes connecting ports with specific demographics.",
       icon: Waypoints,
+      link: "/operator/routes",
       color: "text-accent",
-      bg: "bg-accent/10"
+      count: routes?.length || 0
     },
     {
-      label: "Trip Schedules",
-      value: schedules?.length || 0,
-      icon: CalendarDays,
+      title: "Fare Management",
+      description: "Configure pricing rules, VAT status, and discount tiers for segments.",
+      icon: Banknote,
+      link: "/operator/fares",
+      color: "text-green-500",
+      count: "Pricing Active"
+    },
+    {
+      title: "Fleet & Maintenance",
+      description: "Registry for your maritime vessels and maintenance scheduling logs.",
+      icon: Wrench,
+      link: "/operator/fleet",
       color: "text-orange-500",
-      bg: "bg-orange-500/10"
+      count: vessels?.length || 0
     },
     {
-      label: "Fleet Size",
-      value: vessels?.length || 0,
-      icon: Ship,
+      title: "Trip Schedules",
+      description: "Coordinate daily and special peak-season trips for active routes.",
+      icon: CalendarDays,
+      link: "/operator/schedules",
       color: "text-primary",
-      bg: "bg-primary/10"
+      count: schedules?.length || 0
     }
   ];
 
@@ -85,10 +110,10 @@ export default function OperatorDashboard() {
           <h1 className="text-lg font-bold font-headline text-primary">Dashboard Overview</h1>
         </header>
         
-        <main className="flex flex-1 flex-col gap-6 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <main className="flex flex-1 flex-col gap-8 p-6">
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat, i) => (
-              <Card key={i} className="border-none shadow-sm bg-white overflow-hidden group">
+              <Card key={i} className="border-none shadow-sm bg-white group transition-all hover:shadow-md">
                 <CardContent className="p-6 flex items-center gap-4">
                   <div className={`${stat.bg} ${stat.color} p-3 rounded-xl transition-transform group-hover:scale-110`}>
                     <stat.icon className="h-6 w-6" />
@@ -100,21 +125,53 @@ export default function OperatorDashboard() {
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <LayoutGrid className="h-5 w-5 text-accent" />
+              <h2 className="text-xl font-bold font-headline">Operations Hub</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {managementModules.map((module, i) => (
+                <Link href={module.link} key={i}>
+                  <Card className="h-full border-none shadow-sm bg-white hover:ring-2 hover:ring-accent/50 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-3 opacity-5">
+                       <module.icon className="h-24 w-24 -rotate-12 translate-x-8 translate-y-8" />
+                    </div>
+                    <CardHeader className="pb-2">
+                      <div className={`p-2 w-fit rounded-lg bg-secondary mb-2 group-hover:bg-accent group-hover:text-primary transition-colors`}>
+                        <module.icon className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg font-bold">{module.title}</CardTitle>
+                      <CardDescription className="text-xs leading-relaxed">
+                        {module.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4 flex justify-between items-center">
+                      <span className="text-xs font-bold text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                        {typeof module.count === 'number' ? `${module.count} items` : module.count}
+                      </span>
+                      <div className="flex items-center gap-1 text-xs font-bold text-accent group-hover:gap-2 transition-all">
+                        Configure <ArrowRight className="h-3 w-3" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="md:col-span-2 border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden p-8">
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Ship className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
               </div>
               <div className="relative z-10 space-y-4 max-w-2xl">
-                <div className="inline-flex items-center gap-2 bg-accent/20 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  <LayoutDashboard className="h-4 w-4" />
-                  Fleet Operations Console
-                </div>
-                <h2 className="text-3xl font-black font-headline tracking-tight">Welcome to Isla Konek Ops</h2>
+                <h2 className="text-3xl font-black font-headline tracking-tight">Welcome back, Captain</h2>
                 <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                  Your maritime data is synchronized and secure. Manage your vessels, ports, routes, and schedules from a unified interface.
+                  Your maritime data is synchronized and secure. Use the hub above to manage your island connections.
                 </p>
               </div>
             </Card>
@@ -123,7 +180,7 @@ export default function OperatorDashboard() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 text-destructive" />
-                  Operational Status
+                  Fleet Status
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -132,34 +189,28 @@ export default function OperatorDashboard() {
                     <Wrench className="h-5 w-5" />
                     <div>
                       <p className="font-bold text-sm">{maintenanceNeeded} Vessel(s) in Maintenance</p>
-                      <p className="text-xs">Schedule updates required in Fleet module.</p>
+                      <p className="text-xs">Service schedule required.</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground border rounded-xl border-dashed bg-secondary/20">
+                  <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground border rounded-xl border-dashed bg-secondary/10">
                     <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
-                    <p className="font-bold text-primary text-sm">Fleet Status: Nominal</p>
-                    <p className="text-[10px]">All registered vessels are operational.</p>
+                    <p className="font-bold text-primary text-sm">Nominal Status</p>
+                    <p className="text-[10px]">All vessels operational.</p>
                   </div>
                 )}
                 
                 <div className="pt-4 border-t space-y-2">
                    <div className="flex justify-between text-xs font-medium">
-                      <span className="text-muted-foreground">Database Sync:</span>
+                      <span className="text-muted-foreground">Sync State:</span>
                       <span className="text-green-600 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Active
-                      </span>
-                   </div>
-                   <div className="flex justify-between text-xs font-medium">
-                      <span className="text-muted-foreground">Auth Token:</span>
-                      <span className="text-green-600 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Verified
+                        <CheckCircle2 className="h-3 w-3" /> Real-time Active
                       </span>
                    </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </section>
         </main>
       </SidebarInset>
     </SidebarProvider>

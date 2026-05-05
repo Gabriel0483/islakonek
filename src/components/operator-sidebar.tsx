@@ -6,13 +6,9 @@ import { usePathname } from "next/navigation";
 import { 
   Ship, 
   LayoutDashboard, 
-  MapPin,
   Settings, 
   LogOut,
-  Waypoints,
-  Banknote,
-  Wrench,
-  CalendarDays
+  Sparkles
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,7 +27,7 @@ export function OperatorSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="inset" collapsible="icon" className="border-r-0 bg-sidebar text-sidebar-foreground">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="bg-accent p-1.5 rounded-lg shrink-0">
@@ -45,84 +41,32 @@ export function OperatorSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-white/50 px-4 mb-2">Management</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/50 px-4 mb-2">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild 
                   isActive={pathname === "/operator"}
-                  tooltip="Overview"
+                  tooltip="Dashboard"
                   className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
                 >
                   <Link href="/operator">
                     <LayoutDashboard />
-                    <span>Overview</span>
+                    <span>Dashboard</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild 
-                  isActive={pathname === "/operator/ports"}
-                  tooltip="Ports"
+                  isActive={pathname === "/operator/optimize"}
+                  tooltip="AI Optimization"
                   className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
                 >
-                  <Link href="/operator/ports">
-                    <MapPin />
-                    <span>Ports</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={pathname === "/operator/routes"}
-                  tooltip="Routes"
-                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
-                >
-                  <Link href="/operator/routes">
-                    <Waypoints />
-                    <span>Routes</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={pathname === "/operator/fares"}
-                  tooltip="Fares"
-                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
-                >
-                  <Link href="/operator/fares">
-                    <Banknote />
-                    <span>Fares</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={pathname === "/operator/fleet"}
-                  tooltip="Fleet & Maintenance"
-                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
-                >
-                  <Link href="/operator/fleet">
-                    <Wrench />
-                    <span>Fleet & Maintenance</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={pathname === "/operator/schedules"}
-                  tooltip="Trip Schedules"
-                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
-                >
-                  <Link href="/operator/schedules">
-                    <CalendarDays />
-                    <span>Trip Schedules</span>
+                  <Link href="/operator/optimize">
+                    <Sparkles />
+                    <span>AI Optimization</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
