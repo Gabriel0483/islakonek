@@ -15,7 +15,8 @@ import {
   Eye,
   MoreVertical,
   Banknote,
-  Calendar
+  Calendar,
+  Tag
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -69,6 +70,7 @@ export default function ManageBookingsPage() {
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
   const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
+  const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
   const handleUpdateStatus = (id: string, status: 'Paid' | 'Cancelled') => {
     if (!db) return;
@@ -157,6 +159,10 @@ export default function ManageBookingsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <Tag className="h-2.5 w-2.5 text-accent" />
+                              <span className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</span>
+                            </div>
                             <div className="text-xs font-bold">{getRouteName(booking.routeId)}</div>
                             <div className="text-[10px] text-muted-foreground flex items-center gap-3">
                                <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {getDeparture(booking.scheduleId)}</span>

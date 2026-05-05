@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Ship, 
@@ -22,7 +22,8 @@ import {
   Ticket,
   User,
   Phone,
-  Banknote
+  Banknote,
+  Tag
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -87,13 +88,14 @@ export default function TripsPage() {
       
       if (!schedule.isActive) return false;
 
-      // Filter by Search Query (Route Name or Port Name)
+      // Filter by Search Query (Route Name, Port Name, or Trip Code)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesRoute = route?.name.toLowerCase().includes(query);
+        const matchesCode = schedule.tripCode?.toLowerCase().includes(query);
         const originPort = ports?.find(p => p.id === route?.originPortId)?.name.toLowerCase().includes(query);
         const destPort = ports?.find(p => p.id === route?.destinationPortId)?.name.toLowerCase().includes(query);
-        if (!matchesRoute && !originPort && !destPort) return false;
+        if (!matchesRoute && !originPort && !destPort && !matchesCode) return false;
       }
 
       // Filter by Vessel Type
@@ -111,7 +113,6 @@ export default function TripsPage() {
       const vessel = vessels?.find(v => v.id === schedule.vesselId);
       const usedSeats = bookings?.filter(b => b.scheduleId === schedule.id && b.paymentStatus !== "Cancelled").length || 0;
       
-      // Fallback to vessel capacity if schedule capacity is missing or 0
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
       
       return {
@@ -240,7 +241,7 @@ export default function TripsPage() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search route or port..." 
+                  placeholder="Search Trip ID, route, or port..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 h-12 bg-white border-none shadow-sm" 
@@ -275,6 +276,9 @@ export default function TripsPage() {
                             {trip.vessel?.type || "Standard"}
                           </Badge>
                           <span className="text-xs text-muted-foreground font-medium">{trip.type} Schedule</span>
+                          <div className="flex items-center gap-1 text-[10px] font-black text-primary/50 uppercase ml-auto">
+                             <Tag className="h-3 w-3" /> {trip.tripCode}
+                          </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-7 items-center gap-4">
@@ -355,7 +359,7 @@ export default function TripsPage() {
               <Ticket className="h-5 w-5 text-accent" /> Secure Your Seat
             </DialogTitle>
             <DialogDescription>
-              Trip: {selectedSchedule?.route?.name} at {selectedSchedule?.departureTime}
+              Trip: <span className="font-bold text-primary">{selectedSchedule?.tripCode}</span> ({selectedSchedule?.route?.name}) at {selectedSchedule?.departureTime}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[80vh] pr-4">

@@ -12,7 +12,8 @@ import {
   Ship,
   Clock,
   Banknote,
-  ClipboardList
+  ClipboardList,
+  Tag
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -112,6 +113,7 @@ export default function DeskBookingsPage() {
     .slice(0, 10);
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
+  const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
   const getSeatsUsed = (scheduleId: string) => {
     return bookings?.filter(b => b.scheduleId === scheduleId && b.paymentStatus !== "Cancelled").length || 0;
@@ -180,7 +182,7 @@ export default function DeskBookingsPage() {
                     <TableRow>
                       <TableHead>Ticket ID</TableHead>
                       <TableHead>Passenger</TableHead>
-                      <TableHead>Route</TableHead>
+                      <TableHead>Trip/Route</TableHead>
                       <TableHead>Amount</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -189,7 +191,10 @@ export default function DeskBookingsPage() {
                       <TableRow key={booking.id}>
                         <TableCell className="font-mono text-[10px] font-bold">#{booking.id}</TableCell>
                         <TableCell className="font-bold">{booking.passengerName}</TableCell>
-                        <TableCell className="text-xs">{getRouteName(booking.routeId)}</TableCell>
+                        <TableCell>
+                          <div className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</div>
+                          <div className="text-[10px] text-muted-foreground">{getRouteName(booking.routeId)}</div>
+                        </TableCell>
                         <TableCell className="font-black text-primary">₱{booking.finalFare?.toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
@@ -234,7 +239,7 @@ export default function DeskBookingsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {availableSchedules?.map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.departureTime} ({vessels?.find(v => v.id === s.vesselId)?.name})</SelectItem>
+                          <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime} ({vessels?.find(v => v.id === s.vesselId)?.name})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

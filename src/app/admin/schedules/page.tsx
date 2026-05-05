@@ -16,7 +16,8 @@ import {
   Calendar,
   CheckCircle2,
   X,
-  Users
+  Users,
+  Tag
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -78,6 +79,7 @@ export default function SchedulesPage() {
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
 
   const [formData, setFormData] = useState({
+    tripCode: "",
     routeId: "",
     vesselId: "",
     departureTime: "08:00",
@@ -92,13 +94,16 @@ export default function SchedulesPage() {
 
   const filteredSchedules = schedules?.filter(s => {
     const route = routes?.find(r => r.id === s.routeId);
-    return route?.name.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = route?.name.toLowerCase().includes(search.toLowerCase()) || 
+                          s.tripCode?.toLowerCase().includes(search.toLowerCase());
+    return matchesSearch;
   });
 
   const handleOpenDialog = (schedule: any = null) => {
     if (schedule) {
       setEditingSchedule(schedule);
       setFormData({
+        tripCode: schedule.tripCode || "",
         routeId: schedule.routeId,
         vesselId: schedule.vesselId,
         departureTime: schedule.departureTime,
@@ -111,6 +116,7 @@ export default function SchedulesPage() {
     } else {
       setEditingSchedule(null);
       setFormData({
+        tripCode: "",
         routeId: "",
         vesselId: "",
         departureTime: "08:00",
@@ -145,12 +151,13 @@ export default function SchedulesPage() {
   };
 
   const handleSave = () => {
-    if (!db || !schedulesCollection) return;
+    if (!db || !schedulesCollection || !formData.tripCode) return;
     
     const tripType = formData.specialDates.length > 0 ? "Special" : "Daily";
     const timestamp = new Date().toISOString();
     const payload = {
       ...formData,
+      tripCode: formData.tripCode.toUpperCase(),
       passengerCapacity: Number(formData.passengerCapacity),
       type: tripType,
       updatedAt: timestamp
@@ -196,7 +203,7 @@ export default function SchedulesPage() {
             <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search schedules by route name..." 
+                placeholder="Search schedules by route or Trip ID..." 
                 className="pl-10 h-10 bg-white"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -220,6 +227,10 @@ export default function SchedulesPage() {
                     {schedule.type}
                   </div>
                   <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Tag className="h-3 w-3 text-accent" />
+                      <span className="text-[10px] font-black text-accent uppercase tracking-widest">{schedule.tripCode}</span>
+                    </div>
                     <CardTitle className="text-lg font-bold text-primary flex items-center gap-2">
                       <Waypoints className="h-4 w-4 text-accent" />
                       {getRouteName(schedule.routeId)}
@@ -300,6 +311,20 @@ export default function SchedulesPage() {
             </DialogHeader>
             <ScrollArea className="max-h-[70vh] pr-4">
               <div className="grid gap-6 py-4">
+                <div className="space-y-2">
+                  <Label>Trip ID / Code</Label>
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="e.g. ML-101" 
+                      className="pl-10 uppercase font-black"
+                      value={formData.tripCode} 
+                      onChange={(e) => setFormData({...formData, tripCode: e.target.value})} 
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Internal identifier for this specific voyage.</p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Maritime Route</Label>
@@ -423,7 +448,11 @@ export default function SchedulesPage() {
             </ScrollArea>
             <DialogFooter className="pt-4 border-t">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave} className="bg-primary text-white">
+              <Button 
+                onClick={handleSave} 
+                className="bg-primary text-white"
+                disabled={!formData.tripCode || !formData.routeId || !formData.vesselId}
+              >
                 <CheckCircle2 className="h-4 w-4 mr-2" /> {editingSchedule ? "Save Changes" : "Create Schedule"}
               </Button>
             </DialogFooter>
