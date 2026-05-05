@@ -11,12 +11,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    match /roles_admin/{userId} {
-      allow get: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update, delete: if false;
-    }
-
     match /ports/{portId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
@@ -28,6 +22,16 @@ service cloud.firestore {
     }
 
     match /fares/{fareId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /vessels/{vesselId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /maintenance/{recordId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
     }

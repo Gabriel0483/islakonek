@@ -128,6 +128,36 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "routeId", "segmentId", "baseFare", "finalFare"]
+    },
+    "Vessel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vessel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["RoRo", "FastCraft", "Cargo Ship", "Catamaran"] },
+        "passengerCapacity": { "type": "number" },
+        "cargoCapacityTEU": { "type": "number" },
+        "status": { "type": "string", "enum": ["Operational", "Maintenance", "Out of Service"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "type", "status"]
+    },
+    "MaintenanceRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MaintenanceRecord",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "vesselId": { "type": "string" },
+        "description": { "type": "string" },
+        "scheduledDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Scheduled", "In Progress", "Completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "vesselId", "description", "scheduledDate", "status"]
     }
   },
   "auth": {
@@ -145,13 +175,7 @@
           "schema": {
             "$ref": "#/backend/entities/Port"
           },
-          "description": "A top-level collection containing all maritime port definitions.",
-          "params": [
-            {
-              "name": "portId",
-              "description": "The unique identifier for a specific Port entity."
-            }
-          ]
+          "description": "A top-level collection containing all maritime port definitions."
         }
       },
       {
@@ -161,13 +185,7 @@
           "schema": {
             "$ref": "#/backend/entities/Route"
           },
-          "description": "A top-level collection containing maritime route definitions.",
-          "params": [
-            {
-              "name": "routeId",
-              "description": "The unique identifier for a specific Route."
-            }
-          ]
+          "description": "A top-level collection containing maritime route definitions."
         }
       },
       {
@@ -177,13 +195,27 @@
           "schema": {
             "$ref": "#/backend/entities/Fare"
           },
-          "description": "A collection containing fare pricing rules for route segments.",
-          "params": [
-            {
-              "name": "fareId",
-              "description": "Unique identifier for a fare rule."
-            }
-          ]
+          "description": "A collection containing fare pricing rules for route segments."
+        }
+      },
+      {
+        "path": "/vessels/{vesselId}",
+        "definition": {
+          "entityName": "Vessel",
+          "schema": {
+            "$ref": "#/backend/entities/Vessel"
+          },
+          "description": "A collection of vessels in the fleet."
+        }
+      },
+      {
+        "path": "/maintenance/{recordId}",
+        "definition": {
+          "entityName": "MaintenanceRecord",
+          "schema": {
+            "$ref": "#/backend/entities/MaintenanceRecord"
+          },
+          "description": "Historical and scheduled maintenance records for vessels."
         }
       }
     ]
