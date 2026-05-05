@@ -94,8 +94,10 @@ export default function SchedulesPage() {
 
   const filteredSchedules = schedules?.filter(s => {
     const route = routes?.find(r => r.id === s.routeId);
-    const matchesSearch = route?.name.toLowerCase().includes(search.toLowerCase()) || 
-                          s.tripCode?.toLowerCase().includes(search.toLowerCase());
+    const routeName = route?.name || "";
+    const tripCode = s.tripCode || "";
+    const matchesSearch = routeName.toLowerCase().includes(search.toLowerCase()) || 
+                          tripCode.toLowerCase().includes(search.toLowerCase());
     return matchesSearch;
   });
 
@@ -175,6 +177,7 @@ export default function SchedulesPage() {
   };
 
   const handleDelete = (id: string) => {
+    if (!db) return;
     if (confirm("Are you sure you want to delete this trip schedule?")) {
       const scheduleRef = doc(db, "schedules", id);
       deleteDocumentNonBlocking(scheduleRef);
@@ -250,7 +253,7 @@ export default function SchedulesPage() {
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground uppercase font-bold tracking-tighter">Capacity</span>
                         <span className="font-bold flex items-center gap-1">
-                          <Users className="h-3 w-3" /> {schedule.passengerCapacity || vessels?.find(v => v.id === schedule.vesselId)?.passengerCapacity || 0} Seats
+                          <Users className="h-3 w-3" /> {schedule.passengerCapacity || 0} Seats
                         </span>
                       </div>
                       <div className="pt-2 border-t">
