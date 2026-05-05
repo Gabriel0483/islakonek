@@ -177,6 +177,27 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "routeId", "vesselId", "departureTime", "type", "passengerCapacity"]
+    },
+    "Booking": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Booking",
+      "type": "object",
+      "description": "Represents a ticket booking made at the desk or online.",
+      "properties": {
+        "id": { "type": "string" },
+        "scheduleId": { "type": "string" },
+        "routeId": { "type": "string" },
+        "fareId": { "type": "string" },
+        "passengerName": { "type": "string" },
+        "passengerContact": { "type": "string" },
+        "segmentLabel": { "type": "string" },
+        "finalFare": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["Paid", "Pending", "Cancelled"] },
+        "bookingSource": { "type": "string", "enum": ["Desk", "Public"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "scheduleId", "routeId", "passengerName", "finalFare", "paymentStatus"]
     }
   },
   "auth": {
@@ -245,6 +266,16 @@
             "$ref": "#/backend/entities/TripSchedule"
           },
           "description": "Daily and special trip schedules for maritime routes."
+        }
+      },
+      {
+        "path": "/bookings/{bookingId}",
+        "definition": {
+          "entityName": "Booking",
+          "schema": {
+            "$ref": "#/backend/entities/Booking"
+          },
+          "description": "Records of passenger bookings and ticket sales."
         }
       }
     ]

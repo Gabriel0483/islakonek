@@ -12,7 +12,8 @@ import {
   Wrench, 
   CalendarDays,
   ArrowRight,
-  LayoutGrid
+  LayoutGrid,
+  Ticket
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -44,19 +45,33 @@ export default function OperatorDashboard() {
     return collection(db, "schedules");
   }, [db, user]);
 
+  const bookingsRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return collection(db, "bookings");
+  }, [db, user]);
+
   const { data: ports } = useCollection(portsRef);
   const { data: routes } = useCollection(routesRef);
   const { data: vessels } = useCollection(vesselsRef);
   const { data: schedules } = useCollection(schedulesRef);
+  const { data: bookings } = useCollection(bookingsRef);
 
   const stats = [
     { label: "Active Ports", value: ports?.length || 0, icon: MapPin, color: "text-blue-500", bg: "bg-blue-500/10" },
     { label: "Routes Defined", value: routes?.length || 0, icon: Waypoints, color: "text-accent", bg: "bg-accent/10" },
-    { label: "Trip Schedules", value: schedules?.length || 0, icon: CalendarDays, color: "text-orange-500", bg: "bg-orange-500/10" },
+    { label: "Bookings Today", value: bookings?.length || 0, icon: Ticket, color: "text-green-500", bg: "bg-green-500/10" },
     { label: "Fleet Size", value: vessels?.length || 0, icon: Ship, color: "text-primary", bg: "bg-primary/10" }
   ];
 
   const managementModules = [
+    {
+      title: "Desk Bookings",
+      description: "Manage counter ticket sales, passenger manifests, and payments.",
+      icon: Ticket,
+      link: "/operator/bookings",
+      color: "text-green-600",
+      count: bookings?.length || 0
+    },
     {
       title: "Port Registry",
       description: "Manage maritime terminals and port facilities across the islands.",
