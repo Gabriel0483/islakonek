@@ -5,14 +5,8 @@ import { usePathname } from "next/navigation";
 import { 
   Ship, 
   LayoutDashboard, 
-  Route, 
   Settings, 
-  TrendingUp, 
-  Calendar, 
-  Users, 
-  CreditCard,
-  LogOut,
-  Sparkles
+  LogOut
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,19 +23,6 @@ import {
 
 export function OperatorSidebar() {
   const pathname = usePathname();
-
-  const menuItems = [
-    { title: "Overview", icon: LayoutDashboard, href: "/operator" },
-    { title: "Routes & Schedules", icon: Route, href: "/operator/routes" },
-    { title: "Vessel Fleet", icon: Ship, href: "/operator/vessels" },
-    { title: "Bookings", icon: Calendar, href: "/operator/bookings" },
-  ];
-
-  const toolItems = [
-    { title: "AI Optimization", icon: Sparkles, href: "/operator/optimize", isSpecial: true },
-    { title: "Revenue Insights", icon: TrendingUp, href: "/operator/analytics" },
-    { title: "Crew Management", icon: Users, href: "/operator/crew" },
-  ];
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -61,44 +42,19 @@ export function OperatorSidebar() {
           <SidebarGroupLabel className="text-white/50 px-4 mb-2">Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={pathname === item.href}
-                    tooltip={item.title}
-                    className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-white/50 px-4 mb-2">Smart Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {toolItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={pathname === item.href}
-                    tooltip={item.title}
-                    className={`hover:bg-accent/10 ${item.isSpecial ? 'text-accent font-bold' : ''} data-[active=true]:bg-accent data-[active=true]:text-primary`}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === "/operator"}
+                  tooltip="Overview"
+                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
+                >
+                  <Link href="/operator">
+                    <LayoutDashboard />
+                    <span>Overview</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
