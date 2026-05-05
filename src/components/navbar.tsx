@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -29,9 +30,9 @@ export function Navbar() {
           <Link href="/trips" className="text-sm font-medium hover:text-accent transition-colors">
             Find Trips
           </Link>
-          <Link href="/operator" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5">
+          <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5">
             <LayoutDashboard className="h-4 w-4" />
-            Operator Portal
+            Admin Portal
           </Link>
           <div className="h-4 w-px bg-border mx-2" />
           <Link href="/profile">
@@ -54,7 +55,7 @@ export function Navbar() {
                 <Link href="/trips">Find Trips</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/operator">Operator Portal</Link>
+                <Link href="/admin">Admin Portal</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/profile">My Profile</Link>

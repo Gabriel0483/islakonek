@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -104,16 +105,16 @@ export default function Home() {
               <p className="text-lg text-primary-foreground/80">
                 A unified platform to manage vessels, optimize schedules with AI, and reach thousands of passengers daily. Modernize your fleet management today.
               </p>
-              <Link href="/operator">
+              <Link href="/admin">
                 <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4 px-8 py-6 text-lg">
-                  Join as Operator
+                  Join as Admin
                 </Button>
               </Link>
             </div>
             <div className="flex-1 relative aspect-video w-full">
                <Image
                   src="https://picsum.photos/seed/dashboard/800/500"
-                  alt="Operator Dashboard"
+                  alt="Admin Dashboard"
                   fill
                   className="rounded-xl shadow-2xl object-cover"
                   data-ai-hint="dashboard analytics"
@@ -139,7 +140,7 @@ export default function Home() {
               <h4 className="font-bold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/trips" className="hover:text-accent">Search Trips</Link></li>
-                <li><Link href="/operator" className="hover:text-accent">Operator Login</Link></li>
+                <li><Link href="/admin" className="hover:text-accent">Admin Login</Link></li>
               </ul>
             </div>
             <div>
