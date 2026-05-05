@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -7,7 +8,8 @@ import {
   LayoutDashboard, 
   MapPin,
   Settings, 
-  LogOut
+  LogOut,
+  Waypoints
 } from "lucide-react";
 import {
   Sidebar,
@@ -66,6 +68,19 @@ export function OperatorSidebar() {
                   <Link href="/operator/ports">
                     <MapPin />
                     <span>Ports</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === "/operator/routes"}
+                  tooltip="Routes"
+                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
+                >
+                  <Link href="/operator/routes">
+                    <Waypoints />
+                    <span>Routes</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

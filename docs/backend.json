@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Port": {
@@ -50,6 +51,65 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "Route": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Route",
+      "type": "object",
+      "description": "Represents a maritime route connecting two ports.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the route, e.g., Manila - Cebu."
+        },
+        "originPortId": {
+          "type": "string",
+          "description": "The ID of the departure port."
+        },
+        "destinationPortId": {
+          "type": "string",
+          "description": "The ID of the arrival port."
+        },
+        "basePrice": {
+          "type": "number",
+          "description": "The standard fare for this route."
+        },
+        "estimatedDurationMinutes": {
+          "type": "number",
+          "description": "Estimated time for the voyage in minutes."
+        },
+        "passengerSegments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string", "description": "Segment name, e.g., Senior, Student, PWD." },
+              "discountPercentage": { "type": "number" }
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "originPortId",
+        "destinationPortId",
+        "basePrice",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "auth": {
@@ -72,6 +132,22 @@
             {
               "name": "portId",
               "description": "The unique identifier for a specific Port entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/routes/{routeId}",
+        "definition": {
+          "entityName": "Route",
+          "schema": {
+            "$ref": "#/backend/entities/Route"
+          },
+          "description": "A top-level collection containing maritime route definitions.",
+          "params": [
+            {
+              "name": "routeId",
+              "description": "The unique identifier for a specific Route."
             }
           ]
         }

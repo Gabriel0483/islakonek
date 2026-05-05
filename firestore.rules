@@ -1,54 +1,30 @@
+
 /**
  * FIRESTORE SECURITY RULES
- *
- * Core Philosophy:
- * This ruleset implements a flexible administrative security model for prototyping.
- * Access to maritime data is currently permitted for all authenticated users to facilitate
- * rapid development and testing.
- *
- * Data Structure:
- * - /ports/{portId}: A top-level collection containing global maritime port definitions.
- * - /roles_admin/{userId}: A registry identifying administrative users.
  */
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
-        isSignedIn() // Temporarily allow all signed-in users for prototyping
-      );
-    }
-
-    function isExisting(resource) {
-      return resource != null;
-    }
-
-    // --- Collection Rules ---
-
     match /roles_admin/{userId} {
       allow get: if isSignedIn() && request.auth.uid == userId;
-      allow list: if isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == userId; // Allow self-promotion for prototype
+      allow create: if isSignedIn() && request.auth.uid == userId;
       allow update, delete: if false;
     }
 
     match /ports/{portId} {
-      // For prototyping, we allow any signed-in user to read and write ports.
-      // In production, these should be restricted to isAdmin().
       allow read: if isSignedIn();
-      
-      allow create: if isSignedIn() && request.resource.data.id == portId;
-      allow update: if isSignedIn() && isExisting(resource) && request.resource.data.id == resource.data.id;
-      allow delete: if isSignedIn() && isExisting(resource);
+      allow write: if isSignedIn();
+    }
+
+    match /routes/{routeId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }
