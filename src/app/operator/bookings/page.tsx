@@ -15,7 +15,8 @@ import {
   Clock,
   Waypoints,
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  Banknote
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
