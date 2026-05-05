@@ -111,11 +111,14 @@ export default function TripsPage() {
       const vessel = vessels?.find(v => v.id === schedule.vesselId);
       const usedSeats = bookings?.filter(b => b.scheduleId === schedule.id && b.paymentStatus !== "Cancelled").length || 0;
       
+      // Fallback to vessel capacity if schedule capacity is missing or 0
+      const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
+      
       return {
         ...schedule,
         route,
         vessel,
-        availability: schedule.passengerCapacity - usedSeats
+        availability: capacity - usedSeats
       };
     });
   }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedVesselTypes, priceRange]);
@@ -129,7 +132,7 @@ export default function TripsPage() {
     if (!db || !selectedSchedule || !bookingFormData.fareId || !bookingFormData.passengerName) return;
 
     const selectedFare = fares?.find(f => f.id === bookingFormData.fareId);
-    const newId = Math.random().toString(36).substr(2, 9);
+    const newId = Math.random().toString(36).substr(2, 9).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 

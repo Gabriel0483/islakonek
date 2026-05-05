@@ -102,7 +102,7 @@ export default function SchedulesPage() {
         routeId: schedule.routeId,
         vesselId: schedule.vesselId,
         departureTime: schedule.departureTime,
-        passengerCapacity: schedule.passengerCapacity || 0,
+        passengerCapacity: schedule.passengerCapacity || vessels?.find(v => v.id === schedule.vesselId)?.passengerCapacity || 0,
         type: schedule.type,
         specialDates: schedule.specialDates || [],
         description: schedule.description || "",
@@ -239,7 +239,7 @@ export default function SchedulesPage() {
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground uppercase font-bold tracking-tighter">Capacity</span>
                         <span className="font-bold flex items-center gap-1">
-                          <Users className="h-3 w-3" /> {schedule.passengerCapacity || 0} Seats
+                          <Users className="h-3 w-3" /> {schedule.passengerCapacity || vessels?.find(v => v.id === schedule.vesselId)?.passengerCapacity || 0} Seats
                         </span>
                       </div>
                       <div className="pt-2 border-t">

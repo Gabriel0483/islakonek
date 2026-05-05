@@ -117,6 +117,8 @@ export default function DeskBookingsPage() {
     return bookings?.filter(b => b.scheduleId === scheduleId && b.paymentStatus !== "Cancelled").length || 0;
   };
 
+  const currentCapacity = selectedSchedule?.passengerCapacity || vessels?.find(v => v.id === selectedSchedule?.vesselId)?.passengerCapacity || 0;
+
   const isLoading = isUserLoading || isBookingsLoading;
 
   return (
@@ -246,12 +248,12 @@ export default function DeskBookingsPage() {
                       <div>
                         <p className="text-xs font-bold text-muted-foreground uppercase">Availability</p>
                         <p className="font-bold text-primary">
-                          {selectedSchedule?.passengerCapacity - getSeatsUsed(formData.scheduleId)} Seats Remaining
+                          {currentCapacity - getSeatsUsed(formData.scheduleId)} Seats Remaining
                         </p>
                       </div>
                     </div>
                     <Badge variant="outline" className="bg-white">
-                      Max: {selectedSchedule?.passengerCapacity}
+                      Max: {currentCapacity}
                     </Badge>
                   </div>
                 )}
