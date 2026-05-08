@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export default function TripsPage() {
+function TripsContent() {
   const searchParams = useSearchParams();
   const db = useFirestore();
   const [isMounted, setIsMounted] = useState(false);
@@ -138,7 +138,6 @@ export default function TripsPage() {
     if (!db || !selectedSchedule || !bookingFormData.fareId || !bookingFormData.passengerName) return;
 
     const selectedFare = fares?.find(f => f.id === bookingFormData.fareId);
-    // Generate 6-digit alpha-numeric booking ID
     const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
@@ -454,5 +453,17 @@ export default function TripsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function TripsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-accent" />
+      </div>
+    }>
+      <TripsContent />
+    </Suspense>
   );
 }
