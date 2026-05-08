@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 export default function TripsPage() {
   const searchParams = useSearchParams();
   const db = useFirestore();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Data Fetching
   const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
@@ -91,10 +96,10 @@ export default function TripsPage() {
       // Filter by Search Query (Route Name, Port Name, or Trip Code)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesRoute = route?.name.toLowerCase().includes(query);
+        const matchesRoute = route?.name?.toLowerCase().includes(query);
         const matchesCode = schedule.tripCode?.toLowerCase().includes(query);
-        const originPort = ports?.find(p => p.id === route?.originPortId)?.name.toLowerCase().includes(query);
-        const destPort = ports?.find(p => p.id === route?.destinationPortId)?.name.toLowerCase().includes(query);
+        const originPort = ports?.find(p => p.id === route?.originPortId)?.name?.toLowerCase().includes(query);
+        const destPort = ports?.find(p => p.id === route?.destinationPortId)?.name?.toLowerCase().includes(query);
         if (!matchesRoute && !originPort && !destPort && !matchesCode) return false;
       }
 
@@ -310,7 +315,7 @@ export default function TripsPage() {
                         <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1.5">
                             <Ship className="h-4 w-4" />
-                            {trip.vessel?.name}
+                            {trip.vessel?.name || "TBA"}
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Users className="h-4 w-4" />
@@ -328,7 +333,7 @@ export default function TripsPage() {
                       <div className="bg-secondary/30 p-6 md:w-64 border-t md:border-t-0 md:border-l flex flex-col justify-center items-center text-center gap-4">
                         <div>
                           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mb-1">Starts From</p>
-                          <p className="text-2xl font-extrabold text-primary">₱{trip.route?.basePrice?.toLocaleString()}</p>
+                          <p className="text-2xl font-extrabold text-primary">₱{isMounted ? trip.route?.basePrice?.toLocaleString() : "---"}</p>
                         </div>
                         <Button 
                           onClick={() => handleBookNow(trip)}
@@ -415,7 +420,7 @@ export default function TripsPage() {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-xs opacity-70 uppercase font-bold">Final Ticket Price</p>
-                      <p className="text-4xl font-black">₱{selectedFareDetails.finalFare?.toLocaleString()}</p>
+                      <p className="text-4xl font-black">₱{isMounted ? selectedFareDetails.finalFare?.toLocaleString() : "---"}</p>
                     </div>
                     <div className="text-right">
                       <Badge variant="outline" className="bg-white/10 text-white border-white/20">

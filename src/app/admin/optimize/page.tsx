@@ -1,8 +1,10 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Loader2, Ship, Clock, AlertTriangle, CheckCircle } from "lucide-react";
+import { collection } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -12,23 +14,83 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 export default function OptimizePage() {
+  const db = useFirestore();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AIScheduleOptimizationOutput | null>(null);
-  const [input, setInput] = useState<AIScheduleOptimizationInput>({
-    existingSchedule: [],
-    availableVessels: [],
-    demandForecast: [],
-    weatherForecast: [],
-    operationalConstraints: []
-  });
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
+  const vesselsRef = useMemoFirebase(() => collection(db!, "vessels"), [db]);
+  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
+  const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
+
+  const { data: schedules } = useCollection(schedulesRef);
+  const { data: vessels } = useCollection(vesselsRef);
+  const { data: routes } = useCollection(routesRef);
+  const { data: ports } = useCollection(portsRef);
 
   async function handleOptimize() {
-    if (input.existingSchedule.length === 0) {
+    if (!schedules || schedules.length === 0) {
       console.warn("No schedule data provided for optimization.");
       return;
     }
+    
     setLoading(true);
     try {
+      // Map Firestore data to AI Input schema
+      const existingScheduleInput = schedules.map(s => {
+        const route = routes?.find(r => r.id === s.routeId);
+        const origin = ports?.find(p => p.id === route?.originPortId)?.name || "Unknown Port";
+        const dest = ports?.find(p => p.id === route?.destinationPortId)?.name || "Unknown Port";
+        
+        // Mocking ISO timestamps for current day based on HH:mm
+        const today = new Date().toISOString().split('T')[0];
+        const departure = `${today}T${s.departureTime}:00Z`;
+        const arrivalDate = new Date(new Date(departure).getTime() + (route?.estimatedDurationMinutes || 60) * 60000);
+
+        return {
+          routeId: s.routeId,
+          routeName: route?.name || "Unnamed Route",
+          origin: origin,
+          destination: dest,
+          scheduledDeparture: departure,
+          scheduledArrival: arrivalDate.toISOString(),
+          vesselTypeRequired: "FastCraft", // Fallback
+          currentVesselId: s.vesselId,
+          expectedDurationHours: (route?.estimatedDurationMinutes || 60) / 60
+        };
+      });
+
+      const availableVesselsInput = (vessels || []).map(v => ({
+        vesselId: v.id,
+        vesselName: v.name,
+        type: v.type,
+        passengerCapacity: v.passengerCapacity || 0,
+        cargoCapacityTEU: v.cargoCapacityTEU || 0,
+        currentLocation: "TBA",
+        availableFrom: new Date().toISOString()
+      }));
+
+      const input: AIScheduleOptimizationInput = {
+        existingSchedule: existingScheduleInput,
+        availableVessels: availableVesselsInput,
+        demandForecast: (routes || []).map(r => ({
+          routeId: r.id,
+          date: new Date().toISOString().split('T')[0],
+          passengerDemand: 100, // Mocked demand
+          cargoDemandTEU: 0
+        })),
+        weatherForecast: [],
+        operationalConstraints: [
+          "Max 1 trip per vessel per day during optimization test",
+          "Ensure high utilization for passenger ferries"
+        ]
+      };
+
       const output = await optimizeSchedule(input);
       setResult(output);
     } catch (error) {
@@ -37,6 +99,8 @@ export default function OptimizePage() {
       setLoading(false);
     }
   }
+
+  const hasData = schedules && schedules.length > 0;
 
   return (
     <SidebarProvider>
@@ -59,7 +123,7 @@ export default function OptimizePage() {
               </div>
               <Button 
                 onClick={handleOptimize} 
-                disabled={loading || input.existingSchedule.length === 0}
+                disabled={loading || !hasData}
                 className="bg-accent text-primary font-bold hover:bg-accent/90 px-6 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
               >
                 {loading ? (
@@ -80,8 +144,14 @@ export default function OptimizePage() {
           {!result && !loading && (
             <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl opacity-50">
               <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-bold">No data to optimize</h3>
-              <p className="text-muted-foreground max-w-xs">Once you have active routes and vessels configured, our AI will help you find the most efficient schedule.</p>
+              <h3 className="text-xl font-bold">
+                {hasData ? "Ready to optimize" : "No data to optimize"}
+              </h3>
+              <p className="text-muted-foreground max-w-xs">
+                {hasData 
+                  ? "Your current trips and fleet are loaded. Click generate to see the AI proposal." 
+                  : "Once you have active routes and vessels configured, our AI will help you find the most efficient schedule."}
+              </p>
             </div>
           )}
 
@@ -129,7 +199,9 @@ export default function OptimizePage() {
                               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Departure</p>
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-accent" />
-                                <span className="font-medium">{new Date(trip.optimizedDeparture).toLocaleString()}</span>
+                                <span className="font-medium">
+                                  {isMounted ? new Date(trip.optimizedDeparture).toLocaleString() : "---"}
+                                </span>
                               </div>
                               <p className="text-sm">{trip.origin}</p>
                             </div>
@@ -137,7 +209,9 @@ export default function OptimizePage() {
                               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Arrival</p>
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-accent" />
-                                <span className="font-medium">{new Date(trip.optimizedArrival).toLocaleString()}</span>
+                                <span className="font-medium">
+                                  {isMounted ? new Date(trip.optimizedArrival).toLocaleString() : "---"}
+                                </span>
                               </div>
                               <p className="text-sm">{trip.destination}</p>
                             </div>
@@ -160,7 +234,7 @@ export default function OptimizePage() {
                             </div>
                           </div>
                           <div className="p-6 md:w-1/5 border-t md:border-t-0 md:border-l flex flex-col justify-center items-center gap-2 bg-secondary/50">
-                             <Badge variant="outline" className="bg-white">{trip.assignedVesselId}</Badge>
+                             <Badge variant="outline" className="bg-white">{vessels?.find(v => v.id === trip.assignedVesselId)?.name || trip.assignedVesselId}</Badge>
                              <span className="text-xs text-muted-foreground">Assigned Vessel</span>
                           </div>
                         </div>

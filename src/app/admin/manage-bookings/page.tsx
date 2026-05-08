@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ClipboardList, 
   Search, 
@@ -41,6 +41,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function ManageBookingsPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
   const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
@@ -55,8 +60,8 @@ export default function ManageBookingsPage() {
 
   const filteredBookings = bookings?.filter(b => {
     const matchesSearch = 
-      b.passengerName.toLowerCase().includes(search.toLowerCase()) ||
-      b.id.toLowerCase().includes(search.toLowerCase());
+      b.passengerName?.toLowerCase().includes(search.toLowerCase()) ||
+      b.id?.toLowerCase().includes(search.toLowerCase());
     
     if (activeTab === "all") return matchesSearch;
     if (activeTab === "pending") return matchesSearch && b.paymentStatus === "Pending";
@@ -166,11 +171,14 @@ export default function ManageBookingsPage() {
                             <div className="text-xs font-bold">{getRouteName(booking.routeId)}</div>
                             <div className="text-[10px] text-muted-foreground flex items-center gap-3">
                                <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {getDeparture(booking.scheduleId)}</span>
-                               <span className="flex items-center gap-1"><Calendar className="h-2.5 w-2.5" /> {new Date(booking.createdAt).toLocaleDateString()}</span>
+                               <span className="flex items-center gap-1">
+                                 <Calendar className="h-2.5 w-2.5" /> 
+                                 {isMounted && booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : "---"}
+                               </span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="font-black text-primary">₱{booking.finalFare?.toLocaleString()}</div>
+                            <div className="font-black text-primary">₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}</div>
                             <div className="text-[9px] uppercase font-bold text-muted-foreground">{booking.segmentLabel}</div>
                           </TableCell>
                           <TableCell>

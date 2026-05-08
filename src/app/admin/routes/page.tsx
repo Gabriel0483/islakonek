@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Plus, 
   Pencil, 
@@ -47,6 +47,11 @@ import { Badge } from "@/components/ui/badge";
 export default function RoutesPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const portsCollection = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -107,7 +112,7 @@ export default function RoutesPage() {
 
   const handleAddSegment = () => {
     if (!newSegment.label) return;
-    const segments = [...formData.passengerSegments, { ...newSegment, id: Math.random().toString(36).substr(2, 9) }];
+    const segments = [...formData.passengerSegments, { ...newSegment, id: Math.random().toString(36).substring(2, 9) }];
     setFormData({ ...formData, passengerSegments: segments });
     setNewSegment({ label: "" });
   };
@@ -134,7 +139,7 @@ export default function RoutesPage() {
         updatedAt: timestamp
       });
     } else {
-      const newId = Math.random().toString(36).substr(2, 9);
+      const newId = Math.random().toString(36).substring(2, 11);
       const routeRef = doc(db, "routes", newId);
       setDocumentNonBlocking(routeRef, {
         ...payload,
@@ -205,7 +210,7 @@ export default function RoutesPage() {
                         </CardDescription>
                       </div>
                       <div className="bg-secondary px-3 py-1 rounded-full text-xs font-bold text-primary">
-                        ₱{route.basePrice?.toLocaleString()}
+                        ₱{isMounted ? route.basePrice?.toLocaleString() : "---"}
                       </div>
                     </div>
                   </CardHeader>
@@ -228,8 +233,8 @@ export default function RoutesPage() {
                         <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(route)} className="h-8 w-8 p-0">
                           <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(route.id)} className="h-8 w-8 p-0">
-                          <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/80" />
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(route.id)} className="h-8 w-8 p-0 text-destructive">
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>

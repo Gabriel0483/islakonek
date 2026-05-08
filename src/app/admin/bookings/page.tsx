@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Ticket, 
   Plus, 
@@ -49,6 +49,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 export default function DeskBookingsPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
   const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
@@ -196,7 +201,9 @@ export default function DeskBookingsPage() {
                           <div className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</div>
                           <div className="text-[10px] text-muted-foreground">{getRouteName(booking.routeId)}</div>
                         </TableCell>
-                        <TableCell className="font-black text-primary">₱{booking.finalFare?.toLocaleString()}</TableCell>
+                        <TableCell className="font-black text-primary">
+                          ₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -328,7 +335,7 @@ export default function DeskBookingsPage() {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-xs opacity-70 uppercase font-bold">Total Fare Amount</p>
-                        <p className="text-4xl font-black">₱{selectedFare.finalFare?.toLocaleString()}</p>
+                        <p className="text-4xl font-black">₱{isMounted ? selectedFare.finalFare?.toLocaleString() : "---"}</p>
                       </div>
                       <div className="text-right">
                         <Badge variant="outline" className="bg-white/10 text-white border-white/20">
