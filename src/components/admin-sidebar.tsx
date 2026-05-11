@@ -7,8 +7,7 @@ import {
   Ship, 
   LayoutDashboard, 
   Settings, 
-  LogOut,
-  Sparkles
+  LogOut
 } from "lucide-react";
 import {
   Sidebar,
@@ -54,19 +53,6 @@ export function AdminSidebar() {
                   <Link href="/admin">
                     <LayoutDashboard />
                     <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={pathname === "/admin/optimize"}
-                  tooltip="AI Optimization"
-                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
-                >
-                  <Link href="/admin/optimize">
-                    <Sparkles />
-                    <span>AI Optimization</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
