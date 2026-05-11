@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -71,7 +72,7 @@ export default function ManageBookingsPage() {
     if (activeTab === "waitlisted") return matchesSearch && b.status === "Waitlisted";
     if (activeTab === "confirmed") return matchesSearch && b.status === "Confirmed";
     if (activeTab === "used") return matchesSearch && b.status === "Used";
-    if (activeTab === "inactive") return matchesSearch && ["Suspended", "Auto-cancelled", "Cancelled"].includes(b.status || b.paymentStatus);
+    if (activeTab === "inactive") return matchesSearch && ["Suspended", "Auto-cancelled"].includes(b.status);
     
     return matchesSearch;
   }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

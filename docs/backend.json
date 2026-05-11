@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Port": {
@@ -194,7 +195,6 @@
         "segmentLabel": { "type": "string" },
         "finalFare": { "type": "number" },
         "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled"], "description": "Reserved: unpaid seat. Waitlisted: full trip, queuing. Confirmed: paid. Used: boarded. Suspended: no show. Auto-cancelled: time-out." },
-        "paymentStatus": { "type": "string", "enum": ["Paid", "Pending", "Cancelled"], "description": "Legacy field for payment tracking." },
         "bookingSource": { "type": "string", "enum": ["Desk", "Public"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }

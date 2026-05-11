@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -157,7 +158,6 @@ function TripsContent() {
       segmentLabel: selectedFare?.segmentLabel || "",
       finalFare: selectedFare?.finalFare || 0,
       status: status,
-      paymentStatus: "Pending", // Legacy support
       bookingSource: "Public",
       createdAt: timestamp,
       updatedAt: timestamp

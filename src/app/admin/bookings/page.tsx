@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -46,6 +47,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 
 export default function DeskBookingsPage() {
   const db = useFirestore();
@@ -77,7 +79,7 @@ export default function DeskBookingsPage() {
     fareId: "",
     passengerName: "",
     passengerContact: "",
-    paymentStatus: "Paid" as const
+    isPaid: true
   });
 
   const availableSchedules = schedules?.filter(s => s.routeId === formData.routeId && s.isActive);
@@ -103,16 +105,17 @@ export default function DeskBookingsPage() {
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 
-    // Initial Status Determination
+    // Initial Status Determination based on new rules
     let status = isWaitlistOnly ? 'Waitlisted' : 'Reserved';
-    // If desk processes it and it's marked as paid immediately
-    if (formData.paymentStatus === 'Paid' && !isWaitlistOnly) {
+    if (formData.isPaid && !isWaitlistOnly) {
       status = 'Confirmed';
     }
 
+    const { isPaid, ...cleanData } = formData;
+
     setDocumentNonBlocking(bookingRef, {
       id: newId,
-      ...formData,
+      ...cleanData,
       status: status,
       segmentLabel: selectedFare?.segmentLabel || "",
       finalFare: selectedFare?.finalFare || 0,
@@ -128,7 +131,7 @@ export default function DeskBookingsPage() {
       fareId: "",
       passengerName: "",
       passengerContact: "",
-      paymentStatus: "Paid"
+      isPaid: true
     });
   };
 
@@ -333,17 +336,16 @@ export default function DeskBookingsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Payment Status</Label>
-                      <Select value={formData.paymentStatus} onValueChange={(val: any) => setFormData({...formData, paymentStatus: val})}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Paid">Paid (Cash/Card)</SelectItem>
-                          <SelectItem value="Pending">Pending / Reserved</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/10">
+                      <div className="space-y-0.5">
+                        <Label>Mark as Paid</Label>
+                        <p className="text-[10px] text-muted-foreground italic">Instant Confirmation</p>
+                      </div>
+                      <Switch 
+                        checked={formData.isPaid} 
+                        onCheckedChange={(checked) => setFormData({...formData, isPaid: checked})}
+                        disabled={isWaitlistOnly}
+                      />
                     </div>
                   </div>
                 </section>
@@ -356,7 +358,7 @@ export default function DeskBookingsPage() {
                         <p className="text-4xl font-black">₱{isMounted ? selectedFare.finalFare?.toLocaleString() : "---"}</p>
                       </div>
                       <Badge variant="outline" className="bg-white/10 text-white border-white/20 uppercase text-[10px]">
-                        {isWaitlistOnly ? 'Waitlist Entry' : 'Reserved Seat'}
+                        {isWaitlistOnly ? 'Waitlist Entry' : formData.isPaid ? 'Confirmed Ticket' : 'Reserved Seat'}
                       </Badge>
                     </div>
                   </div>
