@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -23,7 +22,9 @@ import {
   User,
   Phone,
   Banknote,
-  Tag
+  Tag,
+  ListOrdered,
+  AlertCircle
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -93,7 +94,6 @@ function TripsContent() {
       
       if (!schedule.isActive) return false;
 
-      // Filter by Search Query (Route Name, Port Name, or Trip Code)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesRoute = route?.name?.toLowerCase().includes(query);
@@ -103,12 +103,10 @@ function TripsContent() {
         if (!matchesRoute && !originPort && !destPort && !matchesCode) return false;
       }
 
-      // Filter by Vessel Type
       if (selectedVesselTypes.length > 0 && vessel && !selectedVesselTypes.includes(vessel.type)) {
         return false;
       }
 
-      // Filter by Price Range
       if (priceRange.min && route.basePrice < Number(priceRange.min)) return false;
       if (priceRange.max && route.basePrice > Number(priceRange.max)) return false;
 
@@ -116,15 +114,19 @@ function TripsContent() {
     }).map(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
       const vessel = vessels?.find(v => v.id === schedule.vesselId);
-      const usedSeats = bookings?.filter(b => b.scheduleId === schedule.id && b.paymentStatus !== "Cancelled").length || 0;
+      const usedSeats = bookings?.filter(b => b.scheduleId === schedule.id && !['Cancelled', 'Auto-cancelled'].includes(b.status)).length || 0;
       
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
+      const waitlistLimit = schedule.waitlistLimit || 0;
       
       return {
         ...schedule,
         route,
         vessel,
-        availability: capacity - usedSeats
+        availability: capacity - usedSeats,
+        waitlistCapacity: (capacity + waitlistLimit) - usedSeats,
+        isWaitlistOnly: usedSeats >= capacity && usedSeats < (capacity + waitlistLimit),
+        isFull: usedSeats >= (capacity + waitlistLimit)
       };
     });
   }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedVesselTypes, priceRange]);
@@ -142,6 +144,9 @@ function TripsContent() {
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 
+    // Determine Status
+    const status = selectedSchedule.isWaitlistOnly ? 'Waitlisted' : 'Reserved';
+
     setDocumentNonBlocking(bookingRef, {
       id: newId,
       scheduleId: selectedSchedule.id,
@@ -151,7 +156,8 @@ function TripsContent() {
       fareId: bookingFormData.fareId,
       segmentLabel: selectedFare?.segmentLabel || "",
       finalFare: selectedFare?.finalFare || 0,
-      paymentStatus: "Pending",
+      status: status,
+      paymentStatus: "Pending", // Legacy support
       bookingSource: "Public",
       createdAt: timestamp,
       updatedAt: timestamp
@@ -159,7 +165,12 @@ function TripsContent() {
 
     setIsBookingOpen(false);
     setBookingFormData({ passengerName: "", passengerContact: "", fareId: "" });
-    alert(`Booking requested successfully! Your Reservation ID is ${newId}. Please proceed to the terminal to confirm your payment.`);
+    
+    if (status === 'Waitlisted') {
+      alert(`You have been placed on the WAITLIST! Reservation ID: ${newId}. You will be notified if a seat becomes available.`);
+    } else {
+      alert(`Booking requested successfully! Your Reservation ID is ${newId}. Please proceed to the terminal to confirm your payment.`);
+    }
   };
 
   const availableFares = fares?.filter(f => f.routeId === selectedSchedule?.routeId);
@@ -256,13 +267,6 @@ function TripsContent() {
 
             <div className="flex items-center justify-between text-sm text-muted-foreground py-2 border-b">
               <p>Showing <span className="text-foreground font-bold">{filteredTrips.length}</span> results</p>
-              <div className="flex items-center gap-2">
-                <span>Sort by:</span>
-                <select className="bg-transparent font-bold text-foreground outline-none">
-                  <option>Earliest Departure</option>
-                  <option>Lowest Price</option>
-                </select>
-              </div>
             </div>
 
             <div className="space-y-4">
@@ -311,7 +315,7 @@ function TripsContent() {
                           </div>
                         </div>
 
-                        <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="mt-6 flex items-center gap-6 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1.5">
                             <Ship className="h-4 w-4" />
                             {trip.vessel?.name || "TBA"}
@@ -321,6 +325,10 @@ function TripsContent() {
                             {trip.availability > 0 ? (
                               <span className={trip.availability < 10 ? "text-orange-500 font-bold" : ""}>
                                 {trip.availability} seats left
+                              </span>
+                            ) : trip.isWaitlistOnly ? (
+                              <span className="text-orange-600 font-bold flex items-center gap-1">
+                                <ListOrdered className="h-3 w-3" /> Waitlist Open
                               </span>
                             ) : (
                               <span className="text-destructive font-bold">Fully Booked</span>
@@ -336,10 +344,11 @@ function TripsContent() {
                         </div>
                         <Button 
                           onClick={() => handleBookNow(trip)}
-                          disabled={trip.availability <= 0}
-                          className="w-full bg-accent text-primary font-bold hover:bg-accent/90 gap-2 border-none group-hover:scale-105 transition-transform"
+                          disabled={trip.isFull}
+                          variant={trip.isWaitlistOnly ? "outline" : "default"}
+                          className={`w-full font-bold gap-2 transition-transform ${trip.isWaitlistOnly ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : 'bg-accent text-primary hover:bg-accent/90'}`}
                         >
-                          Select & Book <ChevronRight className="h-4 w-4" />
+                          {trip.isWaitlistOnly ? "Join Waitlist" : "Select & Book"} <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -349,7 +358,6 @@ function TripsContent() {
                 <div className="py-20 text-center border-2 border-dashed rounded-xl opacity-50 bg-secondary/10">
                   <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-bold">No trips found</h3>
-                  <p className="text-sm text-muted-foreground">Adjust your filters or search criteria to find available maritime trips.</p>
                 </div>
               )}
             </div>
@@ -361,14 +369,24 @@ function TripsContent() {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Ticket className="h-5 w-5 text-accent" /> Secure Your Seat
+              <Ticket className="h-5 w-5 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Secure Your Seat'}
             </DialogTitle>
             <DialogDescription>
-              Trip: <span className="font-bold text-primary">{selectedSchedule?.tripCode}</span> ({selectedSchedule?.route?.name}) at {selectedSchedule?.departureTime}
+              Trip: <span className="font-bold text-primary">{selectedSchedule?.tripCode}</span> ({selectedSchedule?.route?.name})
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[80vh] pr-4">
             <div className="grid gap-6 py-4">
+              {selectedSchedule?.isWaitlistOnly && (
+                <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-orange-800">Trip is Full</p>
+                    <p className="text-xs text-orange-700">You are joining the waitlist. Your status will be 'Waitlisted'. If a reserved seat is cancelled, you may be automatically upgraded to 'Reserved'.</p>
+                  </div>
+                </div>
+              )}
+
               <section className="space-y-4">
                 <Label className="flex items-center gap-2">
                   <User className="h-4 w-4 text-accent" /> Passenger Information
@@ -410,7 +428,6 @@ function TripsContent() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-muted-foreground italic">Discounts will be verified upon terminal check-in with valid IDs.</p>
                 </div>
               </section>
 
@@ -418,36 +435,22 @@ function TripsContent() {
                 <div className="mt-4 p-6 bg-primary rounded-xl text-primary-foreground">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-xs opacity-70 uppercase font-bold">Final Ticket Price</p>
+                      <p className="text-xs opacity-70 uppercase font-bold">Ticket Price</p>
                       <p className="text-4xl font-black">₱{isMounted ? selectedFareDetails.finalFare?.toLocaleString() : "---"}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="bg-white/10 text-white border-white/20">
-                        {selectedFareDetails.isVatExempt ? "VAT Exempt" : "VAT Inclusive"}
-                      </Badge>
-                      <p className="text-[10px] mt-1 opacity-70">Category: {selectedFareDetails.segmentLabel}</p>
                     </div>
                   </div>
                 </div>
               )}
-
-              <div className="bg-secondary/20 p-4 rounded-lg flex items-center gap-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-xs font-bold text-primary uppercase">Reservation Policy</p>
-                  <p className="text-[10px] text-muted-foreground">Online bookings are reservations. Please arrive 1 hour early for payment and verification.</p>
-                </div>
-              </div>
             </div>
           </ScrollArea>
           <DialogFooter className="pt-4 border-t">
             <Button variant="outline" onClick={() => setIsBookingOpen(false)}>Cancel</Button>
             <Button 
               onClick={handleProcessBooking} 
-              className="bg-primary text-white"
+              className={selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-primary text-white'}
               disabled={!bookingFormData.fareId || !bookingFormData.passengerName}
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" /> Complete Reservation
+              <CheckCircle2 className="h-4 w-4 mr-2" /> {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'}
             </Button>
           </DialogFooter>
         </DialogContent>

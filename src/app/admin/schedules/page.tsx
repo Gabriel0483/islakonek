@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -17,7 +16,8 @@ import {
   CheckCircle2,
   X,
   Users,
-  Tag
+  Tag,
+  ListOrdered
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -84,6 +84,7 @@ export default function SchedulesPage() {
     vesselId: "",
     departureTime: "08:00",
     passengerCapacity: 0,
+    waitlistLimit: 10,
     type: "Daily",
     specialDates: [] as string[],
     description: "",
@@ -110,6 +111,7 @@ export default function SchedulesPage() {
         vesselId: schedule.vesselId || "",
         departureTime: schedule.departureTime || "08:00",
         passengerCapacity: schedule.passengerCapacity || 0,
+        waitlistLimit: schedule.waitlistLimit !== undefined ? schedule.waitlistLimit : 10,
         type: schedule.type || "Daily",
         specialDates: schedule.specialDates || [],
         description: schedule.description || "",
@@ -123,6 +125,7 @@ export default function SchedulesPage() {
         vesselId: "",
         departureTime: "08:00",
         passengerCapacity: 0,
+        waitlistLimit: 10,
         type: "Daily",
         specialDates: [],
         description: "",
@@ -139,7 +142,6 @@ export default function SchedulesPage() {
     setFormData({
       ...formData,
       vesselId: realVesselId,
-      // Only override capacity if a vessel is actually selected
       passengerCapacity: selectedVessel ? selectedVessel.passengerCapacity : formData.passengerCapacity
     });
   };
@@ -164,6 +166,7 @@ export default function SchedulesPage() {
       ...formData,
       tripCode: formData.tripCode.toUpperCase(),
       passengerCapacity: Number(formData.passengerCapacity),
+      waitlistLimit: Number(formData.waitlistLimit),
       type: tripType,
       updatedAt: timestamp
     };
@@ -266,6 +269,12 @@ export default function SchedulesPage() {
                           <Users className="h-3 w-3" /> {schedule.passengerCapacity || 0} Seats
                         </span>
                       </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground uppercase font-bold tracking-tighter">Waitlist Limit</span>
+                        <span className="font-bold flex items-center gap-1">
+                          <ListOrdered className="h-3 w-3" /> {schedule.waitlistLimit || 0} Queues
+                        </span>
+                      </div>
                       <div className="pt-2 border-t">
                         <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Frequency</p>
                         {schedule.type === 'Daily' ? (
@@ -281,12 +290,6 @@ export default function SchedulesPage() {
                         )}
                       </div>
                     </div>
-
-                    {schedule.description && (
-                      <p className="text-xs text-muted-foreground italic line-clamp-1">
-                        "{schedule.description}"
-                      </p>
-                    )}
 
                     <div className="flex justify-between items-center pt-2 border-t">
                       <Badge variant={schedule.isActive ? "default" : "outline"} className={schedule.isActive ? "bg-green-500" : ""}>
@@ -335,7 +338,6 @@ export default function SchedulesPage() {
                       onChange={(e) => setFormData({...formData, tripCode: e.target.value})} 
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Internal identifier for this specific voyage.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -356,7 +358,7 @@ export default function SchedulesPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Assigned Vessel (Optional)</Label>
+                    <Label>Assigned Vessel</Label>
                     <Select 
                       value={formData.vesselId || "unassigned"} 
                       onValueChange={handleVesselChange}
@@ -373,7 +375,6 @@ export default function SchedulesPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-[10px] text-muted-foreground italic">Vessel assignment can be finalized on the day of departure.</p>
                   </div>
                 </div>
 
@@ -388,29 +389,34 @@ export default function SchedulesPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Passenger Capacity</Label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        type="number"
-                        placeholder="Seats available"
-                        className="pl-10"
-                        value={formData.passengerCapacity} 
-                        onChange={(e) => setFormData({...formData, passengerCapacity: Number(e.target.value)})} 
-                      />
-                    </div>
+                    <Input 
+                      type="number"
+                      placeholder="Seats available"
+                      value={formData.passengerCapacity} 
+                      onChange={(e) => setFormData({...formData, passengerCapacity: Number(e.target.value)})} 
+                    />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/5">
-                  <Label className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-accent" /> Schedule Status
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase">{formData.isActive ? "Active" : "Paused"}</span>
-                    <Switch 
-                      checked={formData.isActive} 
-                      onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Waitlist Limit</Label>
+                    <Input 
+                      type="number"
+                      value={formData.waitlistLimit} 
+                      onChange={(e) => setFormData({...formData, waitlistLimit: Number(e.target.value)})} 
                     />
+                    <p className="text-[10px] text-muted-foreground">Extra slots allowed for queuing when trip is full.</p>
+                  </div>
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/5 self-end h-[40px]">
+                    <Label className="flex items-center gap-2">Status</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{formData.isActive ? "Active" : "Paused"}</span>
+                      <Switch 
+                        checked={formData.isActive} 
+                        onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -420,7 +426,6 @@ export default function SchedulesPage() {
                       <Label className="font-bold flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-accent" /> Trip Dates
                       </Label>
-                      <p className="text-[10px] text-muted-foreground">Leave empty for daily trips. Add dates for special/peak season trips.</p>
                     </div>
                     <Badge variant={formData.specialDates.length > 0 ? "default" : "secondary"}>
                       {formData.specialDates.length > 0 ? "Special Schedule" : "Daily Schedule"}

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,9 @@ import {
   Clock,
   Banknote,
   ClipboardList,
-  Tag
+  Tag,
+  AlertCircle,
+  ListOrdered
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -79,23 +80,40 @@ export default function DeskBookingsPage() {
     paymentStatus: "Paid" as const
   });
 
-  const selectedRoute = routes?.find(r => r.id === formData.routeId);
   const availableSchedules = schedules?.filter(s => s.routeId === formData.routeId && s.isActive);
   const availableFares = fares?.filter(f => f.routeId === formData.routeId);
   const selectedFare = fares?.find(f => f.id === formData.fareId);
   const selectedSchedule = schedules?.find(s => s.id === formData.scheduleId);
 
+  const getSeatsUsed = (scheduleId: string) => {
+    return bookings?.filter(b => b.scheduleId === scheduleId && !['Cancelled', 'Auto-cancelled'].includes(b.status)).length || 0;
+  };
+
+  const currentCapacity = selectedSchedule?.passengerCapacity || vessels?.find(v => v.id === selectedSchedule?.vesselId)?.passengerCapacity || 0;
+  const waitlistLimit = selectedSchedule?.waitlistLimit || 0;
+  const seatsUsed = formData.scheduleId ? getSeatsUsed(formData.scheduleId) : 0;
+  
+  const isWaitlistOnly = seatsUsed >= currentCapacity && seatsUsed < (currentCapacity + waitlistLimit);
+  const isFull = seatsUsed >= (currentCapacity + waitlistLimit);
+
   const handleCreateBooking = () => {
     if (!db || !formData.routeId || !formData.scheduleId || !formData.fareId || !formData.passengerName) return;
 
-    // Generate 6-digit alpha-numeric booking ID
     const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 
+    // Initial Status Determination
+    let status = isWaitlistOnly ? 'Waitlisted' : 'Reserved';
+    // If desk processes it and it's marked as paid immediately
+    if (formData.paymentStatus === 'Paid' && !isWaitlistOnly) {
+      status = 'Confirmed';
+    }
+
     setDocumentNonBlocking(bookingRef, {
       id: newId,
       ...formData,
+      status: status,
       segmentLabel: selectedFare?.segmentLabel || "",
       finalFare: selectedFare?.finalFare || 0,
       bookingSource: "Desk",
@@ -120,12 +138,6 @@ export default function DeskBookingsPage() {
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
-
-  const getSeatsUsed = (scheduleId: string) => {
-    return bookings?.filter(b => b.scheduleId === scheduleId && b.paymentStatus !== "Cancelled").length || 0;
-  };
-
-  const currentCapacity = selectedSchedule?.passengerCapacity || vessels?.find(v => v.id === selectedSchedule?.vesselId)?.passengerCapacity || 0;
 
   const isLoading = isUserLoading || isBookingsLoading;
 
@@ -189,6 +201,7 @@ export default function DeskBookingsPage() {
                       <TableHead>Ticket ID</TableHead>
                       <TableHead>Passenger</TableHead>
                       <TableHead>Trip/Route</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Amount</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -200,6 +213,9 @@ export default function DeskBookingsPage() {
                         <TableCell>
                           <div className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</div>
                           <div className="text-[10px] text-muted-foreground">{getRouteName(booking.routeId)}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">{booking.status}</Badge>
                         </TableCell>
                         <TableCell className="font-black text-primary">
                           ₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}
@@ -247,7 +263,7 @@ export default function DeskBookingsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {availableSchedules?.map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime} ({vessels?.find(v => v.id === s.vesselId)?.name})</SelectItem>
+                          <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -255,19 +271,21 @@ export default function DeskBookingsPage() {
                 </section>
 
                 {formData.scheduleId && (
-                  <div className="bg-secondary/20 p-4 rounded-lg flex items-center justify-between">
+                  <div className={`p-4 rounded-lg flex items-center justify-between border ${isWaitlistOnly ? 'bg-orange-50 border-orange-200' : isFull ? 'bg-red-50 border-red-200' : 'bg-secondary/20'}`}>
                     <div className="flex items-center gap-3">
-                      <Ship className="h-5 w-5 text-primary" />
+                      {isWaitlistOnly ? <ListOrdered className="h-5 w-5 text-orange-600" /> : isFull ? <AlertCircle className="h-5 w-5 text-red-600" /> : <Ship className="h-5 w-5 text-primary" />}
                       <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Availability</p>
-                        <p className="font-bold text-primary">
-                          {currentCapacity - getSeatsUsed(formData.scheduleId)} Seats Remaining
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Trip Status</p>
+                        <p className={`font-bold ${isFull ? 'text-red-700' : isWaitlistOnly ? 'text-orange-700' : 'text-primary'}`}>
+                          {isFull ? 'TRIP FULL' : isWaitlistOnly ? 'WAITLISTING' : `${currentCapacity - seatsUsed} Seats Available`}
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-white">
-                      Max: {currentCapacity}
-                    </Badge>
+                    {isWaitlistOnly && (
+                      <Badge variant="outline" className="bg-orange-500 text-white border-none">
+                        Queuing
+                      </Badge>
+                    )}
                   </div>
                 )}
 
@@ -337,11 +355,9 @@ export default function DeskBookingsPage() {
                         <p className="text-xs opacity-70 uppercase font-bold">Total Fare Amount</p>
                         <p className="text-4xl font-black">₱{isMounted ? selectedFare.finalFare?.toLocaleString() : "---"}</p>
                       </div>
-                      <div className="text-right">
-                        <Badge variant="outline" className="bg-white/10 text-white border-white/20">
-                          {selectedFare.isVatExempt ? "VAT Exempt" : "VAT Inclusive"}
-                        </Badge>
-                      </div>
+                      <Badge variant="outline" className="bg-white/10 text-white border-white/20 uppercase text-[10px]">
+                        {isWaitlistOnly ? 'Waitlist Entry' : 'Reserved Seat'}
+                      </Badge>
                     </div>
                   </div>
                 )}
@@ -352,9 +368,9 @@ export default function DeskBookingsPage() {
               <Button 
                 onClick={handleCreateBooking} 
                 className="bg-primary text-white"
-                disabled={!formData.fareId || !formData.passengerName || !formData.scheduleId}
+                disabled={!formData.fareId || !formData.passengerName || !formData.scheduleId || isFull}
               >
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Issue Ticket
+                <CheckCircle2 className="h-4 w-4 mr-2" /> {isWaitlistOnly ? 'Add to Waitlist' : 'Issue Ticket'}
               </Button>
             </DialogFooter>
           </DialogContent>

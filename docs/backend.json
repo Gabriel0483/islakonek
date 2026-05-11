@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Port": {
@@ -170,6 +169,7 @@
         "vesselId": { "type": "string", "description": "ID of the assigned vessel. Optional if assignment is pending." },
         "departureTime": { "type": "string", "description": "Time in HH:mm format" },
         "passengerCapacity": { "type": "number", "description": "Seat capacity for this specific schedule." },
+        "waitlistLimit": { "type": "number", "default": 10, "description": "Maximum number of waitlisted passengers allowed." },
         "type": { "type": "string", "enum": ["Daily", "Special"] },
         "specialDates": { "type": "array", "items": { "type": "string", "format": "date" } },
         "description": { "type": "string" },
@@ -193,12 +193,13 @@
         "passengerContact": { "type": "string" },
         "segmentLabel": { "type": "string" },
         "finalFare": { "type": "number" },
-        "paymentStatus": { "type": "string", "enum": ["Paid", "Pending", "Cancelled"] },
+        "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled"], "description": "Reserved: unpaid seat. Waitlisted: full trip, queuing. Confirmed: paid. Used: boarded. Suspended: no show. Auto-cancelled: time-out." },
+        "paymentStatus": { "type": "string", "enum": ["Paid", "Pending", "Cancelled"], "description": "Legacy field for payment tracking." },
         "bookingSource": { "type": "string", "enum": ["Desk", "Public"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "scheduleId", "routeId", "passengerName", "finalFare", "paymentStatus"]
+      "required": ["id", "scheduleId", "routeId", "passengerName", "finalFare", "status"]
     }
   },
   "auth": {

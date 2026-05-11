@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,12 +10,14 @@ import {
   Phone, 
   CheckCircle2, 
   XCircle,
-  Filter,
   Eye,
   MoreVertical,
-  Banknote,
   Calendar,
-  Tag
+  Tag,
+  Ship,
+  Ban,
+  UserCheck,
+  AlertTriangle
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -37,6 +38,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled";
 
 export default function ManageBookingsPage() {
   const db = useFirestore();
@@ -64,11 +67,11 @@ export default function ManageBookingsPage() {
       b.id?.toLowerCase().includes(search.toLowerCase());
     
     if (activeTab === "all") return matchesSearch;
-    if (activeTab === "pending") return matchesSearch && b.paymentStatus === "Pending";
-    if (activeTab === "paid") return matchesSearch && b.paymentStatus === "Paid";
-    if (activeTab === "cancelled") return matchesSearch && b.paymentStatus === "Cancelled";
-    if (activeTab === "public") return matchesSearch && b.bookingSource === "Public";
-    if (activeTab === "desk") return matchesSearch && b.bookingSource === "Desk";
+    if (activeTab === "reserved") return matchesSearch && b.status === "Reserved";
+    if (activeTab === "waitlisted") return matchesSearch && b.status === "Waitlisted";
+    if (activeTab === "confirmed") return matchesSearch && b.status === "Confirmed";
+    if (activeTab === "used") return matchesSearch && b.status === "Used";
+    if (activeTab === "inactive") return matchesSearch && ["Suspended", "Auto-cancelled", "Cancelled"].includes(b.status || b.paymentStatus);
     
     return matchesSearch;
   }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -77,20 +80,23 @@ export default function ManageBookingsPage() {
   const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
-  const handleUpdateStatus = (id: string, status: 'Paid' | 'Cancelled') => {
+  const handleUpdateStatus = (id: string, status: BookingStatus) => {
     if (!db) return;
     const bookingRef = doc(db, "bookings", id);
-    updateDocumentNonBlocking(bookingRef, { paymentStatus: status, updatedAt: new Date().toISOString() });
+    updateDocumentNonBlocking(bookingRef, { status: status, updatedAt: new Date().toISOString() });
   };
 
   const isLoading = isUserLoading || isBookingsLoading;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Paid': return <Badge className="bg-green-500">Paid</Badge>;
-      case 'Pending': return <Badge className="bg-yellow-500">Pending</Badge>;
-      case 'Cancelled': return <Badge variant="destructive">Cancelled</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
+      case 'Confirmed': return <Badge className="bg-green-600">Confirmed</Badge>;
+      case 'Reserved': return <Badge className="bg-blue-500">Reserved</Badge>;
+      case 'Waitlisted': return <Badge className="bg-orange-500">Waitlisted</Badge>;
+      case 'Used': return <Badge className="bg-indigo-600">Used (Boarded)</Badge>;
+      case 'Suspended': return <Badge variant="destructive">Suspended</Badge>;
+      case 'Auto-cancelled': return <Badge variant="outline" className="text-muted-foreground">Auto-Cancelled</Badge>;
+      default: return <Badge variant="outline">{status || 'Legacy'}</Badge>;
     }
   };
 
@@ -119,18 +125,19 @@ export default function ManageBookingsPage() {
             </div>
             <div className="flex items-center gap-2">
                <Badge variant="outline" className="bg-white">Total: {bookings?.length || 0}</Badge>
-               <Badge className="bg-yellow-500">Pending: {bookings?.filter(b => b.paymentStatus === 'Pending').length || 0}</Badge>
+               <Badge className="bg-blue-500">Reserved: {bookings?.filter(b => b.status === 'Reserved').length || 0}</Badge>
+               <Badge className="bg-orange-500">Waitlist: {bookings?.filter(b => b.status === 'Waitlisted').length || 0}</Badge>
             </div>
           </div>
 
           <Tabs defaultValue="all" onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-white border p-1 h-auto flex-wrap">
               <TabsTrigger value="all">All Records</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="paid">Paid</TabsTrigger>
-              <TabsTrigger value="public">Online Source</TabsTrigger>
-              <TabsTrigger value="desk">Desk Source</TabsTrigger>
-              <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+              <TabsTrigger value="reserved">Reserved</TabsTrigger>
+              <TabsTrigger value="waitlisted">Waitlisted</TabsTrigger>
+              <TabsTrigger value="confirmed">Confirmed (Paid)</TabsTrigger>
+              <TabsTrigger value="used">Used (Boarded)</TabsTrigger>
+              <TabsTrigger value="inactive">Cancelled/No-Show</TabsTrigger>
             </TabsList>
 
             <Card className="border-none shadow-sm overflow-hidden">
@@ -148,7 +155,6 @@ export default function ManageBookingsPage() {
                         <TableHead>Passenger</TableHead>
                         <TableHead>Trip Details</TableHead>
                         <TableHead>Fare & Type</TableHead>
-                        <TableHead>Source</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
@@ -171,22 +177,13 @@ export default function ManageBookingsPage() {
                             <div className="text-xs font-bold">{getRouteName(booking.routeId)}</div>
                             <div className="text-[10px] text-muted-foreground flex items-center gap-3">
                                <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {getDeparture(booking.scheduleId)}</span>
-                               <span className="flex items-center gap-1">
-                                 <Calendar className="h-2.5 w-2.5" /> 
-                                 {isMounted && booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : "---"}
-                               </span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="font-black text-primary">₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}</div>
                             <div className="text-[9px] uppercase font-bold text-muted-foreground">{booking.segmentLabel}</div>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={booking.bookingSource === 'Public' ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-green-200 text-green-700 bg-green-50'}>
-                              {booking.bookingSource}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(booking.paymentStatus)}</TableCell>
+                          <TableCell>{getStatusBadge(booking.status)}</TableCell>
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -195,21 +192,28 @@ export default function ManageBookingsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                {booking.paymentStatus === 'Pending' && (
-                                  <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Paid')} className="text-green-600">
-                                    <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
+                                {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
+                                  <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Confirmed')} className="text-green-600">
+                                    <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid (Confirm)
                                   </DropdownMenuItem>
                                 )}
-                                {booking.paymentStatus !== 'Cancelled' && (
-                                  <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Cancelled')} className="text-destructive">
-                                    <XCircle className="h-4 w-4 mr-2" /> Void Ticket
+                                {booking.status === 'Confirmed' && (
+                                  <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Used')} className="text-indigo-600">
+                                    <Ship className="h-4 w-4 mr-2" /> Mark as Boarded (Used)
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" /> View Details
-                                </DropdownMenuItem>
+                                {['Reserved', 'Waitlisted', 'Confirmed'].includes(booking.status) && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Suspended')} className="text-orange-600">
+                                      <AlertTriangle className="h-4 w-4 mr-2" /> No Show (Suspend)
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Auto-cancelled')} className="text-destructive">
+                                      <Ban className="h-4 w-4 mr-2" /> Cancel Booking
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -220,8 +224,7 @@ export default function ManageBookingsPage() {
                 ) : (
                   <div className="text-center py-20 opacity-50">
                     <ClipboardList className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-xl font-bold">No bookings match criteria</h3>
-                    <p className="text-sm">Try adjusting your filters or search query.</p>
+                    <h3 className="text-xl font-bold">No manifest records found</h3>
                   </div>
                 )}
               </CardContent>
