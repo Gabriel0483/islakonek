@@ -110,10 +110,13 @@ export default function ManageBookingsPage() {
 
   const handleDeleteBooking = (id: string) => {
     if (!db) return;
-    if (confirm("Are you sure you want to permanently delete this booking record? This action cannot be undone.")) {
-      const bookingRef = doc(db, "bookings", id);
-      deleteDocumentNonBlocking(bookingRef);
-    }
+    // Using setTimeout to allow Radix UI to finish closing the menu before showing confirm dialog
+    setTimeout(() => {
+      if (confirm("Are you sure you want to permanently delete this booking record? This action cannot be undone.")) {
+        const bookingRef = doc(db, "bookings", id);
+        deleteDocumentNonBlocking(bookingRef);
+      }
+    }, 100);
   };
 
   const handleOpenEdit = (booking: any) => {
@@ -242,33 +245,33 @@ export default function ManageBookingsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleOpenEdit(booking)}>
+                                <DropdownMenuItem onSelect={() => handleOpenEdit(booking)}>
                                   <Pencil className="h-4 w-4 mr-2 text-muted-foreground" /> Edit Info
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                                 {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
-                                  <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Confirmed')} className="text-green-600">
+                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Confirmed')} className="text-green-600">
                                     <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
                                   </DropdownMenuItem>
                                 )}
                                 {booking.status === 'Confirmed' && (
-                                  <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Used')} className="text-indigo-600">
+                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Used')} className="text-indigo-600">
                                     <Ship className="h-4 w-4 mr-2" /> Mark as Boarded
                                   </DropdownMenuItem>
                                 )}
                                 {['Reserved', 'Waitlisted', 'Confirmed'].includes(booking.status) && (
                                   <>
-                                    <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Suspended')} className="text-orange-600">
+                                    <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Suspended')} className="text-orange-600">
                                       <AlertTriangle className="h-4 w-4 mr-2" /> No Show
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Auto-cancelled')} className="text-destructive">
+                                    <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Auto-cancelled')} className="text-destructive">
                                       <Ban className="h-4 w-4 mr-2" /> Cancel Booking
                                     </DropdownMenuItem>
                                   </>
                                 )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleDeleteBooking(booking.id)} className="text-destructive font-bold">
+                                <DropdownMenuItem onSelect={() => handleDeleteBooking(booking.id)} className="text-destructive font-bold">
                                   <Trash2 className="h-4 w-4 mr-2" /> Delete Record
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
