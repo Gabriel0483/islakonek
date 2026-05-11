@@ -83,6 +83,8 @@ export default function ManageBookingsPage() {
     passengerContact: ""
   });
 
+  const activeStatuses = ["Reserved", "Waitlisted", "Confirmed", "Used"];
+
   const filteredBookings = bookings?.filter(b => {
     const matchesSearch = 
       b.passengerName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -93,7 +95,10 @@ export default function ManageBookingsPage() {
     if (activeTab === "waitlisted") return matchesSearch && b.status === "Waitlisted";
     if (activeTab === "confirmed") return matchesSearch && b.status === "Confirmed";
     if (activeTab === "used") return matchesSearch && b.status === "Used";
-    if (activeTab === "inactive") return matchesSearch && ["Suspended", "Auto-cancelled"].includes(b.status);
+    if (activeTab === "inactive") {
+      // Show explicitly inactive statuses OR any legacy status not in the active list
+      return matchesSearch && (["Suspended", "Auto-cancelled"].includes(b.status) || !activeStatuses.includes(b.status));
+    }
     
     return matchesSearch;
   }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -109,14 +114,16 @@ export default function ManageBookingsPage() {
   };
 
   const handleDeleteBooking = (id: string) => {
-    if (!db) return;
-    // Using setTimeout to allow Radix UI to finish closing the menu before showing confirm dialog
+    if (!db || !id) return;
+    
+    // Using a slightly longer timeout and ensuring we have a stable window reference
     setTimeout(() => {
-      if (confirm("Are you sure you want to permanently delete this booking record? This action cannot be undone.")) {
+      const confirmed = window.confirm("Are you sure you want to permanently delete this booking record? This action cannot be undone.");
+      if (confirmed) {
         const bookingRef = doc(db, "bookings", id);
         deleteDocumentNonBlocking(bookingRef);
       }
-    }, 100);
+    }, 200);
   };
 
   const handleOpenEdit = (booking: any) => {
@@ -148,7 +155,7 @@ export default function ManageBookingsPage() {
       case 'Used': return <Badge className="bg-indigo-600">Used (Boarded)</Badge>;
       case 'Suspended': return <Badge variant="destructive">Suspended</Badge>;
       case 'Auto-cancelled': return <Badge variant="outline" className="text-muted-foreground">Auto-Cancelled</Badge>;
-      default: return <Badge variant="outline">{status || 'Legacy'}</Badge>;
+      default: return <Badge variant="outline" className="opacity-70 italic">{status || 'Legacy'}</Badge>;
     }
   };
 
@@ -189,7 +196,7 @@ export default function ManageBookingsPage() {
               <TabsTrigger value="waitlisted">Waitlisted</TabsTrigger>
               <TabsTrigger value="confirmed">Confirmed (Paid)</TabsTrigger>
               <TabsTrigger value="used">Used (Boarded)</TabsTrigger>
-              <TabsTrigger value="inactive">Cancelled/No-Show</TabsTrigger>
+              <TabsTrigger value="inactive">Cancelled/Legacy</TabsTrigger>
             </TabsList>
 
             <Card className="border-none shadow-sm overflow-hidden">
@@ -271,7 +278,13 @@ export default function ManageBookingsPage() {
                                   </>
                                 )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => handleDeleteBooking(booking.id)} className="text-destructive font-bold">
+                                <DropdownMenuItem 
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    handleDeleteBooking(booking.id);
+                                  }} 
+                                  className="text-destructive font-bold"
+                                >
                                   <Trash2 className="h-4 w-4 mr-2" /> Delete Record
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
