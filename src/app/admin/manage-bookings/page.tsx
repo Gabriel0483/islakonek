@@ -18,11 +18,14 @@ import {
   Ship,
   Ban,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  Pencil,
+  Trash2,
+  Check
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { Button } from "@/components/ui/button";
@@ -39,6 +42,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled";
 
@@ -61,6 +74,14 @@ export default function ManageBookingsPage() {
 
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+
+  // Edit State
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    passengerName: "",
+    passengerContact: ""
+  });
 
   const filteredBookings = bookings?.filter(b => {
     const matchesSearch = 
@@ -85,6 +106,33 @@ export default function ManageBookingsPage() {
     if (!db) return;
     const bookingRef = doc(db, "bookings", id);
     updateDocumentNonBlocking(bookingRef, { status: status, updatedAt: new Date().toISOString() });
+  };
+
+  const handleDeleteBooking = (id: string) => {
+    if (!db) return;
+    if (confirm("Are you sure you want to permanently delete this booking record? This action cannot be undone.")) {
+      const bookingRef = doc(db, "bookings", id);
+      deleteDocumentNonBlocking(bookingRef);
+    }
+  };
+
+  const handleOpenEdit = (booking: any) => {
+    setEditingBooking(booking);
+    setEditFormData({
+      passengerName: booking.passengerName || "",
+      passengerContact: booking.passengerContact || ""
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!db || !editingBooking) return;
+    const bookingRef = doc(db, "bookings", editingBooking.id);
+    updateDocumentNonBlocking(bookingRef, {
+      ...editFormData,
+      updatedAt: new Date().toISOString()
+    });
+    setIsEditDialogOpen(false);
   };
 
   const isLoading = isUserLoading || isBookingsLoading;
@@ -193,28 +241,36 @@ export default function ManageBookingsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleOpenEdit(booking)}>
+                                  <Pencil className="h-4 w-4 mr-2 text-muted-foreground" /> Edit Info
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                                 {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
                                   <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Confirmed')} className="text-green-600">
-                                    <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid (Confirm)
+                                    <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
                                   </DropdownMenuItem>
                                 )}
                                 {booking.status === 'Confirmed' && (
                                   <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Used')} className="text-indigo-600">
-                                    <Ship className="h-4 w-4 mr-2" /> Mark as Boarded (Used)
+                                    <Ship className="h-4 w-4 mr-2" /> Mark as Boarded
                                   </DropdownMenuItem>
                                 )}
                                 {['Reserved', 'Waitlisted', 'Confirmed'].includes(booking.status) && (
                                   <>
                                     <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Suspended')} className="text-orange-600">
-                                      <AlertTriangle className="h-4 w-4 mr-2" /> No Show (Suspend)
+                                      <AlertTriangle className="h-4 w-4 mr-2" /> No Show
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Auto-cancelled')} className="text-destructive">
                                       <Ban className="h-4 w-4 mr-2" /> Cancel Booking
                                     </DropdownMenuItem>
                                   </>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleDeleteBooking(booking.id)} className="text-destructive font-bold">
+                                  <Trash2 className="h-4 w-4 mr-2" /> Delete Record
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -232,6 +288,43 @@ export default function ManageBookingsPage() {
             </Card>
           </Tabs>
         </main>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="h-5 w-5 text-accent" /> Edit Passenger Details
+              </DialogTitle>
+              <DialogDescription>
+                Correct information for Ticket ID: <span className="font-bold text-primary">#{editingBooking?.id}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editName">Full Name</Label>
+                <Input 
+                  id="editName" 
+                  value={editFormData.passengerName} 
+                  onChange={(e) => setEditFormData({...editFormData, passengerName: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editContact">Contact Number</Label>
+                <Input 
+                  id="editContact" 
+                  value={editFormData.passengerContact} 
+                  onChange={(e) => setEditFormData({...editFormData, passengerContact: e.target.value})} 
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveEdit} className="bg-primary text-white">
+                <Check className="h-4 w-4 mr-2" /> Update Record
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   );
