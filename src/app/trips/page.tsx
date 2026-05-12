@@ -95,7 +95,6 @@ function TripsContent() {
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOriginPort, setSelectedOriginPort] = useState(searchParams.get("originPortId") || "all");
-  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
 
   const searchDate = searchParams.get("date");
 
@@ -113,7 +112,6 @@ function TripsContent() {
 
     return schedules.filter(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
-      const vessel = vessels?.find(v => v.id === schedule.vesselId);
       
       if (!schedule.isActive) return false;
 
@@ -143,10 +141,6 @@ function TripsContent() {
         if (!matchesRoute && !originPortName && !destPortName && !matchesCode) return false;
       }
 
-      // 4. Filter by Price
-      if (priceRange.min && route.basePrice < Number(priceRange.min)) return false;
-      if (priceRange.max && route.basePrice > Number(priceRange.max)) return false;
-
       return true;
     }).map(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
@@ -166,7 +160,7 @@ function TripsContent() {
         isFull: usedSeats >= (capacity + waitlistLimit)
       };
     });
-  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, priceRange, searchDate, isMounted, phtState]);
+  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, searchDate, isMounted, phtState]);
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -251,7 +245,6 @@ function TripsContent() {
                     size="sm" 
                     className="text-xs text-accent h-auto p-0 hover:bg-transparent underline"
                     onClick={() => {
-                      setPriceRange({ min: "", max: "" });
                       setSearchQuery("");
                       setSelectedOriginPort("all");
                     }}
@@ -260,24 +253,7 @@ function TripsContent() {
                   </Button>
                 </div>
                 
-                <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Price Range</label>
-                  <div className="flex gap-2 items-center">
-                    <Input 
-                      placeholder="Min" 
-                      value={priceRange.min}
-                      onChange={(e) => setPriceRange({...priceRange, min: e.target.value})}
-                      className="h-8 text-xs bg-secondary border-none" 
-                    />
-                    <span className="text-muted-foreground">-</span>
-                    <Input 
-                      placeholder="Max" 
-                      value={priceRange.max}
-                      onChange={(e) => setPriceRange({...priceRange, max: e.target.value})}
-                      className="h-8 text-xs bg-secondary border-none" 
-                    />
-                  </div>
-                </div>
+                <p className="text-xs text-muted-foreground">Adjust your origin port or use the search bar to narrow down results.</p>
               </CardContent>
             </Card>
           </aside>
