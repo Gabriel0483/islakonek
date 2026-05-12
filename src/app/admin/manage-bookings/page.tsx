@@ -483,6 +483,10 @@ export default function ManageBookingsPage() {
         {/* Boarding Pass Dialog */}
         <Dialog open={isBoardingPassOpen} onOpenChange={setIsBoardingPassOpen}>
           <DialogContent className="sm:max-w-[450px] p-0 bg-transparent border-none shadow-none">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Boarding Pass</DialogTitle>
+              <DialogDescription>Digital boarding pass with voyage details and QR code.</DialogDescription>
+            </DialogHeader>
             <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
               <div className="bg-primary p-6 text-primary-foreground text-center space-y-2">
                 <div className="flex justify-center mb-2">
