@@ -21,7 +21,8 @@ import {
   Tag,
   ListOrdered,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Calendar
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -53,7 +54,6 @@ function TripsContent() {
   useEffect(() => {
     setIsMounted(true);
 
-    // Calculate Philippine Time (UTC+8)
     const getPHT = () => {
       const now = new Date();
       const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -74,7 +74,6 @@ function TripsContent() {
     setPhtState(getPHT());
   }, []);
 
-  // Data Fetching
   const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
   const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
   const faresRef = useMemoFirebase(() => collection(db!, "fares"), [db]);
@@ -89,12 +88,10 @@ function TripsContent() {
   const { data: vessels } = useCollection(vesselsRef);
   const { data: ports } = useCollection(portsRef);
 
-  // Filters State
   const [searchQuery, setSearchQuery] = useState("");
   const selectedOriginPort = searchParams.get("originPortId") || "all";
   const searchDate = searchParams.get("date");
 
-  // Booking State
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [bookingFormData, setBookingFormData] = useState({
@@ -106,28 +103,26 @@ function TripsContent() {
   const filteredTrips = useMemo(() => {
     if (!schedules || !routes || !isMounted || !phtState) return [];
 
+    const targetDate = searchDate || phtState.date;
+
     return schedules.filter(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
       
       if (!schedule.isActive) return false;
 
-      // 1. Date Validation
       if (searchDate) {
         if (schedule.type === 'Special') {
           if (!schedule.specialDates?.includes(searchDate)) return false;
         }
-        // If searching for PHT "Today", check if trip has already elapsed
         if (searchDate === phtState.date) {
           if (schedule.departureTime < phtState.time) return false;
         }
       }
 
-      // 2. Filter by Origin Port (Streamlined from home)
       if (selectedOriginPort !== "all" && route?.originPortId !== selectedOriginPort) {
         return false;
       }
 
-      // 3. Filter by Text Search
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesRoute = route?.name?.toLowerCase().includes(query);
@@ -141,7 +136,12 @@ function TripsContent() {
     }).map(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
       const vessel = vessels?.find(v => v.id === schedule.vesselId);
-      const usedSeats = bookings?.filter(b => b.scheduleId === schedule.id && !['Cancelled', 'Auto-cancelled'].includes(b.status)).length || 0;
+      
+      const usedSeats = bookings?.filter(b => 
+        b.scheduleId === schedule.id && 
+        b.travelDate === targetDate && 
+        !['Cancelled', 'Auto-cancelled', 'Suspended'].includes(b.status)
+      ).length || 0;
       
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
       const waitlistLimit = schedule.waitlistLimit || 0;
@@ -164,12 +164,13 @@ function TripsContent() {
   };
 
   const handleProcessBooking = () => {
-    if (!db || !selectedSchedule || !bookingFormData.fareId || !bookingFormData.passengerName) return;
+    if (!db || !selectedSchedule || !bookingFormData.fareId || !bookingFormData.passengerName || !phtState) return;
 
     const selectedFare = fares?.find(f => f.id === bookingFormData.fareId);
     const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
+    const targetDate = searchDate || phtState.date;
 
     const status = selectedSchedule.isWaitlistOnly ? 'Waitlisted' : 'Reserved';
 
@@ -177,6 +178,7 @@ function TripsContent() {
       id: newId,
       scheduleId: selectedSchedule.id,
       routeId: selectedSchedule.routeId,
+      travelDate: targetDate,
       passengerName: bookingFormData.passengerName,
       passengerContact: bookingFormData.passengerContact,
       fareId: bookingFormData.fareId,
@@ -192,9 +194,9 @@ function TripsContent() {
     setBookingFormData({ passengerName: "", passengerContact: "", fareId: "" });
     
     if (status === 'Waitlisted') {
-      alert(`You have been placed on the WAITLIST! Reservation ID: ${newId}. You will be notified if a seat becomes available.`);
+      alert(`You have been placed on the WAITLIST! Reservation ID: ${newId}.`);
     } else {
-      alert(`Booking requested successfully! Your Reservation ID is ${newId}. Please proceed to the terminal to confirm your payment.`);
+      alert(`Booking requested successfully! Your Reservation ID is ${newId}.`);
     }
   };
 
@@ -209,7 +211,7 @@ function TripsContent() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold font-headline text-primary mb-2">Available Trips</h1>
           <p className="text-muted-foreground text-sm">
-            Voyages for <span className="text-primary font-bold">{searchDate}</span> 
+            Voyages for <span className="text-primary font-bold">{searchDate || phtState?.date}</span> 
             {selectedOriginPort !== 'all' && <> originating from <span className="text-primary font-bold">{ports?.find(p => p.id === selectedOriginPort)?.name}</span></>}
           </p>
         </header>
@@ -340,7 +342,7 @@ function TripsContent() {
                   <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
                   <div>
                     <p className="text-sm font-bold text-orange-800">Trip is Full</p>
-                    <p className="text-xs text-orange-700">You are joining the waitlist. Your status will be 'Waitlisted'. If a reserved seat is cancelled, you may be automatically upgraded to 'Reserved'.</p>
+                    <p className="text-xs text-orange-700">You are joining the waitlist. Your status will be 'Waitlisted'.</p>
                   </div>
                 </div>
               )}

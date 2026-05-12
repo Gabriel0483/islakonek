@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -75,12 +74,12 @@ export default function ManageBookingsPage() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  // Edit State
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
     passengerName: "",
-    passengerContact: ""
+    passengerContact: "",
+    travelDate: ""
   });
 
   const activeStatuses = ["Reserved", "Waitlisted", "Confirmed", "Used"];
@@ -88,7 +87,8 @@ export default function ManageBookingsPage() {
   const filteredBookings = bookings?.filter(b => {
     const matchesSearch = 
       b.passengerName?.toLowerCase().includes(search.toLowerCase()) ||
-      b.id?.toLowerCase().includes(search.toLowerCase());
+      b.id?.toLowerCase().includes(search.toLowerCase()) ||
+      b.travelDate?.includes(search);
     
     if (activeTab === "all") return matchesSearch;
     if (activeTab === "reserved") return matchesSearch && b.status === "Reserved";
@@ -96,7 +96,6 @@ export default function ManageBookingsPage() {
     if (activeTab === "confirmed") return matchesSearch && b.status === "Confirmed";
     if (activeTab === "used") return matchesSearch && b.status === "Used";
     if (activeTab === "inactive") {
-      // Show explicitly inactive statuses OR any legacy status not in the active list
       return matchesSearch && (["Suspended", "Auto-cancelled"].includes(b.status) || !activeStatuses.includes(b.status));
     }
     
@@ -115,10 +114,8 @@ export default function ManageBookingsPage() {
 
   const handleDeleteBooking = (id: string) => {
     if (!db || !id) return;
-    
-    // Using a slightly longer timeout and ensuring we have a stable window reference
     setTimeout(() => {
-      const confirmed = window.confirm("Are you sure you want to permanently delete this booking record? This action cannot be undone.");
+      const confirmed = window.confirm("Are you sure you want to permanently delete this booking record?");
       if (confirmed) {
         const bookingRef = doc(db, "bookings", id);
         deleteDocumentNonBlocking(bookingRef);
@@ -130,7 +127,8 @@ export default function ManageBookingsPage() {
     setEditingBooking(booking);
     setEditFormData({
       passengerName: booking.passengerName || "",
-      passengerContact: booking.passengerContact || ""
+      passengerContact: booking.passengerContact || "",
+      travelDate: booking.travelDate || ""
     });
     setIsEditDialogOpen(true);
   };
@@ -176,7 +174,7 @@ export default function ManageBookingsPage() {
             <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search passenger or Ticket ID..." 
+                placeholder="Search passenger, Ticket ID, or Date..." 
                 className="pl-10 h-10 bg-white"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -213,6 +211,7 @@ export default function ManageBookingsPage() {
                         <TableHead>Ticket ID</TableHead>
                         <TableHead>Passenger</TableHead>
                         <TableHead>Trip Details</TableHead>
+                        <TableHead>Travel Date</TableHead>
                         <TableHead>Fare & Type</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -231,11 +230,17 @@ export default function ManageBookingsPage() {
                           <TableCell>
                             <div className="flex items-center gap-1.5">
                               <Tag className="h-2.5 w-2.5 text-accent" />
-                              <span className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</span>
+                              <span className="text-[10px] font-black text-accent uppercase tracking-tighter">{getTripCode(booking.scheduleId)}</span>
                             </div>
                             <div className="text-xs font-bold">{getRouteName(booking.routeId)}</div>
-                            <div className="text-[10px] text-muted-foreground flex items-center gap-3">
+                            <div className="text-[10px] text-muted-foreground">
                                <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> {getDeparture(booking.scheduleId)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs font-bold">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              {booking.travelDate || "No date"}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -316,6 +321,15 @@ export default function ManageBookingsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="editDate">Travel Date</Label>
+                <Input 
+                  id="editDate" 
+                  type="date"
+                  value={editFormData.travelDate} 
+                  onChange={(e) => setEditFormData({...editFormData, travelDate: e.target.value})} 
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="editName">Full Name</Label>
                 <Input 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,7 +14,8 @@ import {
   ClipboardList,
   Tag,
   AlertCircle,
-  ListOrdered
+  ListOrdered,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -53,9 +53,17 @@ export default function DeskBookingsPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   const [isMounted, setIsMounted] = useState(false);
+  const [todayPHT, setTodayPHT] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const pht = new Date(utc + (3600000 * 8));
+    const y = pht.getFullYear();
+    const m = String(pht.getMonth() + 1).padStart(2, '0');
+    const d = String(pht.getDate()).padStart(2, '0');
+    setTodayPHT(`${y}-${m}-${d}`);
   }, []);
   
   const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
@@ -72,40 +80,49 @@ export default function DeskBookingsPage() {
 
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   
-  // Form State
   const [formData, setFormData] = useState({
     routeId: "",
     scheduleId: "",
     fareId: "",
     passengerName: "",
     passengerContact: "",
+    travelDate: "",
     isPaid: true
   });
+
+  useEffect(() => {
+    if (todayPHT && !formData.travelDate) {
+      setFormData(prev => ({ ...prev, travelDate: todayPHT }));
+    }
+  }, [todayPHT, formData.travelDate]);
 
   const availableSchedules = schedules?.filter(s => s.routeId === formData.routeId && s.isActive);
   const availableFares = fares?.filter(f => f.routeId === formData.routeId);
   const selectedFare = fares?.find(f => f.id === formData.fareId);
   const selectedSchedule = schedules?.find(s => s.id === formData.scheduleId);
 
-  const getSeatsUsed = (scheduleId: string) => {
-    return bookings?.filter(b => b.scheduleId === scheduleId && !['Cancelled', 'Auto-cancelled'].includes(b.status)).length || 0;
+  const getSeatsUsed = (scheduleId: string, travelDate: string) => {
+    return bookings?.filter(b => 
+      b.scheduleId === scheduleId && 
+      b.travelDate === travelDate && 
+      !['Cancelled', 'Auto-cancelled', 'Suspended'].includes(b.status)
+    ).length || 0;
   };
 
   const currentCapacity = selectedSchedule?.passengerCapacity || vessels?.find(v => v.id === selectedSchedule?.vesselId)?.passengerCapacity || 0;
   const waitlistLimit = selectedSchedule?.waitlistLimit || 0;
-  const seatsUsed = formData.scheduleId ? getSeatsUsed(formData.scheduleId) : 0;
+  const seatsUsed = formData.scheduleId && formData.travelDate ? getSeatsUsed(formData.scheduleId, formData.travelDate) : 0;
   
   const isWaitlistOnly = seatsUsed >= currentCapacity && seatsUsed < (currentCapacity + waitlistLimit);
   const isFull = seatsUsed >= (currentCapacity + waitlistLimit);
 
   const handleCreateBooking = () => {
-    if (!db || !formData.routeId || !formData.scheduleId || !formData.fareId || !formData.passengerName) return;
+    if (!db || !formData.routeId || !formData.scheduleId || !formData.fareId || !formData.passengerName || !formData.travelDate) return;
 
     const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 
-    // Initial Status Determination based on new rules
     let status = isWaitlistOnly ? 'Waitlisted' : 'Reserved';
     if (formData.isPaid && !isWaitlistOnly) {
       status = 'Confirmed';
@@ -131,6 +148,7 @@ export default function DeskBookingsPage() {
       fareId: "",
       passengerName: "",
       passengerContact: "",
+      travelDate: todayPHT,
       isPaid: true
     });
   };
@@ -203,6 +221,7 @@ export default function DeskBookingsPage() {
                     <TableRow>
                       <TableHead>Ticket ID</TableHead>
                       <TableHead>Passenger</TableHead>
+                      <TableHead>Travel Date</TableHead>
                       <TableHead>Trip/Route</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Amount</TableHead>
@@ -213,6 +232,7 @@ export default function DeskBookingsPage() {
                       <TableRow key={booking.id}>
                         <TableCell className="font-mono text-[10px] font-bold">#{booking.id}</TableCell>
                         <TableCell className="font-bold">{booking.passengerName}</TableCell>
+                        <TableCell className="text-xs">{booking.travelDate}</TableCell>
                         <TableCell>
                           <div className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</div>
                           <div className="text-[10px] text-muted-foreground">{getRouteName(booking.routeId)}</div>
@@ -246,6 +266,14 @@ export default function DeskBookingsPage() {
               <div className="grid gap-6 py-4">
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><CalendarIcon className="h-3 w-3" /> Travel Date</Label>
+                    <Input 
+                      type="date" 
+                      value={formData.travelDate} 
+                      onChange={(e) => setFormData({...formData, travelDate: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Select Route</Label>
                     <Select value={formData.routeId} onValueChange={(val) => setFormData({...formData, routeId: val, scheduleId: "", fareId: ""})}>
                       <SelectTrigger>
@@ -258,6 +286,9 @@ export default function DeskBookingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                </section>
+
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Select Schedule</Label>
                     <Select disabled={!formData.routeId} value={formData.scheduleId} onValueChange={(val) => setFormData({...formData, scheduleId: val})}>
@@ -273,22 +304,17 @@ export default function DeskBookingsPage() {
                   </div>
                 </section>
 
-                {formData.scheduleId && (
+                {formData.scheduleId && formData.travelDate && (
                   <div className={`p-4 rounded-lg flex items-center justify-between border ${isWaitlistOnly ? 'bg-orange-50 border-orange-200' : isFull ? 'bg-red-50 border-red-200' : 'bg-secondary/20'}`}>
                     <div className="flex items-center gap-3">
                       {isWaitlistOnly ? <ListOrdered className="h-5 w-5 text-orange-600" /> : isFull ? <AlertCircle className="h-5 w-5 text-red-600" /> : <Ship className="h-5 w-5 text-primary" />}
                       <div>
-                        <p className="text-xs font-bold text-muted-foreground uppercase">Trip Status</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Availability for {formData.travelDate}</p>
                         <p className={`font-bold ${isFull ? 'text-red-700' : isWaitlistOnly ? 'text-orange-700' : 'text-primary'}`}>
                           {isFull ? 'TRIP FULL' : isWaitlistOnly ? 'WAITLISTING' : `${currentCapacity - seatsUsed} Seats Available`}
                         </p>
                       </div>
                     </div>
-                    {isWaitlistOnly && (
-                      <Badge variant="outline" className="bg-orange-500 text-white border-none">
-                        Queuing
-                      </Badge>
-                    )}
                   </div>
                 )}
 
@@ -370,7 +396,7 @@ export default function DeskBookingsPage() {
               <Button 
                 onClick={handleCreateBooking} 
                 className="bg-primary text-white"
-                disabled={!formData.fareId || !formData.passengerName || !formData.scheduleId || isFull}
+                disabled={!formData.fareId || !formData.passengerName || !formData.scheduleId || !formData.travelDate || isFull}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" /> {isWaitlistOnly ? 'Add to Waitlist' : 'Issue Ticket'}
               </Button>
