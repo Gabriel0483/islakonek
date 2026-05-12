@@ -1,7 +1,9 @@
+
 /**
  * FIRESTORE SECURITY RULES
- * Version: 2.0
+ * Version: 2.1
  * Public Access: Authentication has been removed.
+ * All collections are publicly readable and writable.
  */
 
 rules_version = '2';
