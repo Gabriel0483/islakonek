@@ -190,8 +190,6 @@
         "specialDates": { "type": "array", "items": { "type": "string", "format": "date" } },
         "description": { "type": "string" },
         "isActive": { "type": "boolean" },
-        "isCancelled": { "type": "boolean", "default": false, "description": "Whether the trip is cancelled due to weather or force majeure." },
-        "cancellationReason": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
@@ -219,6 +217,8 @@
         "bookingSource": { "type": "string", "enum": ["Desk", "Public"] },
         "rebookedFromId": { "type": "string", "description": "Original booking ID if this is a rebooked ticket." },
         "penaltyFees": { "type": "number", "default": 0 },
+        "isFeeWaived": { "type": "boolean", "default": false },
+        "waiveReason": { "type": "string", "enum": ["Weather", "Technical", "Force Majeure", "Passenger Request"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },

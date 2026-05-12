@@ -27,8 +27,7 @@ import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   updateDocumentNonBlocking, 
-  deleteDocumentNonBlocking,
-  setDocumentNonBlocking 
+  deleteDocumentNonBlocking
 } from "@/firebase/non-blocking-updates";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
@@ -63,6 +62,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
 
@@ -101,7 +101,15 @@ export default function ManageBookingsPage() {
   const [rebookingData, setRebookingData] = useState({
     newScheduleId: "",
     newTravelDate: "",
-    reason: "Force Majeure"
+    isFeeWaived: false,
+    waiveReason: "Weather"
+  });
+
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [statusTarget, setStatusTarget] = useState<{ booking: any, status: BookingStatus } | null>(null);
+  const [statusActionData, setStatusActionData] = useState({
+    isFeeWaived: false,
+    waiveReason: "Weather"
   });
 
   const activeStatuses = ["Reserved", "Waitlisted", "Confirmed", "Used"];
@@ -124,45 +132,53 @@ export default function ManageBookingsPage() {
     return matchesSearch;
   }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
   const getRoute = (id: string) => routes?.find(r => r.id === id);
   const getSchedule = (id: string) => schedules?.find(s => s.id === id);
   const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
-  const handleUpdateStatus = (booking: any, status: BookingStatus) => {
-    if (!db) return;
-    
-    const route = getRoute(booking.routeId);
-    const schedule = getSchedule(booking.scheduleId);
-    let penaltyMessage = "";
-    let penaltyAmount = 0;
+  const handleOpenStatusDialog = (booking: any, status: BookingStatus) => {
+    setStatusTarget({ booking, status });
+    setStatusActionData({ isFeeWaived: false, waiveReason: "Weather" });
+    setIsStatusDialogOpen(true);
+  };
 
-    // Logic for Force Majeure Free Refund vs Penalized Cancel
+  const calculateStatusPenalties = () => {
+    if (!statusTarget) return 0;
+    if (statusActionData.isFeeWaived) return 0;
+
+    const { booking, status } = statusTarget;
+    const route = getRoute(booking.routeId);
+    let penalty = 0;
+
     if (status === 'Refunded' || status === 'Auto-cancelled') {
-       if (schedule?.isCancelled) {
-          penaltyMessage = "\n\nOriginal trip was CANCELLED by operator. Refund is FREE of charge.";
-       } else if (booking.status === 'Suspended') {
-          penaltyAmount = (route?.noShowFee || 0) + (route?.cancellationFee || 0);
-          penaltyMessage = `\n\nBooking was a No-Show. Total Penalty: ₱${penaltyAmount} (No-Show: ₱${route?.noShowFee || 0} + Cancel: ₱${route?.cancellationFee || 0}).`;
+       if (booking.status === 'Suspended') {
+          penalty = (route?.noShowFee || 0) + (route?.cancellationFee || 0);
        } else {
-          penaltyAmount = route?.cancellationFee || 0;
-          penaltyMessage = `\n\nA Cancellation Fee of ₱${penaltyAmount} applies to this route.`;
+          penalty = route?.cancellationFee || 0;
        }
     } else if (status === 'Suspended') {
-       penaltyAmount = route?.noShowFee || 0;
-       penaltyMessage = `\n\nA No-Show Fee of ₱${penaltyAmount} applies to this record.`;
+       penalty = route?.noShowFee || 0;
     }
 
-    const confirmed = window.confirm(`Update booking ${booking.id} status to ${status}?${penaltyMessage}`);
-    if (!confirmed) return;
+    return penalty;
+  };
 
-    const bookingRef = doc(db, "bookings", booking.id);
+  const handleConfirmStatusUpdate = () => {
+    if (!db || !statusTarget) return;
+    
+    const penaltyAmount = calculateStatusPenalties();
+    const bookingRef = doc(db, "bookings", statusTarget.booking.id);
+    
     updateDocumentNonBlocking(bookingRef, { 
-      status: status, 
+      status: statusTarget.status, 
       penaltyFees: penaltyAmount,
+      isFeeWaived: statusActionData.isFeeWaived,
+      waiveReason: statusActionData.isFeeWaived ? statusActionData.waiveReason : "",
       updatedAt: new Date().toISOString() 
     });
+
+    setIsStatusDialogOpen(false);
   };
 
   const handleOpenRebook = (booking: any) => {
@@ -170,20 +186,17 @@ export default function ManageBookingsPage() {
     setRebookingData({
       newScheduleId: "",
       newTravelDate: booking.travelDate || "",
-      reason: getSchedule(booking.scheduleId)?.isCancelled ? "Force Majeure" : "Passenger Request"
+      isFeeWaived: false,
+      waiveReason: "Weather"
     });
     setIsRebookDialogOpen(true);
   };
 
   const calculateRebookingFees = useMemo(() => {
     if (!rebookingBooking || !routes) return 0;
-    const route = getRoute(rebookingBooking.routeId);
-    const schedule = getSchedule(rebookingBooking.scheduleId);
+    if (rebookingData.isFeeWaived) return 0;
 
-    // Free if trip was cancelled
-    if (schedule?.isCancelled) return 0;
-    
-    // Penalties apply if suspended (No-Show) or simple request
+    const route = getRoute(rebookingBooking.routeId);
     let fees = 0;
     if (rebookingBooking.status === 'Suspended') {
       fees += (route?.noShowFee || 0);
@@ -191,7 +204,7 @@ export default function ManageBookingsPage() {
     fees += (route?.rebookingFee || 0);
     
     return fees;
-  }, [rebookingBooking, routes, schedules]);
+  }, [rebookingBooking, routes, rebookingData.isFeeWaived]);
 
   const handlePerformRebook = () => {
     if (!db || !rebookingBooking || !rebookingData.newScheduleId) return;
@@ -204,21 +217,12 @@ export default function ManageBookingsPage() {
       travelDate: rebookingData.newTravelDate,
       status: "Confirmed",
       penaltyFees: fees,
+      isFeeWaived: rebookingData.isFeeWaived,
+      waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
       updatedAt: new Date().toISOString()
     });
 
     setIsRebookDialogOpen(false);
-  };
-
-  const handleDeleteBooking = (id: string) => {
-    if (!db || !id) return;
-    setTimeout(() => {
-      const confirmed = window.confirm("Are you sure you want to permanently delete this booking record?");
-      if (confirmed) {
-        const bookingRef = doc(db, "bookings", id);
-        deleteDocumentNonBlocking(bookingRef);
-      }
-    }, 200);
   };
 
   const handleOpenEdit = (booking: any) => {
@@ -244,8 +248,6 @@ export default function ManageBookingsPage() {
     setIsEditDialogOpen(false);
   };
 
-  const isLoading = isBookingsLoading;
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Confirmed': return <Badge className="bg-green-600">Confirmed</Badge>;
@@ -260,7 +262,7 @@ export default function ManageBookingsPage() {
   };
 
   const availableRebookingSchedules = schedules?.filter(s => 
-    s.routeId === rebookingBooking?.routeId && s.isActive && !s.isCancelled
+    s.routeId === rebookingBooking?.routeId && s.isActive
   );
 
   return (
@@ -288,8 +290,6 @@ export default function ManageBookingsPage() {
             </div>
             <div className="flex items-center gap-2">
                <Badge variant="outline" className="bg-white">Total: {bookings?.length || 0}</Badge>
-               <Badge className="bg-blue-500">Reserved: {bookings?.filter(b => b.status === 'Reserved').length || 0}</Badge>
-               <Badge className="bg-orange-500">Waitlist: {bookings?.filter(b => b.status === 'Waitlisted').length || 0}</Badge>
             </div>
           </div>
 
@@ -305,7 +305,7 @@ export default function ManageBookingsPage() {
 
             <Card className="border-none shadow-sm overflow-hidden">
               <CardContent className="p-0">
-                {isLoading ? (
+                {isBookingsLoading ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <Loader2 className="h-8 w-8 animate-spin text-accent" />
                     <p className="text-sm text-muted-foreground">Loading manifest...</p>
@@ -324,29 +324,29 @@ export default function ManageBookingsPage() {
                     </TableHeader>
                     <TableBody>
                       {filteredBookings.map((booking) => (
-                        <TableRow key={booking.id} className={`hover:bg-accent/5 ${getSchedule(booking.scheduleId)?.isCancelled ? 'bg-destructive/5' : ''}`}>
+                        <TableRow key={booking.id} className="hover:bg-accent/5">
                           <TableCell className="font-mono text-[10px] font-bold">
                             #{booking.id}
-                            {getSchedule(booking.scheduleId)?.isCancelled && (
-                               <div className="text-[8px] text-destructive uppercase font-black flex items-center gap-0.5 mt-1">
-                                 <AlertTriangle className="h-2 w-2" /> Trip Cancelled
+                            {booking.isFeeWaived && (
+                               <div className="text-[8px] text-green-600 uppercase font-black flex items-center gap-0.5 mt-1">
+                                 <Check className="h-2 w-2" /> Fees Waived ({booking.waiveReason})
                                </div>
                             )}
                           </TableCell>
                           <TableCell>
                             <div className="font-bold">{booking.passengerName}</div>
-                            <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 mt-1">
-                              <span className="flex items-center gap-1"><Phone className="h-2.5 w-2.5" /> {booking.passengerContact || "No contact"}</span>
+                            <div className="text-[10px] text-muted-foreground mt-1">
+                              <Phone className="h-2.5 w-2.5 inline mr-1" /> {booking.passengerContact}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5">
                               <Tag className="h-2.5 w-2.5 text-accent" />
-                              <span className="text-[10px] font-black text-accent uppercase tracking-tighter">{getTripCode(booking.scheduleId)}</span>
+                              <span className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</span>
                             </div>
-                            <div className="text-xs font-bold">{getRouteName(booking.routeId)}</div>
+                            <div className="text-xs font-bold">{routes?.find(r => r.id === booking.routeId)?.name}</div>
                             <div className="text-[10px] text-muted-foreground">
-                               <span className="flex items-center gap-1"><Calendar className="h-2.5 w-2.5" /> {booking.travelDate} @ {getDeparture(booking.scheduleId)}</span>
+                               <Calendar className="h-2.5 w-2.5 inline mr-1" /> {booking.travelDate} @ {getDeparture(booking.scheduleId)}
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(booking.status)}</TableCell>
@@ -376,35 +376,25 @@ export default function ManageBookingsPage() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Status & Finance</DropdownMenuLabel>
                                 {['Reserved', 'Waitlisted', 'Confirmed', 'Suspended'].includes(booking.status) && (
-                                   <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Refunded')} className="text-blue-600">
+                                   <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Refunded')} className="text-blue-600">
                                      <Banknote className="h-4 w-4 mr-2" /> Refund / Cancel
                                    </DropdownMenuItem>
                                 )}
                                 {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
-                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Confirmed')} className="text-green-600">
+                                  <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Confirmed')} className="text-green-600">
                                     <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
                                   </DropdownMenuItem>
                                 )}
                                 {booking.status === 'Confirmed' && (
-                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Used')} className="text-indigo-600">
+                                  <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Used')} className="text-indigo-600">
                                     <Ship className="h-4 w-4 mr-2" /> Mark as Boarded
                                   </DropdownMenuItem>
                                 )}
                                 {['Reserved', 'Waitlisted', 'Confirmed'].includes(booking.status) && (
-                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Suspended')} className="text-orange-600">
+                                  <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Suspended')} className="text-orange-600">
                                     <AlertTriangle className="h-4 w-4 mr-2" /> Mark as No-Show
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onSelect={(e) => {
-                                    e.preventDefault();
-                                    handleDeleteBooking(booking.id);
-                                  }} 
-                                  className="text-destructive font-bold"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" /> Delete Record
-                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -433,23 +423,35 @@ export default function ManageBookingsPage() {
                  Rebook Ticket ID: <span className="font-bold text-primary">#{rebookingBooking?.id}</span>
                </DialogDescription>
              </DialogHeader>
-             <div className="grid gap-4 py-4">
-               {getSchedule(rebookingBooking?.scheduleId)?.isCancelled ? (
-                  <div className="p-3 rounded bg-blue-50 border border-blue-100 flex items-start gap-2">
-                    <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-                    <p className="text-xs text-blue-800 font-medium">Original trip was cancelled by operator. This rebooking is <strong>FREE</strong> of charge.</p>
-                  </div>
-               ) : rebookingBooking?.status === 'Suspended' ? (
-                  <div className="p-3 rounded bg-orange-50 border border-orange-100 flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
-                    <p className="text-xs text-orange-800 font-medium">Passenger was a No-Show. Rebooking and No-Show fees will be applied.</p>
-                  </div>
-               ) : (
-                  <div className="p-3 rounded bg-secondary/30 flex items-start gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <p className="text-xs text-muted-foreground">Standard rebooking fee applies.</p>
-                  </div>
-               )}
+             <div className="grid gap-6 py-4">
+               <div className="space-y-4 p-4 border rounded-lg bg-secondary/5">
+                 <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="font-bold">Waive Penalties</Label>
+                      <p className="text-[10px] text-muted-foreground italic">Waive fees for specific reasons.</p>
+                    </div>
+                    <Switch 
+                      checked={rebookingData.isFeeWaived} 
+                      onCheckedChange={(checked) => setRebookingData({...rebookingData, isFeeWaived: checked})}
+                    />
+                 </div>
+                 {rebookingData.isFeeWaived && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <Label className="text-xs">Reason for Waiving</Label>
+                      <Select value={rebookingData.waiveReason} onValueChange={(val) => setRebookingData({...rebookingData, waiveReason: val})}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Weather">Adverse Weather</SelectItem>
+                          <SelectItem value="Technical">Technical Issue</SelectItem>
+                          <SelectItem value="Force Majeure">Force Majeure</SelectItem>
+                          <SelectItem value="Passenger Request">Special Request</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                 )}
+               </div>
 
                <div className="space-y-2">
                  <Label>New Travel Date</Label>
@@ -474,13 +476,13 @@ export default function ManageBookingsPage() {
                  </Select>
                </div>
 
-               <div className="mt-2 p-4 bg-primary rounded-lg text-primary-foreground flex justify-between items-center">
+               <div className="p-4 bg-primary rounded-lg text-primary-foreground flex justify-between items-center">
                  <div>
-                   <p className="text-[10px] uppercase font-bold opacity-70">Calculated Penalty Fees</p>
+                   <p className="text-[10px] uppercase font-bold opacity-70">Penalty Fees to Apply</p>
                    <p className="text-2xl font-black">₱{calculateRebookingFees.toLocaleString()}</p>
                  </div>
                  <Badge variant="outline" className="text-white border-white/20">
-                   {calculateRebookingFees === 0 ? "Complimentary" : "Penalized"}
+                   {calculateRebookingFees === 0 ? "Complimentary" : "Standard Fee"}
                  </Badge>
                </div>
              </div>
@@ -492,6 +494,64 @@ export default function ManageBookingsPage() {
                 disabled={!rebookingData.newScheduleId || !rebookingData.newTravelDate}
                >
                  Process Rebooking
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+        </Dialog>
+
+        <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+           <DialogContent className="sm:max-w-[450px]">
+             <DialogHeader>
+               <DialogTitle>Confirm Status Update</DialogTitle>
+               <DialogDescription>
+                 Changing Ticket #{statusTarget?.booking.id} status to <span className="font-bold text-primary">{statusTarget?.status}</span>.
+               </DialogDescription>
+             </DialogHeader>
+             
+             <div className="grid gap-6 py-4">
+               {(statusTarget?.status === 'Refunded' || statusTarget?.status === 'Suspended') && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-secondary/5">
+                    <div className="flex items-center justify-between">
+                       <div className="space-y-0.5">
+                         <Label className="font-bold">Waive Penalty Fee</Label>
+                         <p className="text-[10px] text-muted-foreground italic">Exempt passenger from standard charges.</p>
+                       </div>
+                       <Switch 
+                         checked={statusActionData.isFeeWaived} 
+                         onCheckedChange={(checked) => setStatusActionData({...statusActionData, isFeeWaived: checked})}
+                       />
+                    </div>
+                    {statusActionData.isFeeWaived && (
+                       <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                         <Label className="text-xs">Reason for Waiving</Label>
+                         <Select value={statusActionData.waiveReason} onValueChange={(val) => setStatusActionData({...statusActionData, waiveReason: val})}>
+                           <SelectTrigger className="h-8 text-xs">
+                             <SelectValue />
+                           </SelectTrigger>
+                           <SelectContent>
+                             <SelectItem value="Weather">Adverse Weather</SelectItem>
+                             <SelectItem value="Technical">Technical Issue</SelectItem>
+                             <SelectItem value="Force Majeure">Force Majeure</SelectItem>
+                             <SelectItem value="Passenger Request">Staff Discretion</SelectItem>
+                           </SelectContent>
+                         </Select>
+                       </div>
+                    )}
+                  </div>
+               )}
+
+               <div className="p-4 rounded-lg bg-primary text-primary-foreground flex justify-between items-center">
+                 <div>
+                   <p className="text-[10px] uppercase font-bold opacity-70">Penalty Fee</p>
+                   <p className="text-2xl font-black">₱{calculateStatusPenalties().toLocaleString()}</p>
+                 </div>
+               </div>
+             </div>
+
+             <DialogFooter>
+               <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>Cancel</Button>
+               <Button onClick={handleConfirmStatusUpdate} className="bg-primary text-white">
+                 Confirm Update
                </Button>
              </DialogFooter>
            </DialogContent>
