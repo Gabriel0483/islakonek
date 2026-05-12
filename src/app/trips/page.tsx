@@ -95,7 +95,6 @@ function TripsContent() {
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOriginPort, setSelectedOriginPort] = useState(searchParams.get("originPortId") || "all");
-  const [selectedVesselTypes, setSelectedVesselTypes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
 
   const searchDate = searchParams.get("date");
@@ -144,12 +143,7 @@ function TripsContent() {
         if (!matchesRoute && !originPortName && !destPortName && !matchesCode) return false;
       }
 
-      // 4. Filter by Vessel Type
-      if (selectedVesselTypes.length > 0 && vessel && !selectedVesselTypes.includes(vessel.type)) {
-        return false;
-      }
-
-      // 5. Filter by Price
+      // 4. Filter by Price
       if (priceRange.min && route.basePrice < Number(priceRange.min)) return false;
       if (priceRange.max && route.basePrice > Number(priceRange.max)) return false;
 
@@ -172,7 +166,7 @@ function TripsContent() {
         isFull: usedSeats >= (capacity + waitlistLimit)
       };
     });
-  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, selectedVesselTypes, priceRange, searchDate, isMounted, phtState]);
+  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, priceRange, searchDate, isMounted, phtState]);
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -257,7 +251,6 @@ function TripsContent() {
                     size="sm" 
                     className="text-xs text-accent h-auto p-0 hover:bg-transparent underline"
                     onClick={() => {
-                      setSelectedVesselTypes([]);
                       setPriceRange({ min: "", max: "" });
                       setSearchQuery("");
                       setSelectedOriginPort("all");
@@ -267,27 +260,6 @@ function TripsContent() {
                   </Button>
                 </div>
                 
-                <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Vessel Type</label>
-                  <div className="space-y-2">
-                    {["RoRo", "FastCraft", "Cargo Ship", "Catamaran"].map((type) => (
-                      <div key={type} className="flex items-center gap-2">
-                        <input 
-                          type="checkbox" 
-                          id={type} 
-                          checked={selectedVesselTypes.includes(type)}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedVesselTypes([...selectedVesselTypes, type]);
-                            else setSelectedVesselTypes(selectedVesselTypes.filter(t => t !== type));
-                          }}
-                          className="rounded border-border text-accent focus:ring-accent" 
-                        />
-                        <label htmlFor={type} className="text-sm">{type}</label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="space-y-3">
                   <label className="text-xs font-bold uppercase text-muted-foreground tracking-widest">Price Range</label>
                   <div className="flex gap-2 items-center">
