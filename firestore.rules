@@ -1,49 +1,43 @@
 /**
  * FIRESTORE SECURITY RULES
- * Version: 1.2
- * Triggering redeployment to ensure user profile access is active.
- * Ensuring users have full read/write access to their specific document in the /users collection.
+ * Version: 2.0
+ * Public Access: Authentication has been removed.
  */
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     match /ports/{portId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /routes/{routeId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /fares/{fareId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /vessels/{vesselId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /maintenance/{recordId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /schedules/{scheduleId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /bookings/{bookingId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
 
     match /users/{userId} {
-      // Users can only read or write their own profile document.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if true;
     }
   }
 }

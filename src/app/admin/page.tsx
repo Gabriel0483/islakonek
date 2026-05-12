@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -19,37 +18,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 
 export default function AdminDashboard() {
   const db = useFirestore();
-  const { user } = useUser();
 
-  const portsRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return collection(db, "ports");
-  }, [db, user]);
-
-  const routesRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return collection(db, "routes");
-  }, [db, user]);
-
-  const vesselsRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return collection(db, "vessels");
-  }, [db, user]);
-
-  const schedulesRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return collection(db, "schedules");
-  }, [db, user]);
-
-  const bookingsRef = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    return collection(db, "bookings");
-  }, [db, user]);
+  const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
+  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
+  const vesselsRef = useMemoFirebase(() => collection(db!, "vessels"), [db]);
+  const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
+  const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
 
   const { data: ports } = useCollection(portsRef);
   const { data: routes } = useCollection(routesRef);
