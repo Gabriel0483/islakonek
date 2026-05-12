@@ -16,6 +16,7 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 
 export default function Home() {
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
   const [year, setYear] = useState<number | null>(null);
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
   
@@ -30,6 +31,7 @@ export default function Home() {
   const { data: routes } = useCollection(routesRef);
 
   useEffect(() => {
+    setIsMounted(true);
     setYear(new Date().getFullYear());
   }, []);
 
@@ -138,7 +140,9 @@ export default function Home() {
                       <span>Duration: {Math.floor(route.estimatedDurationMinutes / 60)}h {route.estimatedDurationMinutes % 60}m</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-lg font-black text-primary">₱{route.basePrice?.toLocaleString()}</span>
+                      <span className="text-lg font-black text-primary">
+                        ₱{isMounted ? route.basePrice?.toLocaleString() : "---"}
+                      </span>
                       <Link href={`/trips?origin=${route.name.split(' - ')[0]}`}>
                         <Button size="sm" variant="ghost" className="text-accent gap-1 group-hover:gap-2 transition-all">
                           Book Now <ArrowRight className="h-4 w-4" />
@@ -167,7 +171,7 @@ export default function Home() {
               </div>
               <h2 className="text-4xl font-headline font-bold">Scale Your Maritime Operations</h2>
               <p className="text-lg text-primary-foreground/80">
-                A unified platform to manage vessels, optimize schedules with AI, and reach thousands of passengers daily. Modernize your fleet management today.
+                A unified platform to manage vessels, optimize schedules, and reach thousands of passengers daily. Modernize your fleet management today.
               </p>
               <Link href="/admin">
                 <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4 px-8 py-6 text-lg">
