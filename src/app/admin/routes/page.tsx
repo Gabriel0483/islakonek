@@ -11,7 +11,8 @@ import {
   Waypoints,
   ArrowRight,
   UserCheck,
-  X
+  X,
+  AlertCircle
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -75,6 +76,9 @@ export default function RoutesPage() {
     destinationPortId: "",
     basePrice: 0,
     estimatedDurationMinutes: 0,
+    rebookingFee: 0,
+    cancellationFee: 0,
+    noShowFee: 0,
     passengerSegments: []
   });
 
@@ -93,6 +97,9 @@ export default function RoutesPage() {
         destinationPortId: route.destinationPortId,
         basePrice: route.basePrice,
         estimatedDurationMinutes: route.estimatedDurationMinutes || 0,
+        rebookingFee: route.rebookingFee || 0,
+        cancellationFee: route.cancellationFee || 0,
+        noShowFee: route.noShowFee || 0,
         passengerSegments: route.passengerSegments || []
       });
     } else {
@@ -103,6 +110,9 @@ export default function RoutesPage() {
         destinationPortId: "",
         basePrice: 0,
         estimatedDurationMinutes: 0,
+        rebookingFee: 0,
+        cancellationFee: 0,
+        noShowFee: 0,
         passengerSegments: []
       });
     }
@@ -128,7 +138,10 @@ export default function RoutesPage() {
     const payload = {
       ...formData,
       basePrice: Number(formData.basePrice),
-      estimatedDurationMinutes: Number(formData.estimatedDurationMinutes)
+      estimatedDurationMinutes: Number(formData.estimatedDurationMinutes),
+      rebookingFee: Number(formData.rebookingFee),
+      cancellationFee: Number(formData.cancellationFee),
+      noShowFee: Number(formData.noShowFee)
     };
 
     if (editingRoute) {
@@ -179,7 +192,7 @@ export default function RoutesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search routes by name..." 
-                className="pl-10"
+                className="pl-10 h-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -214,16 +227,29 @@ export default function RoutesPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-2 py-2">
+                       <div className="p-2 rounded bg-red-50 border border-red-100 text-center">
+                          <p className="text-[9px] uppercase font-bold text-red-600">Rebook</p>
+                          <p className="text-xs font-black">₱{route.rebookingFee || 0}</p>
+                       </div>
+                       <div className="p-2 rounded bg-orange-50 border border-orange-100 text-center">
+                          <p className="text-[9px] uppercase font-bold text-orange-600">Cancel</p>
+                          <p className="text-xs font-black">₱{route.cancellationFee || 0}</p>
+                       </div>
+                       <div className="p-2 rounded bg-slate-50 border border-slate-200 text-center">
+                          <p className="text-[9px] uppercase font-bold text-slate-600">No-Show</p>
+                          <p className="text-xs font-black">₱{route.noShowFee || 0}</p>
+                       </div>
+                    </div>
+
                     <div className="flex flex-wrap gap-2">
                       {route.passengerSegments?.map((seg: any) => (
                         <Badge key={seg.id} variant="outline" className="text-[10px] bg-accent/5 border-accent/20">
                           {seg.label}
                         </Badge>
                       ))}
-                      {(!route.passengerSegments || route.passengerSegments.length === 0) && (
-                        <span className="text-xs text-muted-foreground italic">No demographics defined</span>
-                      )}
                     </div>
+
                     <div className="flex justify-between items-center pt-2 border-t">
                        <span className="text-xs text-muted-foreground">
                          Duration: {Math.floor(route.estimatedDurationMinutes / 60)}h {route.estimatedDurationMinutes % 60}m
@@ -255,7 +281,7 @@ export default function RoutesPage() {
             <DialogHeader>
               <DialogTitle>{editingRoute ? "Edit Route" : "Create New Route"}</DialogTitle>
               <DialogDescription>
-                Define the journey details and passenger demographics for this route.
+                Define journey details, passenger demographics, and penalty fees.
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[70vh] pr-4">
@@ -323,6 +349,45 @@ export default function RoutesPage() {
                       value={formData.estimatedDurationMinutes} 
                       onChange={(e) => setFormData({...formData, estimatedDurationMinutes: e.target.value})} 
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-4 border pt-4 p-4 rounded-lg bg-red-50/30">
+                  <div className="flex items-center gap-2 text-destructive mb-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <Label className="font-bold">Penalty Configurations (₱)</Label>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="rebook" className="text-[10px] uppercase text-muted-foreground font-bold">Rebooking Fee</Label>
+                      <Input 
+                        id="rebook" 
+                        type="number"
+                        value={formData.rebookingFee} 
+                        onChange={(e) => setFormData({...formData, rebookingFee: e.target.value})} 
+                        className="bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cancel" className="text-[10px] uppercase text-muted-foreground font-bold">Cancellation Fee</Label>
+                      <Input 
+                        id="cancel" 
+                        type="number"
+                        value={formData.cancellationFee} 
+                        onChange={(e) => setFormData({...formData, cancellationFee: e.target.value})} 
+                        className="bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="noshow" className="text-[10px] uppercase text-muted-foreground font-bold">No-Show Fee</Label>
+                      <Input 
+                        id="noshow" 
+                        type="number"
+                        value={formData.noShowFee} 
+                        onChange={(e) => setFormData({...formData, noShowFee: e.target.value})} 
+                        className="bg-white"
+                      />
+                    </div>
                   </div>
                 </div>
 

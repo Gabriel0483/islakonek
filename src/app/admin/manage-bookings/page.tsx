@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   Pencil,
   Trash2,
-  Check
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -113,12 +114,26 @@ export default function ManageBookingsPage() {
   }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
+  const getRoute = (id: string) => routes?.find(r => r.id === id);
   const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
-  const handleUpdateStatus = (id: string, status: BookingStatus) => {
+  const handleUpdateStatus = (booking: any, status: BookingStatus) => {
     if (!db) return;
-    const bookingRef = doc(db, "bookings", id);
+    
+    const route = getRoute(booking.routeId);
+    let penaltyMessage = "";
+    
+    if (status === 'Auto-cancelled') {
+       penaltyMessage = `\n\nA Cancellation Fee of ₱${route?.cancellationFee || 0} applies to this route.`;
+    } else if (status === 'Suspended') {
+       penaltyMessage = `\n\nA No-Show Fee of ₱${route?.noShowFee || 0} applies to this route.`;
+    }
+
+    const confirmed = window.confirm(`Update booking ${booking.id} status to ${status}?${penaltyMessage}`);
+    if (!confirmed) return;
+
+    const bookingRef = doc(db, "bookings", booking.id);
     updateDocumentNonBlocking(bookingRef, { status: status, updatedAt: new Date().toISOString() });
   };
 
@@ -277,21 +292,21 @@ export default function ManageBookingsPage() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                                 {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
-                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Confirmed')} className="text-green-600">
+                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Confirmed')} className="text-green-600">
                                     <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
                                   </DropdownMenuItem>
                                 )}
                                 {booking.status === 'Confirmed' && (
-                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Used')} className="text-indigo-600">
+                                  <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Used')} className="text-indigo-600">
                                     <Ship className="h-4 w-4 mr-2" /> Mark as Boarded
                                   </DropdownMenuItem>
                                 )}
                                 {['Reserved', 'Waitlisted', 'Confirmed'].includes(booking.status) && (
                                   <>
-                                    <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Suspended')} className="text-orange-600">
+                                    <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Suspended')} className="text-orange-600">
                                       <AlertTriangle className="h-4 w-4 mr-2" /> No Show
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleUpdateStatus(booking.id, 'Auto-cancelled')} className="text-destructive">
+                                    <DropdownMenuItem onSelect={() => handleUpdateStatus(booking, 'Auto-cancelled')} className="text-destructive">
                                       <Ban className="h-4 w-4 mr-2" /> Cancel Booking
                                     </DropdownMenuItem>
                                   </>

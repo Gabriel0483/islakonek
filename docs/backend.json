@@ -56,7 +56,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Route",
       "type": "object",
-      "description": "Represents a maritime route connecting two ports.",
+      "description": "Represents a maritime route connecting two ports, including penalty fee configurations.",
       "properties": {
         "id": {
           "type": "string"
@@ -80,6 +80,21 @@
         "estimatedDurationMinutes": {
           "type": "number",
           "description": "Estimated time for the voyage in minutes."
+        },
+        "rebookingFee": {
+          "type": "number",
+          "default": 0,
+          "description": "Fee charged for rebooking a ticket on this route."
+        },
+        "cancellationFee": {
+          "type": "number",
+          "default": 0,
+          "description": "Fee charged for cancelling a confirmed booking."
+        },
+        "noShowFee": {
+          "type": "number",
+          "default": 0,
+          "description": "Penalty for passengers who fail to board."
         },
         "passengerSegments": {
           "type": "array",
