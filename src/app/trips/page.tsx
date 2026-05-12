@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -73,7 +72,8 @@ function TripsContent() {
   const { data: ports } = useCollection(portsRef);
 
   // Filters State
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("origin") || "");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOriginPort, setSelectedOriginPort] = useState(searchParams.get("originPortId") || "all");
   const [selectedVesselTypes, setSelectedVesselTypes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
 
@@ -95,19 +95,27 @@ function TripsContent() {
       
       if (!schedule.isActive) return false;
 
+      // Filter by Origin Port (from URL or Home selection)
+      if (selectedOriginPort !== "all" && route?.originPortId !== selectedOriginPort) {
+        return false;
+      }
+
+      // Filter by Text Search
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesRoute = route?.name?.toLowerCase().includes(query);
         const matchesCode = schedule.tripCode?.toLowerCase().includes(query);
-        const originPort = ports?.find(p => p.id === route?.originPortId)?.name?.toLowerCase().includes(query);
-        const destPort = ports?.find(p => p.id === route?.destinationPortId)?.name?.toLowerCase().includes(query);
-        if (!matchesRoute && !originPort && !destPort && !matchesCode) return false;
+        const originPortName = ports?.find(p => p.id === route?.originPortId)?.name?.toLowerCase().includes(query);
+        const destPortName = ports?.find(p => p.id === route?.destinationPortId)?.name?.toLowerCase().includes(query);
+        if (!matchesRoute && !originPortName && !destPortName && !matchesCode) return false;
       }
 
+      // Filter by Vessel Type
       if (selectedVesselTypes.length > 0 && vessel && !selectedVesselTypes.includes(vessel.type)) {
         return false;
       }
 
+      // Filter by Price
       if (priceRange.min && route.basePrice < Number(priceRange.min)) return false;
       if (priceRange.max && route.basePrice > Number(priceRange.max)) return false;
 
@@ -130,7 +138,7 @@ function TripsContent() {
         isFull: usedSeats >= (capacity + waitlistLimit)
       };
     });
-  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedVesselTypes, priceRange]);
+  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, selectedVesselTypes, priceRange]);
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -145,7 +153,6 @@ function TripsContent() {
     const timestamp = new Date().toISOString();
     const bookingRef = doc(db, "bookings", newId);
 
-    // Determine Status
     const status = selectedSchedule.isWaitlistOnly ? 'Waitlisted' : 'Reserved';
 
     setDocumentNonBlocking(bookingRef, {
@@ -181,9 +188,25 @@ function TripsContent() {
       <Navbar />
       
       <div className="container mx-auto px-4 py-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold font-headline text-primary mb-2">Available Trips</h1>
-          <p className="text-muted-foreground">Find and book your next maritime journey using our live island schedules.</p>
+        <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold font-headline text-primary mb-2">Available Trips</h1>
+            <p className="text-muted-foreground text-sm">Find and book your next maritime journey using our live island schedules.</p>
+          </div>
+          <div className="w-full md:w-64 space-y-2">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Filter by Departure</Label>
+            <Select value={selectedOriginPort} onValueChange={setSelectedOriginPort}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="All Origin Ports" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Origin Ports</SelectItem>
+                {ports?.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -203,6 +226,7 @@ function TripsContent() {
                       setSelectedVesselTypes([]);
                       setPriceRange({ min: "", max: "" });
                       setSearchQuery("");
+                      setSelectedOriginPort("all");
                     }}
                   >
                     Reset All
@@ -257,7 +281,7 @@ function TripsContent() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search Trip ID, route, or port..." 
+                  placeholder="Search Trip ID or destination..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 h-12 bg-white border-none shadow-sm" 
@@ -358,6 +382,7 @@ function TripsContent() {
                 <div className="py-20 text-center border-2 border-dashed rounded-xl opacity-50 bg-secondary/10">
                   <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-bold">No trips found</h3>
+                  <p className="text-sm text-muted-foreground">Try adjusting your filters or selecting a different port.</p>
                 </div>
               )}
             </div>

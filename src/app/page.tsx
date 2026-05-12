@@ -4,20 +4,34 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, Calendar, Ship } from "lucide-react";
+import { Search, Calendar, Ship, MapPin } from "lucide-react";
+import { collection } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Navbar } from "@/components/navbar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const router = useRouter();
+  const db = useFirestore();
   const [year, setYear] = useState<number | null>(null);
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
   
+  const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
+  const { data: ports } = useCollection(portsRef);
+
   const [searchData, setSearchData] = useState({
-    date: ""
+    date: "",
+    originPortId: ""
   });
 
   useEffect(() => {
@@ -27,6 +41,7 @@ export default function Home() {
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchData.date) params.set("date", searchData.date);
+    if (searchData.originPortId) params.set("originPortId", searchData.originPortId);
     router.push(`/trips?${params.toString()}`);
   };
 
@@ -46,15 +61,35 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/60 to-background/80" />
         
         <div className="container relative z-10 px-4 mx-auto text-white">
-          <div className="max-w-xl mx-auto space-y-6 text-center">
+          <div className="max-w-2xl mx-auto space-y-6 text-center">
             <h1 className="text-4xl md:text-6xl font-black font-headline mb-6 drop-shadow-lg">
               Islands Within Reach
             </h1>
             <Card className="bg-white/95 backdrop-blur p-6 shadow-2xl border-none text-foreground">
-              <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full space-y-2 text-left">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div className="space-y-2 text-left">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Calendar className="h-3 w-3 text-accent" /> Select Travel Date
+                    <MapPin className="h-3 w-3 text-accent" /> Origin Port
+                  </label>
+                  <Select 
+                    value={searchData.originPortId} 
+                    onValueChange={(val) => setSearchData({...searchData, originPortId: val})}
+                  >
+                    <SelectTrigger className="border-none bg-secondary h-12 focus:ring-accent">
+                      <SelectValue placeholder="Select Departure Port" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Ports</SelectItem>
+                      {ports?.map(port => (
+                        <SelectItem key={port.id} value={port.id}>{port.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3 text-accent" /> Travel Date
                   </label>
                   <Input 
                     type="date" 
@@ -63,12 +98,13 @@ export default function Home() {
                     className="border-none bg-secondary h-12 focus-visible:ring-accent w-full" 
                   />
                 </div>
-                <div className="w-full md:w-auto">
+
+                <div className="md:col-span-2 lg:col-span-1">
                   <Button 
                     onClick={handleSearch}
-                    className="w-full h-12 px-8 gap-2 font-bold bg-accent hover:bg-accent/90 text-primary"
+                    className="w-full h-12 gap-2 font-bold bg-accent hover:bg-accent/90 text-primary"
                   >
-                    <Search className="h-4 w-4" /> Search Trips
+                    <Search className="h-4 w-4" /> Find Trips
                   </Button>
                 </div>
               </div>
