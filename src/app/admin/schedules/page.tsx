@@ -17,7 +17,9 @@ import {
   X,
   Users,
   Tag,
-  ListOrdered
+  ListOrdered,
+  AlertTriangle,
+  CloudOff
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -87,7 +89,9 @@ export default function SchedulesPage() {
     type: "Daily",
     specialDates: [] as string[],
     description: "",
-    isActive: true
+    isActive: true,
+    isCancelled: false,
+    cancellationReason: ""
   });
 
   const [newDate, setNewDate] = useState("");
@@ -114,7 +118,9 @@ export default function SchedulesPage() {
         type: schedule.type || "Daily",
         specialDates: schedule.specialDates || [],
         description: schedule.description || "",
-        isActive: schedule.isActive !== undefined ? schedule.isActive : true
+        isActive: schedule.isActive !== undefined ? schedule.isActive : true,
+        isCancelled: schedule.isCancelled || false,
+        cancellationReason: schedule.cancellationReason || ""
       });
     } else {
       setEditingSchedule(null);
@@ -128,7 +134,9 @@ export default function SchedulesPage() {
         type: "Daily",
         specialDates: [],
         description: "",
-        isActive: true
+        isActive: true,
+        isCancelled: false,
+        cancellationReason: ""
       });
     }
     setIsDialogOpen(true);
@@ -237,9 +245,9 @@ export default function SchedulesPage() {
           ) : filteredSchedules && filteredSchedules.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSchedules.map((schedule) => (
-                <Card key={schedule.id} className={`border-none shadow-sm hover:shadow-md transition-shadow relative overflow-hidden ${!schedule.isActive ? 'opacity-60' : ''}`}>
-                  <div className={`absolute top-0 right-0 p-2 ${schedule.type === 'Daily' ? 'bg-blue-500' : 'bg-orange-500'} text-white text-[10px] font-bold uppercase rounded-bl-lg`}>
-                    {schedule.type}
+                <Card key={schedule.id} className={`border-none shadow-sm hover:shadow-md transition-shadow relative overflow-hidden ${!schedule.isActive ? 'opacity-60' : ''} ${schedule.isCancelled ? 'border-2 border-destructive' : ''}`}>
+                  <div className={`absolute top-0 right-0 p-2 ${schedule.isCancelled ? 'bg-destructive' : schedule.type === 'Daily' ? 'bg-blue-500' : 'bg-orange-500'} text-white text-[10px] font-bold uppercase rounded-bl-lg`}>
+                    {schedule.isCancelled ? 'Cancelled' : schedule.type}
                   </div>
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2 mb-1">
@@ -255,6 +263,11 @@ export default function SchedulesPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {schedule.isCancelled && (
+                       <div className="p-2 rounded bg-destructive/10 text-destructive text-[10px] font-bold flex items-center gap-2 mb-2">
+                         <CloudOff className="h-3 w-3" /> CANCELLED: {schedule.cancellationReason || "Weather/Force Majeure"}
+                       </div>
+                    )}
                     <div className="bg-secondary/20 p-3 rounded-lg space-y-2">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground uppercase font-bold tracking-tighter">Vessel</span>
@@ -266,12 +279,6 @@ export default function SchedulesPage() {
                         <span className="text-muted-foreground uppercase font-bold tracking-tighter">Capacity</span>
                         <span className="font-bold flex items-center gap-1">
                           <Users className="h-3 w-3" /> {schedule.passengerCapacity || 0} Seats
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-muted-foreground uppercase font-bold tracking-tighter">Waitlist Limit</span>
-                        <span className="font-bold flex items-center gap-1">
-                          <ListOrdered className="h-3 w-3" /> {schedule.waitlistLimit || 0} Queues
                         </span>
                       </div>
                       <div className="pt-2 border-t">
@@ -291,9 +298,11 @@ export default function SchedulesPage() {
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t">
-                      <Badge variant={schedule.isActive ? "default" : "outline"} className={schedule.isActive ? "bg-green-500" : ""}>
-                        {schedule.isActive ? "Active" : "Paused"}
-                      </Badge>
+                      <div className="flex gap-2">
+                        <Badge variant={schedule.isActive ? "default" : "outline"} className={schedule.isActive && !schedule.isCancelled ? "bg-green-500" : ""}>
+                          {schedule.isCancelled ? "Cancelled" : schedule.isActive ? "Active" : "Paused"}
+                        </Badge>
+                      </div>
                       <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(schedule)} className="h-8 w-8 p-0">
                           <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -397,6 +406,41 @@ export default function SchedulesPage() {
                   </div>
                 </div>
 
+                <div className="space-y-4 border rounded-lg p-4 bg-secondary/5">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="font-bold flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-destructive" /> Emergency Cancellation
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground">Mark this trip as cancelled due to weather or technical issues.</p>
+                    </div>
+                    <Switch 
+                      checked={formData.isCancelled} 
+                      onCheckedChange={(checked) => setFormData({...formData, isCancelled: checked})}
+                    />
+                  </div>
+                  {formData.isCancelled && (
+                    <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2">
+                      <Label className="text-xs">Cancellation Reason</Label>
+                      <Select 
+                        value={formData.cancellationReason} 
+                        onValueChange={(val) => setFormData({...formData, cancellationReason: val})}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Select reason" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Adverse Weather Conditions">Adverse Weather Conditions</SelectItem>
+                          <SelectItem value="Technical/Engine Issue">Technical/Engine Issue</SelectItem>
+                          <SelectItem value="Port Closure">Port Closure</SelectItem>
+                          <SelectItem value="Force Majeure">Force Majeure</SelectItem>
+                          <SelectItem value="Other Operational Reason">Other Operational Reason</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Waitlist Limit</Label>
@@ -405,27 +449,21 @@ export default function SchedulesPage() {
                       value={formData.waitlistLimit} 
                       onChange={(e) => setFormData({...formData, waitlistLimit: Number(e.target.value)})} 
                     />
-                    <p className="text-[10px] text-muted-foreground">Extra slots allowed for queuing when trip is full.</p>
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/5 self-end h-[40px]">
-                    <Label className="flex items-center gap-2">Status</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{formData.isActive ? "Active" : "Paused"}</span>
-                      <Switch 
-                        checked={formData.isActive} 
-                        onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
-                      />
-                    </div>
+                    <Label className="flex items-center gap-2">Trip Active</Label>
+                    <Switch 
+                      checked={formData.isActive} 
+                      onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-4 border-t pt-4">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="font-bold flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-accent" /> Trip Dates
-                      </Label>
-                    </div>
+                    <Label className="font-bold flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-accent" /> Special Trip Dates
+                    </Label>
                     <Badge variant={formData.specialDates.length > 0 ? "default" : "secondary"}>
                       {formData.specialDates.length > 0 ? "Special Schedule" : "Daily Schedule"}
                     </Badge>
@@ -455,15 +493,6 @@ export default function SchedulesPage() {
                       </div>
                     </div>
                   )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Notes / Description</Label>
-                  <Input 
-                    placeholder="e.g. Holy Week Peak Season Schedule" 
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  />
                 </div>
               </div>
             </ScrollArea>

@@ -190,6 +190,8 @@
         "specialDates": { "type": "array", "items": { "type": "string", "format": "date" } },
         "description": { "type": "string" },
         "isActive": { "type": "boolean" },
+        "isCancelled": { "type": "boolean", "default": false, "description": "Whether the trip is cancelled due to weather or force majeure." },
+        "cancellationReason": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
@@ -213,8 +215,10 @@
         "emergencyContact": { "type": "string", "description": "Name and number for emergency cases." },
         "segmentLabel": { "type": "string" },
         "finalFare": { "type": "number" },
-        "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled"] },
+        "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled", "Refunded"] },
         "bookingSource": { "type": "string", "enum": ["Desk", "Public"] },
+        "rebookedFromId": { "type": "string", "description": "Original booking ID if this is a rebooked ticket." },
+        "penaltyFees": { "type": "number", "default": 0 },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
