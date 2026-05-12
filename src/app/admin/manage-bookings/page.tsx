@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -542,10 +541,10 @@ export default function ManageBookingsPage() {
 
                   <div className="bg-primary/5 p-4 rounded-2xl mb-4 border border-primary/10">
                     <Image 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}&color=1f3a93&bgcolor=ffffff`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}&color=1f3a93&bgcolor=ffffff`}
                       alt="Boarding Pass QR"
-                      width={180}
-                      height={180}
+                      width={120}
+                      height={120}
                       className="mix-blend-multiply transition-opacity hover:opacity-90"
                     />
                   </div>
