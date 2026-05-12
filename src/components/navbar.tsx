@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { Ship, User, LayoutDashboard, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/firebase";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
+  const { user, isUserLoading } = useUser();
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 mx-auto">
@@ -38,7 +41,7 @@ export function Navbar() {
           <Link href="/profile">
             <Button variant="ghost" size="sm" className="gap-2">
               <User className="h-4 w-4 text-accent" />
-              Sign In
+              {isUserLoading ? "..." : user && !user.isAnonymous ? "My Profile" : "Sign In"}
             </Button>
           </Link>
         </div>
@@ -58,7 +61,9 @@ export function Navbar() {
                 <Link href="/admin">Admin Portal</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/profile">My Profile</Link>
+                <Link href="/profile">
+                  {user && !user.isAnonymous ? "My Profile" : "Sign In"}
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

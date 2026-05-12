@@ -204,6 +204,19 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "scheduleId", "routeId", "passengerName", "passengerDob", "passengerContact", "emergencyContact", "finalFare", "status"]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
     }
   },
   "auth": {
@@ -282,6 +295,16 @@
             "$ref": "#/backend/entities/Booking"
           },
           "description": "Records of passenger bookings and ticket sales."
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores individual user profile data."
         }
       }
     ]
