@@ -534,18 +534,14 @@ export default function ManageBookingsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-6 border-t border-dashed relative">
-                  {/* Decorative Ticket Punches */}
-                  <div className="absolute -left-8 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-black/80 md:bg-transparent" />
-                  <div className="absolute -right-8 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-black/80 md:bg-transparent" />
-
-                  <div className="bg-primary/5 p-4 rounded-2xl mb-4 border border-primary/10">
+                <div className="flex flex-col items-center justify-center py-6 border-t border-dashed">
+                  <div className="bg-secondary/20 p-4 rounded-2xl mb-4">
                     <Image 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}&color=1f3a93&bgcolor=ffffff`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}`}
                       alt="Boarding Pass QR"
-                      width={120}
-                      height={120}
-                      className="mix-blend-multiply transition-opacity hover:opacity-90"
+                      width={150}
+                      height={150}
+                      className="mix-blend-multiply"
                     />
                   </div>
                   <p className="text-[10px] text-primary/60 font-black uppercase tracking-[0.2em] italic">Scan at the boarding gate</p>
