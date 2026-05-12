@@ -24,6 +24,7 @@ export default function Home() {
   const router = useRouter();
   const db = useFirestore();
   const [year, setYear] = useState<number | null>(null);
+  const [dateLimits, setDateLimits] = useState({ min: "", max: "" });
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
   
   const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
@@ -35,7 +36,26 @@ export default function Home() {
   });
 
   useEffect(() => {
-    setYear(new Date().getFullYear());
+    const now = new Date();
+    setYear(now.getFullYear());
+
+    // Calculate 10-day rolling window
+    const formatDate = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const todayStr = formatDate(now);
+    const tenDaysLater = new Date();
+    tenDaysLater.setDate(now.getDate() + 9);
+    const maxDateStr = formatDate(tenDaysLater);
+
+    setDateLimits({
+      min: todayStr,
+      max: maxDateStr
+    });
   }, []);
 
   const handleSearch = () => {
@@ -94,6 +114,8 @@ export default function Home() {
                   <Input 
                     type="date" 
                     value={searchData.date}
+                    min={dateLimits.min}
+                    max={dateLimits.max}
                     onChange={(e) => setSearchData({...searchData, date: e.target.value})}
                     className="border-none bg-secondary h-12 focus-visible:ring-accent w-full" 
                   />
