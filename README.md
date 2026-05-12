@@ -16,6 +16,14 @@ To verify the change, use:
 git remote -v
 ```
 
+### Handling Git Pull Conflicts (Divergent Branches)
+If you see an error about "divergent branches" when pulling code, run this command to allow merging:
+
+```bash
+git config pull.rebase false  # This sets merge as the default strategy
+git pull origin main
+```
+
 ### Changing the Firebase Backend
 To connect this application to a different Firebase project (data repository):
 1. Go to the [Firebase Console](https://console.firebase.google.com/).
