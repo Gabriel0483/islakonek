@@ -1,22 +1,18 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, Calendar, Ship, ArrowRight } from "lucide-react";
+import { Search, Calendar, Ship } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Navbar } from "@/components/navbar";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { collection } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 
 export default function Home() {
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
   const [year, setYear] = useState<number | null>(null);
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
   
@@ -24,12 +20,7 @@ export default function Home() {
     date: ""
   });
 
-  const db = useFirestore();
-  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
-  const { data: routes } = useCollection(routesRef);
-
   useEffect(() => {
-    setIsMounted(true);
     setYear(new Date().getFullYear());
   }, []);
 
@@ -43,7 +34,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col font-body">
       <Navbar />
       
-      <section className="relative h-[500px] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
         <Image
           src={heroImage?.imageUrl || ""}
           alt="Modern ferry"
@@ -56,7 +47,10 @@ export default function Home() {
         
         <div className="container relative z-10 px-4 mx-auto text-white">
           <div className="max-w-xl mx-auto space-y-6 text-center">
-            <Card className="bg-white/95 backdrop-blur p-6 shadow-2xl border-none text-foreground mt-8">
+            <h1 className="text-4xl md:text-6xl font-black font-headline mb-6 drop-shadow-lg">
+              Islands Within Reach
+            </h1>
+            <Card className="bg-white/95 backdrop-blur p-6 shadow-2xl border-none text-foreground">
               <div className="flex flex-col md:flex-row gap-4 items-end">
                 <div className="flex-1 w-full space-y-2 text-left">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -79,54 +73,9 @@ export default function Home() {
                 </div>
               </div>
               <p className="mt-4 text-[10px] text-muted-foreground uppercase font-bold tracking-widest text-center">
-                Search all available island connections by date
+                Check real-time island schedules and availability
               </p>
             </Card>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20 bg-background">
-        <div className="container px-4 mx-auto">
-          <div className="flex justify-between items-end mb-12">
-            <div>
-              <h2 className="text-3xl font-headline font-bold text-primary">Popular Island Routes</h2>
-              <p className="text-muted-foreground">Most traveled routes this week</p>
-            </div>
-            <Link href="/trips">
-              <Button variant="outline" className="text-primary hover:text-accent">View All Routes</Button>
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {routes && routes.length > 0 ? (
-              routes.slice(0, 3).map((route) => (
-                <Card key={route.id} className="border-none shadow-sm hover:shadow-lg transition-all group overflow-hidden bg-white">
-                  <div className="h-3 bg-accent/20 group-hover:bg-accent transition-colors" />
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-primary mb-2">{route.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                      <span>Duration: {Math.floor(route.estimatedDurationMinutes / 60)}h {route.estimatedDurationMinutes % 60}m</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-black text-primary">
-                        ₱{isMounted ? route.basePrice?.toLocaleString() : "---"}
-                      </span>
-                      <Link href={`/trips?origin=${route.name.split(' - ')[0]}`}>
-                        <Button size="sm" variant="ghost" className="text-accent gap-1 group-hover:gap-2 transition-all">
-                          Book Now <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-full py-20 text-center border-2 border-dashed rounded-2xl bg-secondary/20">
-                <Ship className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-muted-foreground">Stay tuned! New routes are being added daily.</p>
-              </div>
-            )}
           </div>
         </div>
       </section>
