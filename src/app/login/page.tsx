@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Ship, Mail, Lock, Loader2, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,15 +21,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If user is already logged in, redirect to home or admin
-  if (user) {
-    if (user.email === 'rielmagpantay@gmail.com') {
-      router.push("/admin");
-    } else {
-      router.push("/");
+  // Handle redirection in a useEffect hook
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      if (user.email === 'rielmagpantay@gmail.com') {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
     }
-    return null;
-  }
+  }, [user, isUserLoading, router]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +45,14 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }, 2000);
   };
+
+  if (isUserLoading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary/30 p-4 font-body">
