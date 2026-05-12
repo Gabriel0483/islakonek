@@ -17,7 +17,10 @@ import {
   ListOrdered,
   Calendar as CalendarIcon,
   Mail,
-  Heart
+  Heart,
+  QrCode,
+  Download,
+  Printer
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -50,6 +53,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import Image from "next/image";
 
 export default function DeskBookingsPage() {
   const db = useFirestore();
@@ -99,6 +103,8 @@ export default function DeskBookingsPage() {
   const { data: vessels } = useCollection(vesselsRef);
 
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+  const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
+  const [lastCreatedBooking, setLastCreatedBooking] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     routeId: "",
@@ -153,16 +159,34 @@ export default function DeskBookingsPage() {
 
     const { isPaid, ...cleanData } = formData;
 
-    setDocumentNonBlocking(bookingRef, {
+    let boardingSeq = null;
+    if (status === 'Confirmed') {
+      const tripBookings = bookings?.filter(b => 
+        b.scheduleId === formData.scheduleId && 
+        b.travelDate === formData.travelDate && 
+        (b.status === 'Confirmed' || b.status === 'Used')
+      ) || [];
+      boardingSeq = tripBookings.length + 1;
+    }
+
+    const newBookingData = {
       id: newId,
       ...cleanData,
       status: status,
       segmentLabel: selectedFare?.segmentLabel || "",
       finalFare: selectedFare?.finalFare || 0,
       bookingSource: "Desk",
+      boardingSequenceNumber: boardingSeq,
       createdAt: timestamp,
       updatedAt: timestamp
-    }, { merge: true });
+    };
+
+    setDocumentNonBlocking(bookingRef, newBookingData, { merge: true });
+
+    if (status === 'Confirmed') {
+      setLastCreatedBooking(newBookingData);
+      setIsBoardingPassOpen(true);
+    }
 
     setIsNewBookingOpen(false);
     setFormData({
@@ -185,6 +209,7 @@ export default function DeskBookingsPage() {
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
+  const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
 
   const isLoading = isBookingsLoading;
 
@@ -279,6 +304,88 @@ export default function DeskBookingsPage() {
             </CardContent>
           </Card>
         </main>
+
+        {/* Boarding Pass Dialog */}
+        <Dialog open={isBoardingPassOpen} onOpenChange={setIsBoardingPassOpen}>
+          <DialogContent className="sm:max-w-[450px] p-0 bg-transparent border-none shadow-none">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
+              <div className="bg-primary p-6 text-primary-foreground text-center space-y-2">
+                <div className="flex justify-center mb-2">
+                  <div className="bg-white/20 p-2 rounded-xl">
+                    <Ship className="h-8 w-8" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-black font-headline uppercase tracking-tight">Boarding Pass</h2>
+                <p className="text-xs opacity-80 font-bold uppercase tracking-widest">Isla Konek Maritime Services</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="flex justify-between items-start border-b pb-4">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Passenger Name</Label>
+                    <p className="text-lg font-black text-primary uppercase">{lastCreatedBooking?.passengerName}</p>
+                  </div>
+                  <div className="text-right">
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Ticket ID</Label>
+                    <p className="font-mono text-sm font-bold">#{lastCreatedBooking?.id}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Trip ID</Label>
+                    <p className="font-black text-accent uppercase">{getTripCode(lastCreatedBooking?.scheduleId)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Date of Travel</Label>
+                    <p className="font-bold">{lastCreatedBooking?.travelDate}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Departure Time</Label>
+                    <p className="font-bold">{getDeparture(lastCreatedBooking?.scheduleId)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Boarding Seq</Label>
+                    <div className="bg-primary/10 text-primary h-8 w-8 rounded-full flex items-center justify-center font-black text-sm">
+                      {lastCreatedBooking?.boardingSequenceNumber || "N/A"}
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Routing</Label>
+                    <p className="font-bold text-sm">{getRouteName(lastCreatedBooking?.routeId)}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center py-6 border-t border-dashed">
+                  <div className="bg-secondary/20 p-4 rounded-2xl mb-4">
+                    <Image 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOARDING_PASS_${lastCreatedBooking?.id}_${lastCreatedBooking?.boardingSequenceNumber}`}
+                      alt="Boarding Pass QR"
+                      width={150}
+                      height={150}
+                      className="mix-blend-multiply"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest italic">Scan at the boarding gate</p>
+                </div>
+              </div>
+
+              <div className="bg-secondary/30 p-4 flex gap-2">
+                <Button className="flex-1 bg-primary text-white font-bold" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4 mr-2" /> Print Pass
+                </Button>
+                <Button variant="outline" className="flex-1 font-bold">
+                  <Download className="h-4 w-4 mr-2" /> Save Image
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <Button variant="link" className="text-white" onClick={() => setIsBoardingPassOpen(false)}>
+                Close Boarding Pass
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
           <DialogContent className="sm:max-w-[750px]">

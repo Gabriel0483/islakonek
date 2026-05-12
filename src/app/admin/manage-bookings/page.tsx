@@ -26,7 +26,10 @@ import {
   Mail,
   Heart,
   Eye,
-  XCircle
+  XCircle,
+  QrCode,
+  Download,
+  Printer
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -68,6 +71,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import Image from "next/image";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
 
@@ -96,6 +100,7 @@ export default function ManageBookingsPage() {
   const [isRebookDialogOpen, setIsRebookDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
 
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -186,6 +191,11 @@ export default function ManageBookingsPage() {
     setIsDeleteConfirmOpen(true);
   };
 
+  const handleViewBoardingPass = (booking: any) => {
+    setSelectedBooking(booking);
+    setIsBoardingPassOpen(true);
+  };
+
   const calculateStatusPenalties = () => {
     if (!statusTarget) return 0;
     if (statusActionData.isFeeWaived) return 0;
@@ -213,15 +223,36 @@ export default function ManageBookingsPage() {
     const penaltyAmount = calculateStatusPenalties();
     const bookingRef = doc(db, "bookings", statusTarget.booking.id);
     
-    updateDocumentNonBlocking(bookingRef, { 
+    const updateData: any = { 
       status: statusTarget.status, 
       penaltyFees: penaltyAmount,
       isFeeWaived: statusActionData.isFeeWaived,
       waiveReason: statusActionData.isFeeWaived ? statusActionData.waiveReason : "",
       updatedAt: new Date().toISOString() 
-    });
+    };
+
+    // If marking as paid/confirmed, assign a boarding sequence number
+    if (statusTarget.status === 'Confirmed' && !statusTarget.booking.boardingSequenceNumber) {
+      const tripBookings = bookings?.filter(b => 
+        b.scheduleId === statusTarget.booking.scheduleId && 
+        b.travelDate === statusTarget.booking.travelDate && 
+        (b.status === 'Confirmed' || b.status === 'Used')
+      ) || [];
+      updateData.boardingSequenceNumber = tripBookings.length + 1;
+    }
+
+    updateDocumentNonBlocking(bookingRef, updateData);
 
     setIsStatusDialogOpen(false);
+
+    // If it was confirmed, show the pass
+    if (statusTarget.status === 'Confirmed') {
+      setTimeout(() => {
+        const updatedBooking = { ...statusTarget.booking, ...updateData };
+        setSelectedBooking(updatedBooking);
+        setIsBoardingPassOpen(true);
+      }, 500);
+    }
   };
 
   const calculateRebookingFees = useMemo(() => {
@@ -244,6 +275,13 @@ export default function ManageBookingsPage() {
     const fees = calculateRebookingFees;
     const bookingRef = doc(db, "bookings", selectedBooking.id);
     
+    // Calculate new sequence number
+    const tripBookings = bookings?.filter(b => 
+      b.scheduleId === rebookingData.newScheduleId && 
+      b.travelDate === rebookingData.newTravelDate && 
+      (b.status === 'Confirmed' || b.status === 'Used')
+    ) || [];
+
     updateDocumentNonBlocking(bookingRef, {
       scheduleId: rebookingData.newScheduleId,
       travelDate: rebookingData.newTravelDate,
@@ -251,6 +289,7 @@ export default function ManageBookingsPage() {
       penaltyFees: fees,
       isFeeWaived: rebookingData.isFeeWaived,
       waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
+      boardingSequenceNumber: tripBookings.length + 1,
       updatedAt: new Date().toISOString()
     });
 
@@ -396,6 +435,11 @@ export default function ManageBookingsPage() {
                                 <DropdownMenuItem onSelect={() => handleOpenViewDetails(booking)}>
                                   <Eye className="h-4 w-4 mr-2 text-muted-foreground" /> View Details
                                 </DropdownMenuItem>
+                                {(booking.status === 'Confirmed' || booking.status === 'Used') && (
+                                  <DropdownMenuItem onSelect={() => handleViewBoardingPass(booking)}>
+                                    <QrCode className="h-4 w-4 mr-2 text-primary" /> View Boarding Pass
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onSelect={() => handleOpenEdit(booking)}>
                                   <Pencil className="h-4 w-4 mr-2 text-muted-foreground" /> Edit Booking
                                 </DropdownMenuItem>
@@ -435,6 +479,88 @@ export default function ManageBookingsPage() {
             </Card>
           </Tabs>
         </main>
+
+        {/* Boarding Pass Dialog */}
+        <Dialog open={isBoardingPassOpen} onOpenChange={setIsBoardingPassOpen}>
+          <DialogContent className="sm:max-w-[450px] p-0 bg-transparent border-none shadow-none">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
+              <div className="bg-primary p-6 text-primary-foreground text-center space-y-2">
+                <div className="flex justify-center mb-2">
+                  <div className="bg-white/20 p-2 rounded-xl">
+                    <Ship className="h-8 w-8" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-black font-headline uppercase tracking-tight">Boarding Pass</h2>
+                <p className="text-xs opacity-80 font-bold uppercase tracking-widest">Isla Konek Maritime Services</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="flex justify-between items-start border-b pb-4">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Passenger Name</Label>
+                    <p className="text-lg font-black text-primary uppercase">{selectedBooking?.passengerName}</p>
+                  </div>
+                  <div className="text-right">
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Ticket ID</Label>
+                    <p className="font-mono text-sm font-bold">#{selectedBooking?.id}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Trip ID</Label>
+                    <p className="font-black text-accent uppercase">{getTripCode(selectedBooking?.scheduleId)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Date of Travel</Label>
+                    <p className="font-bold">{selectedBooking?.travelDate}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Departure Time</Label>
+                    <p className="font-bold">{getDeparture(selectedBooking?.scheduleId)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Boarding Seq</Label>
+                    <div className="bg-primary/10 text-primary h-8 w-8 rounded-full flex items-center justify-center font-black text-sm">
+                      {selectedBooking?.boardingSequenceNumber || "N/A"}
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-[10px] text-muted-foreground uppercase font-bold">Routing</Label>
+                    <p className="font-bold text-sm">{getRoute(selectedBooking?.routeId)?.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center py-6 border-t border-dashed">
+                  <div className="bg-secondary/20 p-4 rounded-2xl mb-4">
+                    <Image 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}`}
+                      alt="Boarding Pass QR"
+                      width={150}
+                      height={150}
+                      className="mix-blend-multiply"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest italic">Scan at the boarding gate</p>
+                </div>
+              </div>
+
+              <div className="bg-secondary/30 p-4 flex gap-2">
+                <Button className="flex-1 bg-primary text-white font-bold" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4 mr-2" /> Print Pass
+                </Button>
+                <Button variant="outline" className="flex-1 font-bold">
+                  <Download className="h-4 w-4 mr-2" /> Save Image
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <Button variant="link" className="text-white" onClick={() => setIsBoardingPassOpen(false)}>
+                Close Boarding Pass
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* View Details Dialog */}
         <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
@@ -490,6 +616,12 @@ export default function ManageBookingsPage() {
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Travel Date</p>
                       <p className="font-bold">{selectedBooking?.travelDate} @ {getDeparture(selectedBooking?.scheduleId)}</p>
                     </div>
+                    {selectedBooking?.boardingSequenceNumber && (
+                      <div className="flex justify-between items-center pt-2 border-t border-muted-foreground/10">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold">Boarding Sequence</p>
+                        <p className="font-black text-primary text-lg">#{selectedBooking.boardingSequenceNumber}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
