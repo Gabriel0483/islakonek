@@ -190,16 +190,20 @@
         "scheduleId": { "type": "string" },
         "routeId": { "type": "string" },
         "fareId": { "type": "string" },
+        "travelDate": { "type": "string", "format": "date" },
         "passengerName": { "type": "string" },
-        "passengerContact": { "type": "string" },
+        "passengerDob": { "type": "string", "format": "date" },
+        "passengerEmail": { "type": "string", "format": "email" },
+        "passengerContact": { "type": "string", "description": "Mobile number of the passenger." },
+        "emergencyContact": { "type": "string", "description": "Name and number for emergency cases." },
         "segmentLabel": { "type": "string" },
         "finalFare": { "type": "number" },
-        "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled"], "description": "Reserved: unpaid seat. Waitlisted: full trip, queuing. Confirmed: paid. Used: boarded. Suspended: no show. Auto-cancelled: time-out." },
+        "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled"] },
         "bookingSource": { "type": "string", "enum": ["Desk", "Public"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "scheduleId", "routeId", "passengerName", "finalFare", "status"]
+      "required": ["id", "scheduleId", "routeId", "passengerName", "passengerDob", "passengerContact", "emergencyContact", "finalFare", "status"]
     }
   },
   "auth": {

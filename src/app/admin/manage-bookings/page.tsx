@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,7 +21,9 @@ import {
   AlertTriangle,
   Pencil,
   Trash2,
-  Check
+  Check,
+  Mail,
+  Heart
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -78,7 +81,10 @@ export default function ManageBookingsPage() {
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
     passengerName: "",
+    passengerDob: "",
+    passengerEmail: "",
     passengerContact: "",
+    emergencyContact: "",
     travelDate: ""
   });
 
@@ -127,7 +133,10 @@ export default function ManageBookingsPage() {
     setEditingBooking(booking);
     setEditFormData({
       passengerName: booking.passengerName || "",
+      passengerDob: booking.passengerDob || "",
+      passengerEmail: booking.passengerEmail || "",
       passengerContact: booking.passengerContact || "",
+      emergencyContact: booking.emergencyContact || "",
       travelDate: booking.travelDate || ""
     });
     setIsEditDialogOpen(true);
@@ -223,8 +232,9 @@ export default function ManageBookingsPage() {
                           <TableCell className="font-mono text-[10px] font-bold">#{booking.id}</TableCell>
                           <TableCell>
                             <div className="font-bold">{booking.passengerName}</div>
-                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Phone className="h-2.5 w-2.5" /> {booking.passengerContact || "No contact"}
+                            <div className="text-[10px] text-muted-foreground flex flex-col gap-0.5 mt-1">
+                              <span className="flex items-center gap-1"><Phone className="h-2.5 w-2.5" /> {booking.passengerContact || "No contact"}</span>
+                              <span className="flex items-center gap-1"><Calendar className="h-2.5 w-2.5" /> Born: {booking.passengerDob || "N/A"}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -311,7 +321,7 @@ export default function ManageBookingsPage() {
         </main>
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Pencil className="h-5 w-5 text-accent" /> Edit Passenger Details
@@ -320,34 +330,66 @@ export default function ManageBookingsPage() {
                 Correct information for Ticket ID: <span className="font-bold text-primary">#{editingBooking?.id}</span>
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="editDate">Travel Date</Label>
-                <Input 
-                  id="editDate" 
-                  type="date"
-                  value={editFormData.travelDate} 
-                  onChange={(e) => setEditFormData({...editFormData, travelDate: e.target.value})} 
-                />
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editDate">Travel Date</Label>
+                  <Input 
+                    id="editDate" 
+                    type="date"
+                    value={editFormData.travelDate} 
+                    onChange={(e) => setEditFormData({...editFormData, travelDate: e.target.value})} 
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editName">Full Name</Label>
+                    <Input 
+                      id="editName" 
+                      value={editFormData.passengerName} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerName: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editDob">Date of Birth</Label>
+                    <Input 
+                      id="editDob" 
+                      type="date"
+                      value={editFormData.passengerDob} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerDob: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmail">Email Address</Label>
+                    <Input 
+                      id="editEmail" 
+                      type="email"
+                      value={editFormData.passengerEmail} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerEmail: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editContact">Mobile Number</Label>
+                    <Input 
+                      id="editContact" 
+                      value={editFormData.passengerContact} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerContact: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editEmergency">Emergency Contact</Label>
+                  <Input 
+                    id="editEmergency" 
+                    value={editFormData.emergencyContact} 
+                    onChange={(e) => setEditFormData({...editFormData, emergencyContact: e.target.value})} 
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="editName">Full Name</Label>
-                <Input 
-                  id="editName" 
-                  value={editFormData.passengerName} 
-                  onChange={(e) => setEditFormData({...editFormData, passengerName: e.target.value})} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editContact">Contact Number</Label>
-                <Input 
-                  id="editContact" 
-                  value={editFormData.passengerContact} 
-                  onChange={(e) => setEditFormData({...editFormData, passengerContact: e.target.value})} 
-                />
-              </div>
-            </div>
-            <DialogFooter>
+            </ScrollArea>
+            <DialogFooter className="pt-4 border-t">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSaveEdit} className="bg-primary text-white">
                 <Check className="h-4 w-4 mr-2" /> Update Record

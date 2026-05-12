@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,7 +16,9 @@ import {
   Tag,
   AlertCircle,
   ListOrdered,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Mail,
+  Heart
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -85,7 +88,10 @@ export default function DeskBookingsPage() {
     scheduleId: "",
     fareId: "",
     passengerName: "",
+    passengerDob: "",
+    passengerEmail: "",
     passengerContact: "",
+    emergencyContact: "",
     travelDate: "",
     isPaid: true
   });
@@ -147,7 +153,10 @@ export default function DeskBookingsPage() {
       scheduleId: "",
       fareId: "",
       passengerName: "",
+      passengerDob: "",
+      passengerEmail: "",
       passengerContact: "",
+      emergencyContact: "",
       travelDate: todayPHT,
       isPaid: true
     });
@@ -255,7 +264,7 @@ export default function DeskBookingsPage() {
         </main>
 
         <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent className="sm:max-w-[750px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Ticket className="h-5 w-5 text-accent" /> Counter Issuance
@@ -333,7 +342,28 @@ export default function DeskBookingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contact">Contact Number</Label>
+                      <Label htmlFor="passengerDob">Date of Birth</Label>
+                      <Input 
+                        id="passengerDob" 
+                        type="date"
+                        value={formData.passengerDob} 
+                        onChange={(e) => setFormData({...formData, passengerDob: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="flex items-center gap-1.5"><Mail className="h-3 w-3 text-muted-foreground" /> Email Address <span className="text-[10px] text-muted-foreground italic">(Optional)</span></Label>
+                      <Input 
+                        id="email" 
+                        type="email"
+                        value={formData.passengerEmail} 
+                        onChange={(e) => setFormData({...formData, passengerEmail: e.target.value})}
+                        placeholder="juan@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact">Mobile Number</Label>
                       <Input 
                         id="contact" 
                         value={formData.passengerContact} 
@@ -341,6 +371,15 @@ export default function DeskBookingsPage() {
                         placeholder="0912 345 6789"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency" className="flex items-center gap-1.5"><Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number</Label>
+                    <Input 
+                      id="emergency" 
+                      value={formData.emergencyContact} 
+                      onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                      placeholder="Name and number"
+                    />
                   </div>
                 </section>
 
@@ -396,7 +435,7 @@ export default function DeskBookingsPage() {
               <Button 
                 onClick={handleCreateBooking} 
                 className="bg-primary text-white"
-                disabled={!formData.fareId || !formData.passengerName || !formData.scheduleId || !formData.travelDate || isFull}
+                disabled={!formData.fareId || !formData.passengerName || !formData.passengerDob || !formData.passengerContact || !formData.emergencyContact || !formData.scheduleId || !formData.travelDate || isFull}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" /> {isWaitlistOnly ? 'Add to Waitlist' : 'Issue Ticket'}
               </Button>

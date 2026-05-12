@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -22,7 +23,9 @@ import {
   ListOrdered,
   AlertCircle,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Mail,
+  Heart
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -96,7 +99,10 @@ function TripsContent() {
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [bookingFormData, setBookingFormData] = useState({
     passengerName: "",
+    passengerDob: "",
+    passengerEmail: "",
     passengerContact: "",
+    emergencyContact: "",
     fareId: ""
   });
 
@@ -180,7 +186,10 @@ function TripsContent() {
       routeId: selectedSchedule.routeId,
       travelDate: targetDate,
       passengerName: bookingFormData.passengerName,
+      passengerDob: bookingFormData.passengerDob,
+      passengerEmail: bookingFormData.passengerEmail,
       passengerContact: bookingFormData.passengerContact,
+      emergencyContact: bookingFormData.emergencyContact,
       fareId: bookingFormData.fareId,
       segmentLabel: selectedFare?.segmentLabel || "",
       finalFare: selectedFare?.finalFare || 0,
@@ -191,7 +200,14 @@ function TripsContent() {
     }, { merge: true });
 
     setIsBookingOpen(false);
-    setBookingFormData({ passengerName: "", passengerContact: "", fareId: "" });
+    setBookingFormData({ 
+      passengerName: "", 
+      passengerDob: "", 
+      passengerEmail: "", 
+      passengerContact: "", 
+      emergencyContact: "", 
+      fareId: "" 
+    });
     
     if (status === 'Waitlisted') {
       alert(`You have been placed on the WAITLIST! Reservation ID: ${newId}.`);
@@ -326,7 +342,7 @@ function TripsContent() {
       </div>
 
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ticket className="h-5 w-5 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Secure Your Seat'}
@@ -362,7 +378,31 @@ function TripsContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact">Contact Number</Label>
+                    <Label htmlFor="passengerDob">Date of Birth</Label>
+                    <Input 
+                      id="passengerDob" 
+                      type="date"
+                      value={bookingFormData.passengerDob} 
+                      onChange={(e) => setBookingFormData({...bookingFormData, passengerDob: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="passengerEmail" className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-muted-foreground" /> Email Address <span className="text-[10px] text-muted-foreground uppercase">(Optional)</span>
+                    </Label>
+                    <Input 
+                      id="passengerEmail" 
+                      type="email"
+                      value={bookingFormData.passengerEmail} 
+                      onChange={(e) => setBookingFormData({...bookingFormData, passengerEmail: e.target.value})}
+                      placeholder="juan@example.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact">Mobile Number</Label>
                     <Input 
                       id="contact" 
                       value={bookingFormData.passengerContact} 
@@ -370,6 +410,18 @@ function TripsContent() {
                       placeholder="0912 345 6789"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="emergencyContact" className="flex items-center gap-1.5">
+                    <Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number
+                  </Label>
+                  <Input 
+                    id="emergencyContact" 
+                    value={bookingFormData.emergencyContact} 
+                    onChange={(e) => setBookingFormData({...bookingFormData, emergencyContact: e.target.value})}
+                    placeholder="Maria Dela Cruz - 0917 123 4567"
+                  />
                 </div>
               </section>
 
@@ -408,7 +460,7 @@ function TripsContent() {
             <Button 
               onClick={handleProcessBooking} 
               className={selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-primary text-white'}
-              disabled={!bookingFormData.fareId || !bookingFormData.passengerName}
+              disabled={!bookingFormData.fareId || !bookingFormData.passengerName || !bookingFormData.passengerDob || !bookingFormData.passengerContact || !bookingFormData.emergencyContact}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" /> {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'}
             </Button>
