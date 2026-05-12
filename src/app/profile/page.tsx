@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { 
   User, 
   Mail, 
@@ -9,10 +11,12 @@ import {
   CheckCircle2, 
   ShieldCheck,
   History,
-  Ticket
+  Ticket,
+  LogOut,
+  LogIn
 } from "lucide-react";
 import { doc, collection } from "firebase/firestore";
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection, useAuth } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -24,6 +28,8 @@ import { Separator } from "@/components/ui/separator";
 
 export default function ProfilePage() {
   const db = useFirestore();
+  const auth = useAuth();
+  const router = useRouter();
   const { user, isUserLoading } = useUser();
   
   const userDocRef = useMemoFirebase(() => {
@@ -64,7 +70,8 @@ export default function ProfilePage() {
     }
   }, [profile, user]);
 
-  const myBookings = allBookings?.filter(b => b.passengerEmail === (profile?.email || user?.email))
+  const userEmail = profile?.email || user?.email;
+  const myBookings = allBookings?.filter(b => b.passengerEmail === userEmail)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const handleSave = () => {
@@ -86,16 +93,44 @@ export default function ProfilePage() {
     }, 500);
   };
 
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push("/");
+  };
+
   const isLoading = isUserLoading || isProfileLoading;
+
+  if (!isUserLoading && (!user || user.isAnonymous)) {
+    return (
+      <div className="min-h-screen bg-background font-body">
+        <Navbar />
+        <main className="container mx-auto px-4 py-20 text-center max-w-md">
+          <div className="bg-secondary/30 p-8 rounded-2xl mb-6">
+            <User className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h1 className="text-2xl font-bold font-headline text-primary mb-2">Guest Session</h1>
+            <p className="text-muted-foreground text-sm mb-6">You are currently using Isla Konek as a guest. Sign in to save your profile permanently and track your voyages.</p>
+            <Button className="w-full bg-primary font-bold h-12" onClick={() => router.push("/login")}>
+              <LogIn className="h-4 w-4 mr-2" /> Sign In / Register
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-body">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
-        <header>
-          <h1 className="text-3xl font-bold font-headline text-primary mb-2">Account Profile</h1>
-          <p className="text-muted-foreground text-sm">Manage your personal information and view your maritime journey history.</p>
+        <header className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold font-headline text-primary mb-2">Account Profile</h1>
+            <p className="text-muted-foreground text-sm">Manage your personal information and view your maritime journey history.</p>
+          </div>
+          <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/5" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" /> Sign Out
+          </Button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -213,8 +248,8 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="p-4 rounded-lg bg-white/10 text-sm">
-                  <p className="opacity-80">Connected via:</p>
-                  <p className="font-bold">{user?.isAnonymous ? "Guest Session" : user?.email || "Authenticated User"}</p>
+                  <p className="opacity-80">Connected as:</p>
+                  <p className="font-bold truncate">{user?.email}</p>
                 </div>
                 <p className="text-xs opacity-70 leading-relaxed">
                   Your Isla Konek digital ID simplifies your check-in process at the port. Ensure your name matches your valid government ID.
@@ -226,7 +261,7 @@ export default function ProfilePage() {
                <p className="text-xs font-bold uppercase tracking-widest">Need Help?</p>
                <p className="text-[10px] text-muted-foreground">For booking adjustments or cancellations, please contact support or visit the nearest ticket counter.</p>
                <Separator className="my-4" />
-               <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => window.location.href='/'}>
+               <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
                  Log Out Session
                </Button>
             </div>
