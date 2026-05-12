@@ -375,7 +375,7 @@ export default function ManageBookingsPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Status & Finance</DropdownMenuLabel>
-                                {['Reserved', 'Waitlisted', 'Confirmed', 'Suspended'].includes(booking.status) && (
+                                {['Reserved', 'Waitlisted', 'Confirmed', 'Suspended', 'Used'].includes(booking.status) && (
                                    <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Refunded')} className="text-blue-600">
                                      <Banknote className="h-4 w-4 mr-2" /> Refund / Cancel
                                    </DropdownMenuItem>
@@ -383,16 +383,6 @@ export default function ManageBookingsPage() {
                                 {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
                                   <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Confirmed')} className="text-green-600">
                                     <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
-                                  </DropdownMenuItem>
-                                )}
-                                {booking.status === 'Confirmed' && (
-                                  <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Used')} className="text-indigo-600">
-                                    <Ship className="h-4 w-4 mr-2" /> Mark as Boarded
-                                  </DropdownMenuItem>
-                                )}
-                                {['Reserved', 'Waitlisted', 'Confirmed'].includes(booking.status) && (
-                                  <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Suspended')} className="text-orange-600">
-                                    <AlertTriangle className="h-4 w-4 mr-2" /> Mark as No-Show
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>
@@ -509,7 +499,7 @@ export default function ManageBookingsPage() {
              </DialogHeader>
              
              <div className="grid gap-6 py-4">
-               {(statusTarget?.status === 'Refunded' || statusTarget?.status === 'Suspended') && (
+               {(statusTarget?.status === 'Refunded') && (
                   <div className="space-y-4 p-4 border rounded-lg bg-secondary/5">
                     <div className="flex items-center justify-between">
                        <div className="space-y-0.5">
