@@ -21,7 +21,12 @@ import {
   AlertCircle,
   RefreshCw,
   Banknote,
-  Info
+  Info,
+  User,
+  Mail,
+  Heart,
+  Eye,
+  XCircle
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -85,8 +90,14 @@ export default function ManageBookingsPage() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
+  // Dialog states
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
+  const [isRebookDialogOpen, setIsRebookDialogOpen] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
     passengerName: "",
     passengerDob: "",
@@ -96,8 +107,6 @@ export default function ManageBookingsPage() {
     travelDate: ""
   });
 
-  const [isRebookDialogOpen, setIsRebookDialogOpen] = useState(false);
-  const [rebookingBooking, setRebookingBooking] = useState<any>(null);
   const [rebookingData, setRebookingData] = useState({
     newScheduleId: "",
     newTravelDate: "",
@@ -105,7 +114,6 @@ export default function ManageBookingsPage() {
     waiveReason: "Weather"
   });
 
-  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{ booking: any, status: BookingStatus } | null>(null);
   const [statusActionData, setStatusActionData] = useState({
     isFeeWaived: false,
@@ -137,10 +145,45 @@ export default function ManageBookingsPage() {
   const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
+  // Actions
+  const handleOpenViewDetails = (booking: any) => {
+    setSelectedBooking(booking);
+    setIsViewDetailsOpen(true);
+  };
+
+  const handleOpenEdit = (booking: any) => {
+    setSelectedBooking(booking);
+    setEditFormData({
+      passengerName: booking.passengerName || "",
+      passengerDob: booking.passengerDob || "",
+      passengerEmail: booking.passengerEmail || "",
+      passengerContact: booking.passengerContact || "",
+      emergencyContact: booking.emergencyContact || "",
+      travelDate: booking.travelDate || ""
+    });
+    setIsEditDialogOpen(true);
+  };
+
   const handleOpenStatusDialog = (booking: any, status: BookingStatus) => {
     setStatusTarget({ booking, status });
     setStatusActionData({ isFeeWaived: false, waiveReason: "Weather" });
     setIsStatusDialogOpen(true);
+  };
+
+  const handleOpenRebook = (booking: any) => {
+    setSelectedBooking(booking);
+    setRebookingData({
+      newScheduleId: "",
+      newTravelDate: booking.travelDate || "",
+      isFeeWaived: false,
+      waiveReason: "Weather"
+    });
+    setIsRebookDialogOpen(true);
+  };
+
+  const handleOpenDelete = (booking: any) => {
+    setSelectedBooking(booking);
+    setIsDeleteConfirmOpen(true);
   };
 
   const calculateStatusPenalties = () => {
@@ -181,36 +224,25 @@ export default function ManageBookingsPage() {
     setIsStatusDialogOpen(false);
   };
 
-  const handleOpenRebook = (booking: any) => {
-    setRebookingBooking(booking);
-    setRebookingData({
-      newScheduleId: "",
-      newTravelDate: booking.travelDate || "",
-      isFeeWaived: false,
-      waiveReason: "Weather"
-    });
-    setIsRebookDialogOpen(true);
-  };
-
   const calculateRebookingFees = useMemo(() => {
-    if (!rebookingBooking || !routes) return 0;
+    if (!selectedBooking || !routes) return 0;
     if (rebookingData.isFeeWaived) return 0;
 
-    const route = getRoute(rebookingBooking.routeId);
+    const route = getRoute(selectedBooking.routeId);
     let fees = 0;
-    if (rebookingBooking.status === 'Suspended') {
+    if (selectedBooking.status === 'Suspended') {
       fees += (route?.noShowFee || 0);
     }
     fees += (route?.rebookingFee || 0);
     
     return fees;
-  }, [rebookingBooking, routes, rebookingData.isFeeWaived]);
+  }, [selectedBooking, routes, rebookingData.isFeeWaived]);
 
   const handlePerformRebook = () => {
-    if (!db || !rebookingBooking || !rebookingData.newScheduleId) return;
+    if (!db || !selectedBooking || !rebookingData.newScheduleId) return;
 
     const fees = calculateRebookingFees;
-    const bookingRef = doc(db, "bookings", rebookingBooking.id);
+    const bookingRef = doc(db, "bookings", selectedBooking.id);
     
     updateDocumentNonBlocking(bookingRef, {
       scheduleId: rebookingData.newScheduleId,
@@ -225,27 +257,21 @@ export default function ManageBookingsPage() {
     setIsRebookDialogOpen(false);
   };
 
-  const handleOpenEdit = (booking: any) => {
-    setEditingBooking(booking);
-    setEditFormData({
-      passengerName: booking.passengerName || "",
-      passengerDob: booking.passengerDob || "",
-      passengerEmail: booking.passengerEmail || "",
-      passengerContact: booking.passengerContact || "",
-      emergencyContact: booking.emergencyContact || "",
-      travelDate: booking.travelDate || ""
-    });
-    setIsEditDialogOpen(true);
-  };
-
   const handleSaveEdit = () => {
-    if (!db || !editingBooking) return;
-    const bookingRef = doc(db, "bookings", editingBooking.id);
+    if (!db || !selectedBooking) return;
+    const bookingRef = doc(db, "bookings", selectedBooking.id);
     updateDocumentNonBlocking(bookingRef, {
       ...editFormData,
       updatedAt: new Date().toISOString()
     });
     setIsEditDialogOpen(false);
+  };
+
+  const handleDeleteRecord = () => {
+    if (!db || !selectedBooking) return;
+    const bookingRef = doc(db, "bookings", selectedBooking.id);
+    deleteDocumentNonBlocking(bookingRef);
+    setIsDeleteConfirmOpen(false);
   };
 
   const getStatusBadge = (status: string) => {
@@ -255,14 +281,14 @@ export default function ManageBookingsPage() {
       case 'Waitlisted': return <Badge className="bg-orange-500">Waitlisted</Badge>;
       case 'Used': return <Badge className="bg-indigo-600">Used (Boarded)</Badge>;
       case 'Suspended': return <Badge variant="destructive">Suspended (No-Show)</Badge>;
-      case 'Auto-cancelled': return <Badge variant="outline" className="text-muted-foreground">Auto-Cancelled</Badge>;
+      case 'Auto-cancelled': return <Badge variant="outline" className="text-muted-foreground">Cancelled</Badge>;
       case 'Refunded': return <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">Refunded</Badge>;
       default: return <Badge variant="outline" className="opacity-70 italic">{status || 'Legacy'}</Badge>;
     }
   };
 
   const availableRebookingSchedules = schedules?.filter(s => 
-    s.routeId === rebookingBooking?.routeId && s.isActive
+    s.routeId === selectedBooking?.routeId && s.isActive
   );
 
   return (
@@ -367,24 +393,31 @@ export default function ManageBookingsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => handleOpenViewDetails(booking)}>
+                                  <Eye className="h-4 w-4 mr-2 text-muted-foreground" /> View Details
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => handleOpenEdit(booking)}>
-                                  <Pencil className="h-4 w-4 mr-2 text-muted-foreground" /> Edit Info
+                                  <Pencil className="h-4 w-4 mr-2 text-muted-foreground" /> Edit Booking
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => handleOpenRebook(booking)}>
-                                  <RefreshCw className="h-4 w-4 mr-2 text-accent" /> Rebook Trip
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuLabel>Status & Finance</DropdownMenuLabel>
-                                {['Reserved', 'Waitlisted', 'Confirmed', 'Suspended', 'Used'].includes(booking.status) && (
-                                   <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Refunded')} className="text-blue-600">
-                                     <Banknote className="h-4 w-4 mr-2" /> Refund / Cancel
-                                   </DropdownMenuItem>
-                                )}
                                 {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
                                   <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Confirmed')} className="text-green-600">
                                     <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
                                   </DropdownMenuItem>
                                 )}
+                                <DropdownMenuItem onSelect={() => handleOpenRebook(booking)}>
+                                  <RefreshCw className="h-4 w-4 mr-2 text-accent" /> Rebook
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Refunded')} className="text-blue-600">
+                                  <Banknote className="h-4 w-4 mr-2" /> Refund
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Auto-cancelled')} className="text-orange-600">
+                                  <XCircle className="h-4 w-4 mr-2" /> Cancel Booking
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => handleOpenDelete(booking)} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" /> Delete Record
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -403,6 +436,175 @@ export default function ManageBookingsPage() {
           </Tabs>
         </main>
 
+        {/* View Details Dialog */}
+        <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-accent" /> Booking Details
+              </DialogTitle>
+              <DialogDescription>
+                Detailed information for Ticket ID: <span className="font-bold text-primary">#{selectedBooking?.id}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="space-y-6 py-4">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase text-muted-foreground font-bold">Passenger Information</Label>
+                  <div className="grid grid-cols-2 gap-4 bg-secondary/10 p-4 rounded-lg">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Full Name</p>
+                      <p className="font-bold">{selectedBooking?.passengerName}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Date of Birth</p>
+                      <p className="font-bold">{selectedBooking?.passengerDob}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Email</p>
+                      <p className="font-bold">{selectedBooking?.passengerEmail || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Contact</p>
+                      <p className="font-bold">{selectedBooking?.passengerContact}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Emergency Contact</p>
+                      <p className="font-bold">{selectedBooking?.emergencyContact}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase text-muted-foreground font-bold">Voyage Details</Label>
+                  <div className="bg-secondary/10 p-4 rounded-lg space-y-3">
+                    <div className="flex justify-between">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Trip Code</p>
+                      <p className="font-black text-accent">{getTripCode(selectedBooking?.scheduleId)}</p>
+                    </div>
+                    <div className="flex justify-between">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Route</p>
+                      <p className="font-bold">{getRoute(selectedBooking?.routeId)?.name}</p>
+                    </div>
+                    <div className="flex justify-between">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Travel Date</p>
+                      <p className="font-bold">{selectedBooking?.travelDate} @ {getDeparture(selectedBooking?.scheduleId)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase text-muted-foreground font-bold">Financial Summary</Label>
+                  <div className="bg-primary/5 p-4 rounded-lg space-y-3 border border-primary/10">
+                    <div className="flex justify-between">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Status</p>
+                      {getStatusBadge(selectedBooking?.status || "")}
+                    </div>
+                    <div className="flex justify-between">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Final Fare</p>
+                      <p className="font-black text-primary">₱{isMounted ? selectedBooking?.finalFare?.toLocaleString() : "---"}</p>
+                    </div>
+                    {selectedBooking?.penaltyFees > 0 && (
+                      <div className="flex justify-between text-destructive">
+                        <p className="text-[10px] uppercase font-bold">Penalties Applied</p>
+                        <p className="font-black">+ ₱{selectedBooking.penaltyFees.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedBooking?.isFeeWaived && (
+                      <div className="bg-green-50 p-2 rounded text-[10px] text-green-700 font-bold italic">
+                        Fees waived due to: {selectedBooking.waiveReason}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+            <DialogFooter>
+              <Button onClick={() => setIsViewDetailsOpen(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Booking Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="h-5 w-5 text-accent" /> Edit Booking
+              </DialogTitle>
+              <DialogDescription>
+                Correct information for Ticket ID: <span className="font-bold text-primary">#{selectedBooking?.id}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editDate">Travel Date</Label>
+                  <Input 
+                    id="editDate" 
+                    type="date"
+                    value={editFormData.travelDate} 
+                    onChange={(e) => setEditFormData({...editFormData, travelDate: e.target.value})} 
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editName">Full Name</Label>
+                    <Input 
+                      id="editName" 
+                      value={editFormData.passengerName} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerName: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editDob">Date of Birth</Label>
+                    <Input 
+                      id="editDob" 
+                      type="date"
+                      value={editFormData.passengerDob} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerDob: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editEmail">Email Address</Label>
+                    <Input 
+                      id="editEmail" 
+                      type="email"
+                      value={editFormData.passengerEmail} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerEmail: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editContact">Mobile Number</Label>
+                    <Input 
+                      id="editContact" 
+                      value={editFormData.passengerContact} 
+                      onChange={(e) => setEditFormData({...editFormData, passengerContact: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editEmergency">Emergency Contact</Label>
+                  <Input 
+                    id="editEmergency" 
+                    value={editFormData.emergencyContact} 
+                    onChange={(e) => setEditFormData({...editFormData, emergencyContact: e.target.value})} 
+                  />
+                </div>
+              </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4 border-t">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveEdit} className="bg-primary text-white">
+                <Check className="h-4 w-4 mr-2" /> Update Record
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rebook Dialog */}
         <Dialog open={isRebookDialogOpen} onOpenChange={setIsRebookDialogOpen}>
            <DialogContent className="sm:max-w-[500px]">
              <DialogHeader>
@@ -410,7 +612,7 @@ export default function ManageBookingsPage() {
                  <RefreshCw className="h-5 w-5 text-accent" /> Rebooking Ticket
                </DialogTitle>
                <DialogDescription>
-                 Rebook Ticket ID: <span className="font-bold text-primary">#{rebookingBooking?.id}</span>
+                 Rebook Ticket ID: <span className="font-bold text-primary">#{selectedBooking?.id}</span>
                </DialogDescription>
              </DialogHeader>
              <div className="grid gap-6 py-4">
@@ -489,17 +691,18 @@ export default function ManageBookingsPage() {
            </DialogContent>
         </Dialog>
 
+        {/* Status Update Dialog (Refund/Cancel) */}
         <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
            <DialogContent className="sm:max-w-[450px]">
              <DialogHeader>
                <DialogTitle>Confirm Status Update</DialogTitle>
                <DialogDescription>
-                 Changing Ticket #{statusTarget?.booking.id} status to <span className="font-bold text-primary">{statusTarget?.status}</span>.
+                 Changing Ticket #{statusTarget?.booking.id} status to <span className="font-bold text-primary">{statusTarget?.status === 'Auto-cancelled' ? 'Cancelled' : statusTarget?.status}</span>.
                </DialogDescription>
              </DialogHeader>
              
              <div className="grid gap-6 py-4">
-               {(statusTarget?.status === 'Refunded') && (
+               {(statusTarget?.status === 'Refunded' || statusTarget?.status === 'Auto-cancelled') && (
                   <div className="space-y-4 p-4 border rounded-lg bg-secondary/5">
                     <div className="flex items-center justify-between">
                        <div className="space-y-0.5">
@@ -547,80 +750,20 @@ export default function ManageBookingsPage() {
            </DialogContent>
         </Dialog>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+        {/* Delete Confirm Dialog */}
+        <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <DialogContent className="sm:max-w-[400px]">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Pencil className="h-5 w-5 text-accent" /> Edit Passenger Details
+              <DialogTitle className="text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" /> Delete Record
               </DialogTitle>
               <DialogDescription>
-                Correct information for Ticket ID: <span className="font-bold text-primary">#{editingBooking?.id}</span>
+                Are you absolutely sure you want to delete Ticket ID <span className="font-bold">#{selectedBooking?.id}</span>? This action cannot be undone and will remove all manifest data for this passenger.
               </DialogDescription>
             </DialogHeader>
-            <ScrollArea className="max-h-[70vh] pr-4">
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="editDate">Travel Date</Label>
-                  <Input 
-                    id="editDate" 
-                    type="date"
-                    value={editFormData.travelDate} 
-                    onChange={(e) => setEditFormData({...editFormData, travelDate: e.target.value})} 
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="editName">Full Name</Label>
-                    <Input 
-                      id="editName" 
-                      value={editFormData.passengerName} 
-                      onChange={(e) => setEditFormData({...editFormData, passengerName: e.target.value})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editDob">Date of Birth</Label>
-                    <Input 
-                      id="editDob" 
-                      type="date"
-                      value={editFormData.passengerDob} 
-                      onChange={(e) => setEditFormData({...editFormData, passengerDob: e.target.value})} 
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="editEmail">Email Address</Label>
-                    <Input 
-                      id="editEmail" 
-                      type="email"
-                      value={editFormData.passengerEmail} 
-                      onChange={(e) => setEditFormData({...editFormData, passengerEmail: e.target.value})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="editContact">Mobile Number</Label>
-                    <Input 
-                      id="editContact" 
-                      value={editFormData.passengerContact} 
-                      onChange={(e) => setEditFormData({...editFormData, passengerContact: e.target.value})} 
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="editEmergency">Emergency Contact</Label>
-                  <Input 
-                    id="editEmergency" 
-                    value={editFormData.emergencyContact} 
-                    onChange={(e) => setEditFormData({...editFormData, emergencyContact: e.target.value})} 
-                  />
-                </div>
-              </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSaveEdit} className="bg-primary text-white">
-                <Check className="h-4 w-4 mr-2" /> Update Record
-              </Button>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>No, Keep Record</Button>
+              <Button variant="destructive" onClick={handleDeleteRecord}>Yes, Delete Record</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
