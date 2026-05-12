@@ -487,7 +487,7 @@ export default function ManageBookingsPage() {
               <DialogTitle>Boarding Pass</DialogTitle>
               <DialogDescription>Digital boarding pass with voyage details and QR code.</DialogDescription>
             </DialogHeader>
-            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl relative">
               <div className="bg-primary p-6 text-primary-foreground text-center space-y-2">
                 <div className="flex justify-center mb-2">
                   <div className="bg-white/20 p-2 rounded-xl">
@@ -499,7 +499,7 @@ export default function ManageBookingsPage() {
               </div>
 
               <div className="p-6 space-y-6">
-                <div className="flex justify-between items-start border-b pb-4">
+                <div className="flex justify-between items-start border-b border-dashed pb-4">
                   <div>
                     <Label className="text-[10px] text-muted-foreground uppercase font-bold">Passenger Name</Label>
                     <p className="text-lg font-black text-primary uppercase">{selectedBooking?.passengerName}</p>
@@ -535,17 +535,21 @@ export default function ManageBookingsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-6 border-t border-dashed">
-                  <div className="bg-secondary/20 p-4 rounded-2xl mb-4">
+                <div className="flex flex-col items-center justify-center py-6 border-t border-dashed relative">
+                  {/* Decorative Ticket Punches */}
+                  <div className="absolute -left-8 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-black/80 md:bg-transparent" />
+                  <div className="absolute -right-8 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-black/80 md:bg-transparent" />
+
+                  <div className="bg-primary/5 p-4 rounded-2xl mb-4 border border-primary/10">
                     <Image 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}&color=1f3a93&bgcolor=ffffff`}
                       alt="Boarding Pass QR"
-                      width={150}
-                      height={150}
-                      className="mix-blend-multiply"
+                      width={180}
+                      height={180}
+                      className="mix-blend-multiply transition-opacity hover:opacity-90"
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest italic">Scan at the boarding gate</p>
+                  <p className="text-[10px] text-primary/60 font-black uppercase tracking-[0.2em] italic">Scan at the boarding gate</p>
                 </div>
               </div>
 
