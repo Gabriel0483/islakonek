@@ -2,6 +2,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { 
   Ship, 
   AlertCircle, 
@@ -14,16 +16,29 @@ import {
   ArrowRight,
   LayoutGrid,
   Ticket,
-  ClipboardList
+  ClipboardList,
+  Lock,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
   const db = useFirestore();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isUserLoading, router]);
 
   const portsRef = useMemoFirebase(() => {
     if (!db) return null;
@@ -55,6 +70,39 @@ export default function AdminDashboard() {
   const { data: vessels } = useCollection(vesselsRef);
   const { data: schedules } = useCollection(schedulesRef);
   const { data: bookings } = useCollection(bookingsRef);
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary/20 p-4">
+        <Card className="max-w-md w-full text-center p-8 border-none shadow-xl">
+          <div className="bg-destructive/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="h-8 w-8 text-destructive" />
+          </div>
+          <CardTitle className="text-2xl font-bold mb-2">Restricted Access</CardTitle>
+          <CardDescription className="text-base mb-8">
+            This portal is reserved for the designated SuperAdmin. 
+            Please contact the administrator if you believe this is an error.
+          </CardDescription>
+          <div className="space-y-3">
+            <Link href="/" className="block">
+              <Button variant="outline" className="w-full">Return to Public Site</Button>
+            </Link>
+            <Link href="/login" className="block">
+              <Button variant="link" className="text-xs text-muted-foreground">Sign in with a different account</Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const stats = [
     { label: "Active Ports", value: ports?.length || 0, icon: MapPin, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -128,9 +176,15 @@ export default function AdminDashboard() {
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <h1 className="text-lg font-bold font-headline text-primary">Admin Dashboard</h1>
+        <header className="flex h-16 shrink-0 items-center justify-between border-b px-4">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <h1 className="text-lg font-bold font-headline text-primary">Admin Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase mr-2 hidden sm:block">Logged in as: <span className="text-primary">{user?.email}</span></div>
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="System Online" />
+          </div>
         </header>
         
         <main className="flex flex-1 flex-col gap-8 p-6">
@@ -192,9 +246,9 @@ export default function AdminDashboard() {
                 <Ship className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
               </div>
               <div className="relative z-10 space-y-4 max-w-2xl">
-                <h2 className="text-3xl font-black font-headline tracking-tight">Admin Operations</h2>
+                <h2 className="text-3xl font-black font-headline tracking-tight">SuperAdmin Operations</h2>
                 <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                  Your maritime data is synchronized and secure. Use the hub above to manage your island connections.
+                  Welcome back, <span className="font-bold underline">rielmagpantay@gmail.com</span>. Your maritime dashboard is active with full configuration privileges.
                 </p>
               </div>
             </Card>

@@ -1,45 +1,63 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 2.1
- * Public Access: Authentication has been removed.
- * All collections are publicly readable and writable.
+ * Version: 2.3
+ * SuperAdmin Designation: rielmagpantay@gmail.com
  */
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper function to check if the user is the designated SuperAdmin
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email == 'rielmagpantay@gmail.com';
+    }
+
+    // Ports: Publicly readable, writeable only by SuperAdmin
     match /ports/{portId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin();
     }
 
+    // Routes: Publicly readable, writeable only by SuperAdmin
     match /routes/{routeId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin();
     }
 
+    // Fares: Publicly readable, writeable only by SuperAdmin
     match /fares/{fareId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin();
     }
 
+    // Vessels: Publicly readable, writeable only by SuperAdmin
     match /vessels/{vesselId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin();
     }
 
+    // Maintenance: Publicly readable, writeable only by SuperAdmin
     match /maintenance/{recordId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin();
     }
 
+    // Schedules: Publicly readable, writeable only by SuperAdmin
     match /schedules/{scheduleId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin();
     }
 
+    // Bookings: Publicly readable and writeable (Public/Desk workflow)
     match /bookings/{bookingId} {
       allow read, write: if true;
     }
 
+    // Users: Users can manage their own profile if logged in
     match /users/{userId} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

@@ -1,16 +1,30 @@
+
 "use client";
 
 import Link from "next/link";
-import { Ship, LayoutDashboard, Menu } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
+import { useUser, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 export function Navbar() {
+  const { user } = useUser();
+  const auth = useAuth();
+
+  const handleLogout = () => {
+    if (auth) signOut(auth);
+  };
+
+  const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 mx-auto">
@@ -29,10 +43,48 @@ export function Navbar() {
           <Link href="/trips" className="text-sm font-medium hover:text-accent transition-colors">
             Find Trips
           </Link>
-          <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5">
-            <LayoutDashboard className="h-4 w-4" />
-            Admin Portal
-          </Link>
+          {isSuperAdmin && (
+            <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5">
+              <LayoutDashboard className="h-4 w-4" />
+              Admin Portal
+            </Link>
+          )}
+          
+          <div className="flex items-center gap-4 border-l pl-6">
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 h-9 px-3 hover:bg-secondary">
+                    <div className="bg-primary/10 p-1.5 rounded-full">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-xs font-bold max-w-[120px] truncate">{user.email}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Account</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">My Bookings</Link>
+                  </DropdownMenuItem>
+                  {isSuperAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">SuperAdmin Hub</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="h-4 w-4 mr-2" /> Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login">
+                <Button variant="default" className="bg-primary h-9 px-6 font-bold text-xs">
+                  Sign In
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="md:hidden">
@@ -46,9 +98,26 @@ export function Navbar() {
               <DropdownMenuItem asChild>
                 <Link href="/trips">Find Trips</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/admin">Admin Portal</Link>
-              </DropdownMenuItem>
+              {isSuperAdmin && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">Admin Portal</Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {user ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">My Account</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    Log Out
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem asChild>
+                  <Link href="/login">Sign In</Link>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
