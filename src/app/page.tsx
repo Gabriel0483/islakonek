@@ -36,10 +36,16 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const now = new Date();
-    setYear(now.getFullYear());
+    // Get Philippine Time (UTC+8)
+    const getPHTDate = () => {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      return new Date(utc + (3600000 * 8));
+    };
 
-    // Calculate 10-day rolling window
+    const phtNow = getPHTDate();
+    setYear(phtNow.getFullYear());
+
     const formatDate = (date: Date) => {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -47,9 +53,9 @@ export default function Home() {
       return `${y}-${m}-${d}`;
     };
 
-    const todayStr = formatDate(now);
-    const tenDaysLater = new Date();
-    tenDaysLater.setDate(now.getDate() + 9);
+    const todayStr = formatDate(phtNow);
+    const tenDaysLater = new Date(phtNow.getTime());
+    tenDaysLater.setDate(phtNow.getDate() + 9);
     const maxDateStr = formatDate(tenDaysLater);
 
     setDateLimits({

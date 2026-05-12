@@ -51,9 +51,30 @@ function TripsContent() {
   const searchParams = useSearchParams();
   const db = useFirestore();
   const [isMounted, setIsMounted] = useState(false);
+  const [phtState, setPhtState] = useState<{ date: string; time: string } | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
+
+    // Calculate Philippine Time (UTC+8)
+    const getPHT = () => {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const pht = new Date(utc + (3600000 * 8));
+      
+      const y = pht.getFullYear();
+      const m = String(pht.getMonth() + 1).padStart(2, '0');
+      const d = String(pht.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+      
+      const hh = String(pht.getHours()).padStart(2, '0');
+      const mm = String(pht.getMinutes()).padStart(2, '0');
+      const timeStr = `${hh}:${mm}`;
+
+      return { date: dateStr, time: timeStr };
+    };
+
+    setPhtState(getPHT());
   }, []);
 
   // Data Fetching
@@ -77,6 +98,8 @@ function TripsContent() {
   const [selectedVesselTypes, setSelectedVesselTypes] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
 
+  const searchDate = searchParams.get("date");
+
   // Booking State
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
@@ -87,7 +110,7 @@ function TripsContent() {
   });
 
   const filteredTrips = useMemo(() => {
-    if (!schedules || !routes) return [];
+    if (!schedules || !routes || !isMounted || !phtState) return [];
 
     return schedules.filter(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
@@ -95,12 +118,23 @@ function TripsContent() {
       
       if (!schedule.isActive) return false;
 
-      // Filter by Origin Port (from URL or Home selection)
+      // 1. Date Validation
+      if (searchDate) {
+        if (schedule.type === 'Special') {
+          if (!schedule.specialDates?.includes(searchDate)) return false;
+        }
+        // If searching for PHT "Today", check if trip has already elapsed
+        if (searchDate === phtState.date) {
+          if (schedule.departureTime < phtState.time) return false;
+        }
+      }
+
+      // 2. Filter by Origin Port
       if (selectedOriginPort !== "all" && route?.originPortId !== selectedOriginPort) {
         return false;
       }
 
-      // Filter by Text Search
+      // 3. Filter by Text Search
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesRoute = route?.name?.toLowerCase().includes(query);
@@ -110,12 +144,12 @@ function TripsContent() {
         if (!matchesRoute && !originPortName && !destPortName && !matchesCode) return false;
       }
 
-      // Filter by Vessel Type
+      // 4. Filter by Vessel Type
       if (selectedVesselTypes.length > 0 && vessel && !selectedVesselTypes.includes(vessel.type)) {
         return false;
       }
 
-      // Filter by Price
+      // 5. Filter by Price
       if (priceRange.min && route.basePrice < Number(priceRange.min)) return false;
       if (priceRange.max && route.basePrice > Number(priceRange.max)) return false;
 
@@ -138,7 +172,7 @@ function TripsContent() {
         isFull: usedSeats >= (capacity + waitlistLimit)
       };
     });
-  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, selectedVesselTypes, priceRange]);
+  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, selectedVesselTypes, priceRange, searchDate, isMounted, phtState]);
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -294,7 +328,7 @@ function TripsContent() {
             </div>
 
             <div className="space-y-4">
-              {isSchedulesLoading ? (
+              {isSchedulesLoading || !phtState ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                   <Loader2 className="h-10 w-10 animate-spin text-accent" />
                   <p>Searching for active voyages...</p>
