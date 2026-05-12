@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -65,23 +64,21 @@ export default function ProfilePage() {
     }
   }, [profile, user]);
 
-  // Filter bookings for this specific user (based on email match as placeholder for real auth-linked bookings)
   const myBookings = allBookings?.filter(b => b.passengerEmail === (profile?.email || user?.email))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const handleSave = () => {
-    if (!db || !user) return;
+    if (!db || !user || !userDocRef) return;
     setIsSaving(true);
     setSaveSuccess(false);
 
     const timestamp = new Date().toISOString();
-    setDocumentNonBlocking(userDocRef!, {
+    setDocumentNonBlocking(userDocRef, {
       ...formData,
       uid: user.uid,
       updatedAt: timestamp
     }, { merge: true });
 
-    // Simulate success feedback
     setTimeout(() => {
       setIsSaving(false);
       setSaveSuccess(true);
@@ -156,7 +153,7 @@ export default function ProfilePage() {
                     
                     <div className="pt-4 flex items-center justify-between">
                       <p className="text-[10px] text-muted-foreground italic uppercase">
-                        {profile ? `Last updated: ${new Date(profile.updatedAt).toLocaleDateString()}` : "Profile not yet initialized"}
+                        {profile?.updatedAt ? `Last updated: ${new Date(profile.updatedAt).toLocaleDateString()}` : "Profile session active"}
                       </p>
                       <Button onClick={handleSave} disabled={isSaving} className="bg-primary text-white">
                         {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : saveSuccess ? <CheckCircle2 className="h-4 w-4 mr-2" /> : null}

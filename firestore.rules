@@ -1,7 +1,7 @@
-
 /**
  * FIRESTORE SECURITY RULES
- * Updated to ensure robust profile access and trigger redeployment.
+ * Version: 1.1
+ * Triggering redeployment to ensure user profile access is active.
  */
 
 rules_version = '2';
@@ -12,48 +12,38 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-
     match /ports/{portId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /routes/{routeId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /fares/{fareId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /vessels/{vesselId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /maintenance/{recordId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /schedules/{scheduleId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /bookings/{bookingId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /users/{userId} {
-      // Explicitly allow users to manage their own profile data
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Explicitly allow users to read and write their own profile document.
+      // This matches the UID of the authenticated requester against the document ID.
+      allow get, list, create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
