@@ -14,7 +14,7 @@ import {
   X
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   setDocumentNonBlocking,
   updateDocumentNonBlocking, 
@@ -46,7 +46,6 @@ import { Badge } from "@/components/ui/badge";
 
 export default function RoutesPage() {
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -54,14 +53,14 @@ export default function RoutesPage() {
   }, []);
   
   const portsCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "ports");
-  }, [db, user]);
+  }, [db]);
   
   const routesCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "routes");
-  }, [db, user]);
+  }, [db]);
   
   const { data: ports, isLoading: isPortsLoading } = useCollection(portsCollection);
   const { data: routes, isLoading: isRoutesLoading } = useCollection(routesCollection);
@@ -123,7 +122,7 @@ export default function RoutesPage() {
   };
 
   const handleSave = () => {
-    if (!db || !routesCollection) return;
+    if (!db) return;
     
     const timestamp = new Date().toISOString();
     const payload = {
@@ -160,7 +159,7 @@ export default function RoutesPage() {
 
   const getPortName = (id: string) => ports?.find(p => p.id === id)?.name || "Unknown Port";
 
-  const isLoading = isUserLoading || isPortsLoading || isRoutesLoading;
+  const isLoading = isPortsLoading || isRoutesLoading;
 
   return (
     <SidebarProvider>
@@ -185,7 +184,7 @@ export default function RoutesPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90" disabled={!user}>
+            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90">
               <Plus className="h-4 w-4 mr-2" /> Create New Route
             </Button>
           </div>

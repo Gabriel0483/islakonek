@@ -7,14 +7,13 @@ import {
   Plus, 
   Pencil, 
   Loader2, 
-  Search,
   Waypoints,
   Info,
   Check,
   Percent
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   setDocumentNonBlocking,
   updateDocumentNonBlocking 
@@ -47,7 +46,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function FaresPage() {
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -55,14 +53,14 @@ export default function FaresPage() {
   }, []);
   
   const routesCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "routes");
-  }, [db, user]);
+  }, [db]);
   
   const faresCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "fares");
-  }, [db, user]);
+  }, [db]);
   
   const { data: routes, isLoading: isRoutesLoading } = useCollection(routesCollection);
   const { data: fares, isLoading: isFaresLoading } = useCollection(faresCollection);
@@ -149,7 +147,7 @@ export default function FaresPage() {
     setIsDialogOpen(false);
   };
 
-  const isLoading = isUserLoading || isRoutesLoading || isFaresLoading;
+  const isLoading = isRoutesLoading || isFaresLoading;
 
   return (
     <SidebarProvider>

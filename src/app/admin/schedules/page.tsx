@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -11,7 +12,6 @@ import {
   Clock,
   Waypoints,
   Ship,
-  Info,
   Calendar,
   CheckCircle2,
   X,
@@ -20,7 +20,7 @@ import {
   ListOrdered
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   setDocumentNonBlocking,
   updateDocumentNonBlocking, 
@@ -53,22 +53,21 @@ import { Switch } from "@/components/ui/switch";
 
 export default function SchedulesPage() {
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   
   const schedulesCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "schedules");
-  }, [db, user]);
+  }, [db]);
 
   const routesCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "routes");
-  }, [db, user]);
+  }, [db]);
 
   const vesselsCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "vessels");
-  }, [db, user]);
+  }, [db]);
   
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesCollection);
   const { data: routes } = useCollection(routesCollection);
@@ -200,7 +199,7 @@ export default function SchedulesPage() {
     return vessels?.find(v => v.id === id)?.name || "Unknown Vessel";
   };
 
-  const isLoading = isUserLoading || isSchedulesLoading;
+  const isLoading = isSchedulesLoading;
 
   return (
     <SidebarProvider>

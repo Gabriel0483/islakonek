@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -24,11 +25,30 @@ import { collection } from "firebase/firestore";
 export default function AdminDashboard() {
   const db = useFirestore();
 
-  const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
-  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
-  const vesselsRef = useMemoFirebase(() => collection(db!, "vessels"), [db]);
-  const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
-  const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
+  const portsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "ports");
+  }, [db]);
+
+  const routesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "routes");
+  }, [db]);
+
+  const vesselsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "vessels");
+  }, [db]);
+
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "schedules");
+  }, [db]);
+
+  const bookingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "bookings");
+  }, [db]);
 
   const { data: ports } = useCollection(portsRef);
   const { data: routes } = useCollection(routesRef);
@@ -39,7 +59,7 @@ export default function AdminDashboard() {
   const stats = [
     { label: "Active Ports", value: ports?.length || 0, icon: MapPin, color: "text-blue-500", bg: "bg-blue-500/10" },
     { label: "Routes Defined", value: routes?.length || 0, icon: Waypoints, color: "text-accent", bg: "bg-accent/10" },
-    { label: "Bookings Today", value: bookings?.length || 0, icon: Ticket, color: "text-green-500", bg: "bg-green-500/10" },
+    { label: "Bookings Total", value: bookings?.length || 0, icon: Ticket, color: "text-green-500", bg: "bg-green-500/10" },
     { label: "Fleet Size", value: vessels?.length || 0, icon: Ship, color: "text-primary", bg: "bg-primary/10" }
   ];
 
@@ -172,7 +192,7 @@ export default function AdminDashboard() {
                 <Ship className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
               </div>
               <div className="relative z-10 space-y-4 max-w-2xl">
-                <h2 className="text-3xl font-black font-headline tracking-tight">Welcome, Administrator</h2>
+                <h2 className="text-3xl font-black font-headline tracking-tight">Admin Operations</h2>
                 <p className="text-lg text-primary-foreground/80 leading-relaxed">
                   Your maritime data is synchronized and secure. Use the hub above to manage your island connections.
                 </p>

@@ -16,7 +16,7 @@ import {
   Clock
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   setDocumentNonBlocking,
   updateDocumentNonBlocking, 
@@ -49,17 +49,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function FleetPage() {
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   
   const vesselsCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "vessels");
-  }, [db, user]);
+  }, [db]);
 
   const maintenanceCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "maintenance");
-  }, [db, user]);
+  }, [db]);
   
   const { data: vessels, isLoading: isVesselsLoading } = useCollection(vesselsCollection);
   const { data: maintenance, isLoading: isMaintenanceLoading } = useCollection(maintenanceCollection);
@@ -113,7 +112,7 @@ export default function FleetPage() {
   };
 
   const handleSaveVessel = () => {
-    if (!db || !vesselsCollection) return;
+    if (!db) return;
     const timestamp = new Date().toISOString();
     const payload = {
       ...vesselFormData,
@@ -134,7 +133,7 @@ export default function FleetPage() {
   };
 
   const handleSaveMaintenance = () => {
-    if (!db || !maintenanceCollection) return;
+    if (!db) return;
     const newId = Math.random().toString(36).substr(2, 9);
     const timestamp = new Date().toISOString();
     const maintenanceRef = doc(db, "maintenance", newId);
@@ -145,7 +144,6 @@ export default function FleetPage() {
       createdAt: timestamp
     }, { merge: true });
 
-    // If maintenance is In Progress, update vessel status
     if (maintenanceFormData.status === "In Progress") {
       const vesselRef = doc(db, "vessels", maintenanceFormData.vesselId);
       updateDocumentNonBlocking(vesselRef, { status: "Maintenance" });
@@ -174,7 +172,7 @@ export default function FleetPage() {
     }
   };
 
-  const isLoading = isUserLoading || isVesselsLoading || isMaintenanceLoading;
+  const isLoading = isVesselsLoading || isMaintenanceLoading;
 
   return (
     <SidebarProvider>

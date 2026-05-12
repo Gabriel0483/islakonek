@@ -7,7 +7,6 @@ import {
   Plus, 
   Loader2, 
   User, 
-  Phone, 
   CheckCircle2, 
   Ship,
   Clock,
@@ -22,7 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   setDocumentNonBlocking,
 } from "@/firebase/non-blocking-updates";
@@ -54,7 +53,6 @@ import { Switch } from "@/components/ui/switch";
 
 export default function DeskBookingsPage() {
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   const [isMounted, setIsMounted] = useState(false);
   const [todayPHT, setTodayPHT] = useState("");
 
@@ -69,11 +67,30 @@ export default function DeskBookingsPage() {
     setTodayPHT(`${y}-${m}-${d}`);
   }, []);
   
-  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
-  const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
-  const faresRef = useMemoFirebase(() => collection(db!, "fares"), [db]);
-  const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
-  const vesselsRef = useMemoFirebase(() => collection(db!, "vessels"), [db]);
+  const routesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "routes");
+  }, [db]);
+
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "schedules");
+  }, [db]);
+
+  const faresRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "fares");
+  }, [db]);
+
+  const bookingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "bookings");
+  }, [db]);
+
+  const vesselsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "vessels");
+  }, [db]);
 
   const { data: routes } = useCollection(routesRef);
   const { data: schedules } = useCollection(schedulesRef);
@@ -169,7 +186,7 @@ export default function DeskBookingsPage() {
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
-  const isLoading = isUserLoading || isBookingsLoading;
+  const isLoading = isBookingsLoading;
 
   return (
     <SidebarProvider>

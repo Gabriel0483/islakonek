@@ -12,7 +12,7 @@ import {
   Anchor
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   setDocumentNonBlocking,
   updateDocumentNonBlocking, 
@@ -37,12 +37,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function PortsPage() {
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   
   const portsCollection = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return collection(db, "ports");
-  }, [db, user]);
+  }, [db]);
   
   const { data: ports, isLoading: isPortsLoading } = useCollection(portsCollection);
 
@@ -88,7 +87,7 @@ export default function PortsPage() {
   };
 
   const handleSave = () => {
-    if (!db || !portsCollection) return;
+    if (!db) return;
     
     const timestamp = new Date().toISOString();
     if (editingPort) {
@@ -117,7 +116,7 @@ export default function PortsPage() {
     }
   };
 
-  const isLoading = isUserLoading || isPortsLoading;
+  const isLoading = isPortsLoading;
 
   return (
     <SidebarProvider>
@@ -142,7 +141,7 @@ export default function PortsPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90" disabled={!user}>
+            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90">
               <Plus className="h-4 w-4 mr-2" /> Add New Port
             </Button>
           </div>

@@ -7,7 +7,7 @@ import {
   Ship, 
   LayoutDashboard, 
   Settings, 
-  LogOut
+  Home
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,6 +56,19 @@ export function AdminSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === "/"}
+                  tooltip="Main Site"
+                  className="hover:bg-accent/10"
+                >
+                  <Link href="/">
+                    <Home />
+                    <span>Public Site</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -68,14 +81,6 @@ export function AdminSidebar() {
               <Link href="/admin/settings">
                 <Settings />
                 <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Logout" className="hover:bg-destructive/10 text-red-400">
-              <Link href="/">
-                <LogOut />
-                <span>Logout</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

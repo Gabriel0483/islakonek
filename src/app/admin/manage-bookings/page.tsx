@@ -7,31 +7,25 @@ import {
   Search, 
   Loader2, 
   Clock, 
-  User, 
   Phone, 
   CheckCircle2, 
-  XCircle,
-  Eye,
   MoreVertical,
   Calendar,
   Tag,
   Ship,
   Ban,
-  UserCheck,
   AlertTriangle,
   Pencil,
   Trash2,
-  Check,
-  Mail,
-  Heart
+  Check
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -59,16 +53,26 @@ type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspend
 
 export default function ManageBookingsPage() {
   const db = useFirestore();
-  const { user, isUserLoading } = useUser();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
   
-  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
-  const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
-  const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
+  const routesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "routes");
+  }, [db]);
+
+  const bookingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "bookings");
+  }, [db]);
+
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "schedules");
+  }, [db]);
 
   const { data: routes } = useCollection(routesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
@@ -152,7 +156,7 @@ export default function ManageBookingsPage() {
     setIsEditDialogOpen(false);
   };
 
-  const isLoading = isUserLoading || isBookingsLoading;
+  const isLoading = isBookingsLoading;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
