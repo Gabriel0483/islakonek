@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -301,9 +300,6 @@ function TripsContent() {
                     </div>
 
                     <div className="bg-secondary/30 p-6 md:w-64 border-t md:border-t-0 md:border-l flex flex-col justify-center items-center text-center gap-4">
-                      <div className="space-y-1">
-                        <p className="text-2xl font-extrabold text-primary">₱{isMounted ? trip.route?.basePrice?.toLocaleString() : "---"}</p>
-                      </div>
                       <Button 
                         onClick={() => handleBookNow(trip)}
                         disabled={trip.isFull}
