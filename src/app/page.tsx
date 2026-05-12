@@ -21,8 +21,6 @@ export default function Home() {
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
   
   const [searchData, setSearchData] = useState({
-    origin: "",
-    destination: "",
     date: ""
   });
 
@@ -37,8 +35,6 @@ export default function Home() {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (searchData.origin) params.set("origin", searchData.origin);
-    if (searchData.destination) params.set("destination", searchData.destination);
     if (searchData.date) params.set("date", searchData.date);
     router.push(`/trips?${params.toString()}`);
   };
@@ -47,7 +43,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col font-body">
       <Navbar />
       
-      <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[500px] flex items-center justify-center overflow-hidden">
         <Image
           src={heroImage?.imageUrl || ""}
           alt="Modern ferry"
@@ -56,62 +52,37 @@ export default function Home() {
           priority
           data-ai-hint="modern ferry"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/60 to-background/80" />
         
         <div className="container relative z-10 px-4 mx-auto text-white">
-          <div className="max-w-2xl space-y-6">
-            <h1 className="text-5xl md:text-6xl font-headline font-extrabold leading-tight">
-              Connect Islands, <br />
-              <span className="text-accent">Simplify Voyages</span>
-            </h1>
-            <p className="text-xl text-white/90 max-w-lg">
-              Isla Konek is your modern bridge to the Philippine seas. Book ferry trips, manage schedules, and explore the islands with ease.
-            </p>
+          <div className="max-w-xl mx-auto space-y-6 text-center">
+            {/* Hero Message and Description Removed */}
             
-            <Card className="bg-white/95 backdrop-blur p-4 md:p-6 shadow-2xl border-none text-foreground mt-8">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
+            <Card className="bg-white/95 backdrop-blur p-6 shadow-2xl border-none text-foreground mt-8">
+              <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex-1 w-full space-y-2 text-left">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <MapPin className="h-3 w-3 text-accent" /> Origin
-                  </label>
-                  <Input 
-                    placeholder="e.g. Manila" 
-                    value={searchData.origin}
-                    onChange={(e) => setSearchData({...searchData, origin: e.target.value})}
-                    className="border-none bg-secondary focus-visible:ring-accent" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <MapPin className="h-3 w-3 text-accent" /> Destination
-                  </label>
-                  <Input 
-                    placeholder="e.g. Cebu" 
-                    value={searchData.destination}
-                    onChange={(e) => setSearchData({...searchData, destination: e.target.value})}
-                    className="border-none bg-secondary focus-visible:ring-accent" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Calendar className="h-3 w-3 text-accent" /> Date
+                    <Calendar className="h-3 w-3 text-accent" /> Select Travel Date
                   </label>
                   <Input 
                     type="date" 
                     value={searchData.date}
                     onChange={(e) => setSearchData({...searchData, date: e.target.value})}
-                    className="border-none bg-secondary focus-visible:ring-accent" 
+                    className="border-none bg-secondary h-12 focus-visible:ring-accent w-full" 
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="w-full md:w-auto">
                   <Button 
                     onClick={handleSearch}
-                    className="w-full h-10 gap-2 font-bold bg-accent hover:bg-accent/90 text-primary"
+                    className="w-full h-12 px-8 gap-2 font-bold bg-accent hover:bg-accent/90 text-primary"
                   >
                     <Search className="h-4 w-4" /> Search Trips
                   </Button>
                 </div>
               </div>
+              <p className="mt-4 text-[10px] text-muted-foreground uppercase font-bold tracking-widest text-center">
+                Search all available island connections by date
+              </p>
             </Card>
           </div>
         </div>
