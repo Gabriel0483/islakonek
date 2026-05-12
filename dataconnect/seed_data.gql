@@ -1,0 +1,128 @@
+mutation CreateDemoData @transaction @auth(level: USER, insecureReason: "Seed data is typically managed by authenticated administrators.") {
+  user_insertMany(data: [
+    {
+      id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      username: "john.doe",
+      email: "john.doe@example.com",
+      role: "admin",
+      firstName: "John",
+      lastName: "Doe",
+      lastLogin: "2024-01-01T10:00:00Z"
+    },
+    {
+      id: "b1cde2f0-1234-5678-90ab-cdef12345678",
+      username: "jane.smith",
+      email: "jane.smith@example.com",
+      role: "crew",
+      firstName: "Jane",
+      lastName: "Smith",
+      lastLogin: "2024-01-02T11:00:00Z"
+    }
+  ])
+  vessel_insertMany(data: [
+    {
+      id: "c2d3e4f5-6789-0abc-def1-234567890abc",
+      name: "Sea Serpent",
+      imoNumber: "9876543",
+      vesselType: "Container Ship",
+      flagState: "Panama",
+      length: 300.5,
+      grossTonnage: "100000",
+      buildYear: 2010,
+      currentStatus: "Active"
+    },
+    {
+      id: "d3e4f5a6-7890-1bcd-ef12-345678901cde",
+      name: "Ocean Explorer",
+      imoNumber: "1234567",
+      vesselType: "Research Vessel",
+      flagState: "Norway",
+      length: 150.0,
+      grossTonnage: "15000",
+      buildYear: 2018,
+      currentStatus: "Under Maintenance"
+    }
+  ])
+  crewMember_insertMany(data: [
+    {
+      id: "e4f5a6b7-8901-2cde-f123-456789012def",
+      firstName: "Alice",
+      lastName: "Johnson",
+      nationality: "USA",
+      role: "Captain",
+      contactEmail: "alice.j@example.com",
+      phoneNumber: "123-456-7890",
+      certificationNumber: "C12345"
+    },
+    {
+      id: "f5a6b7c8-9012-3def-1234-567890123fab",
+      firstName: "Bob",
+      lastName: "Williams",
+      nationality: "UK",
+      role: "Chief Engineer",
+      contactEmail: "bob.w@example.com",
+      phoneNumber: "098-765-4321",
+      certificationNumber: "E67890"
+    }
+  ])
+  portCall_insertMany(data: [
+    {
+      id: "0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+      vesselId: "c2d3e4f5-6789-0abc-def1-234567890abc",
+      portName: "Port of Rotterdam",
+      arrivalDate: "2024-03-10T08:00:00Z",
+      departureDate: "2024-03-12T17:00:00Z",
+      purpose: "Cargo Loading",
+      cargoOperations: "Loading 1000 containers"
+    },
+    {
+      id: "1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e",
+      vesselId: "d3e4f5a6-7890-1bcd-ef12-345678901cde",
+      portName: "Port of Oslo",
+      arrivalDate: "2024-03-15T09:30:00Z",
+      departureDate: "2024-03-16T14:00:00Z",
+      purpose: "Research Expedition",
+      cargoOperations: "Supplies replenishment"
+    }
+  ])
+  vesselAssignment_insertMany(data: [
+    {
+      vesselId: "c2d3e4f5-6789-0abc-def1-234567890abc",
+      crewMemberId: "e4f5a6b7-8901-2cde-f123-456789012def",
+      assignmentDate: "2024-01-01",
+      endDate: "2024-06-30"
+    },
+    {
+      vesselId: "c2d3e4f5-6789-0abc-def1-234567890abc",
+      crewMemberId: "f5a6b7c8-9012-3def-1234-567890123fab",
+      assignmentDate: "2024-01-01",
+      endDate: "2024-06-30"
+    },
+    {
+      vesselId: "d3e4f5a6-7890-1bcd-ef12-345678901cde",
+      crewMemberId: "e4f5a6b7-8901-2cde-f123-456789012def",
+      assignmentDate: "2024-07-01",
+      endDate: "2024-12-31"
+    }
+  ])
+  maintenanceLog_insertMany(data: [
+    {
+      id: "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f",
+      vesselId: "c2d3e4f5-6789-0abc-def1-234567890abc",
+      maintenanceDate: "2024-02-01",
+      description: "Engine overhaul",
+      performedById: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      nextDueDate: "2025-02-01",
+      cost: 50000.00
+    },
+    {
+      id: "3d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f0a",
+      vesselId: "d3e4f5a6-7890-1bcd-ef12-345678901cde",
+      maintenanceDate: "2024-03-01",
+      description: "Hull inspection",
+      performedById: "b1cde2f0-1234-5678-90ab-cdef12345678",
+      nextDueDate: "2024-09-01",
+      cost: 15000.75
+    }
+  ])
+}

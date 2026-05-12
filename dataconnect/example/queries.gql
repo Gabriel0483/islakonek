@@ -1,0 +1,67 @@
+mutation CreateVessel($name: String!, $imoNumber: String!, $vesselType: String!, $flagState: String!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  vessel_insert(data: {
+    name: $name,
+    imoNumber: $imoNumber,
+    vesselType: $vesselType,
+    flagState: $flagState
+  }) {
+    id
+  }
+}
+
+query GetVesselDetails($id: UUID!) @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  vessel(id: $id) {
+    name
+    imoNumber
+    vesselType
+    flagState
+    length
+    grossTonnage
+    buildYear
+    currentStatus
+    maintenanceLogs_on_vessel {
+      description
+      maintenanceDate
+      cost
+    }
+    portCalls_on_vessel {
+      portName
+      arrivalDate
+      departureDate
+      cargoOperations
+    }
+    vesselAssignments_on_vessel {
+      assignmentDate
+      crewMember {
+        firstName
+        lastName
+      }
+    }
+  }
+}
+
+mutation AssignCrewToVessel($vesselId: UUID!, $crewMemberId: UUID!, $assignmentDate: Date!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  vesselAssignment_insert(data: {
+    vesselId: $vesselId,
+    crewMemberId: $crewMemberId,
+    assignmentDate: $assignmentDate
+  }) {
+    vesselId
+    crewMemberId
+    assignmentDate
+  }
+}
+
+query GetCrewMemberAssignments($crewMemberId: UUID!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  crewMember(id: $crewMemberId) {
+    firstName
+    lastName
+    vesselAssignments_on_crewMember {
+      assignmentDate
+      vessel {
+        name
+        imoNumber
+      }
+    }
+  }
+}

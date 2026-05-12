@@ -1,0 +1,54 @@
+type User @table {
+  username: String!
+  email: String!
+  role: String!
+  firstName: String
+  lastName: String
+  lastLogin: Timestamp
+}
+
+type Vessel @table {
+  name: String!
+  imoNumber: String!
+  vesselType: String!
+  flagState: String!
+  length: Float
+  grossTonnage: Int64
+  buildYear: Int
+  currentStatus: String
+}
+
+type CrewMember @table {
+  firstName: String!
+  lastName: String!
+  nationality: String!
+  role: String!
+  contactEmail: String
+  phoneNumber: String
+  certificationNumber: String
+}
+
+type VesselAssignment @table(key: ["vessel", "crewMember", "assignmentDate"]) {
+  assignmentDate: Date!
+  vessel: Vessel!
+  crewMember: CrewMember!
+  endDate: Date
+}
+
+type PortCall @table {
+  portName: String!
+  arrivalDate: Timestamp!
+  departureDate: Timestamp!
+  vessel: Vessel!
+  purpose: String
+  cargoOperations: String
+}
+
+type MaintenanceLog @table {
+  vessel: Vessel!
+  maintenanceDate: Date!
+  description: String!
+  performedBy: User!
+  nextDueDate: Date
+  cost: Float
+}
