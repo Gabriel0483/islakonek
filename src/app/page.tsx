@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, Calendar, Ship, LayoutDashboard, Clock, ArrowRight } from "lucide-react";
+import { Search, Calendar, Ship, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,8 +56,6 @@ export default function Home() {
         
         <div className="container relative z-10 px-4 mx-auto text-white">
           <div className="max-w-xl mx-auto space-y-6 text-center">
-            {/* Hero Message and Description Removed */}
-            
             <Card className="bg-white/95 backdrop-blur p-6 shadow-2xl border-none text-foreground mt-8">
               <div className="flex flex-col md:flex-row gap-4 items-end">
                 <div className="flex-1 w-full space-y-2 text-left">
@@ -133,37 +131,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-20 bg-primary text-primary-foreground">
-        <div className="container px-4 mx-auto">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-1 space-y-6">
-              <div className="inline-flex items-center gap-2 bg-accent/20 text-accent px-3 py-1 rounded-full text-sm font-bold">
-                <LayoutDashboard className="h-4 w-4" /> For Maritime Operators
-              </div>
-              <h2 className="text-4xl font-headline font-bold">Scale Your Maritime Operations</h2>
-              <p className="text-lg text-primary-foreground/80">
-                A unified platform to manage vessels, optimize schedules, and reach thousands of passengers daily. Modernize your fleet management today.
-              </p>
-              <Link href="/admin">
-                <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4 px-8 py-6 text-lg">
-                  Admin Portal
-                </Button>
-              </Link>
-            </div>
-            <div className="flex-1 relative aspect-video w-full">
-               <Image
-                  src="https://picsum.photos/seed/dashboard/800/500"
-                  alt="Admin Dashboard"
-                  fill
-                  className="rounded-xl shadow-2xl object-cover"
-                  data-ai-hint="dashboard analytics"
-               />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="py-12 bg-background border-t">
+      <footer className="py-12 bg-background border-t mt-auto">
         <div className="container px-4 mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             <div className="space-y-4">
@@ -179,7 +147,7 @@ export default function Home() {
               <h4 className="font-bold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/trips" className="hover:text-accent">Search Trips</Link></li>
-                <li><Link href="/admin" className="hover:text-accent">Admin Login</Link></li>
+                <li><Link href="/admin" className="hover:text-accent">Admin Portal</Link></li>
               </ul>
             </div>
             <div>
