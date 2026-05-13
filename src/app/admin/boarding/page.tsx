@@ -14,7 +14,8 @@ import {
   ChevronRight,
   UserCheck,
   Calendar,
-  Filter
+  Filter,
+  RotateCcw
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -107,6 +108,16 @@ export default function BoardingPage() {
     updateDocumentNonBlocking(bookingRef, {
       status: "Used",
       boardedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const handleDeboardPassenger = (bookingId: string) => {
+    if (!db) return;
+    const bookingRef = doc(db, "bookings", bookingId);
+    updateDocumentNonBlocking(bookingRef, {
+      status: "Confirmed",
+      boardedAt: null,
       updatedAt: new Date().toISOString()
     });
   };
@@ -211,7 +222,7 @@ export default function BoardingPage() {
                   />
                 </div>
               </div>
-            </CardHeader>
+            </Header>
             <CardContent className="p-0">
               {isSchedulesLoading || isBookingsLoading ? (
                 <div className="flex items-center justify-center py-20">
@@ -275,8 +286,18 @@ export default function BoardingPage() {
                                   Board <ChevronRight className="h-4 w-4 ml-1" />
                                 </Button>
                               ) : (
-                                <div className="text-[10px] font-bold text-green-600 uppercase flex items-center justify-end gap-1">
-                                  <CheckCircle2 className="h-3.5 w-3.5" /> Complete
+                                <div className="flex items-center justify-end gap-2">
+                                  <div className="text-[10px] font-bold text-green-600 uppercase flex items-center gap-1">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Complete
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleDeboardPassenger(booking.id)}
+                                    className="h-8 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 uppercase"
+                                  >
+                                    <RotateCcw className="h-3 w-3 mr-1" /> Deboard
+                                  </Button>
                                 </div>
                               )}
                             </TableCell>
