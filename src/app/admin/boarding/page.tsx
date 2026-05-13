@@ -7,14 +7,13 @@ import {
   Loader2, 
   CheckCircle2, 
   Clock, 
-  Users, 
   Scan, 
   Ticket,
   ChevronRight,
   UserCheck,
   Calendar,
-  Filter,
-  RotateCcw
+  RotateCcw,
+  MapPin
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -40,6 +39,7 @@ export default function BoardingPage() {
   const [todayPHT, setTodayPHT] = useState("");
   const [currentTimePHT, setCurrentTimePHT] = useState("");
   const [search, setSearch] = useState("");
+  const [selectedRouteId, setSelectedRouteId] = useState<string>("all");
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("all");
 
   useEffect(() => {
@@ -81,12 +81,32 @@ export default function BoardingPage() {
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [schedules, todayPHT]);
 
+  const todayRoutes = useMemo(() => {
+    if (!routes || !activeTodaySchedules) return [];
+    const routeIdsToday = new Set(activeTodaySchedules.map(s => s.routeId));
+    return routes.filter(r => routeIdsToday.has(r.id));
+  }, [routes, activeTodaySchedules]);
+
+  const filteredSchedulesForDropdown = useMemo(() => {
+    if (selectedRouteId === "all") return activeTodaySchedules;
+    return activeTodaySchedules.filter(s => s.routeId === selectedRouteId);
+  }, [activeTodaySchedules, selectedRouteId]);
+
   const filteredBookings = useMemo(() => {
     if (!bookings || !todayPHT) return [];
     
     return bookings.filter(b => {
       const matchesDate = b.travelDate === todayPHT;
-      const matchesSchedule = selectedScheduleId === "all" || b.scheduleId === selectedScheduleId;
+      
+      let matchesSchedule = false;
+      if (selectedScheduleId !== "all") {
+        matchesSchedule = b.scheduleId === selectedScheduleId;
+      } else if (selectedRouteId !== "all") {
+        matchesSchedule = b.routeId === selectedRouteId;
+      } else {
+        matchesSchedule = true;
+      }
+
       const matchesStatus = b.status === "Confirmed" || b.status === "Used";
       const matchesSearch = 
         b.passengerName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -94,12 +114,11 @@ export default function BoardingPage() {
       
       return matchesDate && matchesSchedule && matchesStatus && matchesSearch;
     }).sort((a: any, b: any) => {
-      // Sort by boarding sequence if boarded, then by name
       if (a.status === 'Used' && b.status !== 'Used') return -1;
       if (a.status !== 'Used' && b.status === 'Used') return 1;
       return a.passengerName.localeCompare(b.passengerName);
     });
-  }, [bookings, todayPHT, selectedScheduleId, search]);
+  }, [bookings, todayPHT, selectedScheduleId, selectedRouteId, search]);
 
   const handleBoardPassenger = (bookingId: string) => {
     if (!db) return;
@@ -163,42 +182,70 @@ export default function BoardingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="md:col-span-1 border-none shadow-sm bg-white">
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Select Trip</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Filters</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Select value={selectedScheduleId} onValueChange={setSelectedScheduleId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All Active Trips" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Today's Trips</SelectItem>
-                    {activeTodaySchedules.map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.tripCode} - {s.departureTime}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> 1. Select Route
+                  </label>
+                  <Select 
+                    value={selectedRouteId} 
+                    onValueChange={(val) => {
+                      setSelectedRouteId(val);
+                      setSelectedScheduleId("all");
+                    }}
+                  >
+                    <SelectTrigger className="w-full h-9 text-xs">
+                      <SelectValue placeholder="All Active Routes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Routes</SelectItem>
+                      {todayRoutes.map(r => (
+                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+                    <Ship className="h-3 w-3" /> 2. Select Trip
+                  </label>
+                  <Select value={selectedScheduleId} onValueChange={setSelectedScheduleId}>
+                    <SelectTrigger className="w-full h-9 text-xs">
+                      <SelectValue placeholder="All Active Trips" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Today's Trips</SelectItem>
+                      {filteredSchedulesForDropdown.map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.tripCode} - {s.departureTime}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
 
             <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card className="border-none shadow-sm bg-primary text-primary-foreground">
-                <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Total Manifest</p>
-                  <p className="text-2xl font-black">{stats.total}</p>
+                  <p className="text-3xl font-black">{stats.total}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm bg-green-600 text-white">
-                <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Boarded</p>
-                  <p className="text-2xl font-black">{stats.boarded}</p>
+                  <p className="text-3xl font-black">{stats.boarded}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm bg-accent text-primary">
-                <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center h-full">
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Remaining</p>
-                  <p className="text-2xl font-black">{stats.pending}</p>
+                  <p className="text-3xl font-black">{stats.pending}</p>
                 </CardContent>
               </Card>
             </div>
@@ -209,7 +256,11 @@ export default function BoardingPage() {
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <CardTitle className="text-lg">Passenger Manifest</CardTitle>
-                  <CardDescription>Verify and board passengers for {selectedScheduleId === 'all' ? "all current voyages" : getTripInfo(selectedScheduleId).code}</CardDescription>
+                  <CardDescription>
+                    Verify and board passengers for {selectedScheduleId === 'all' 
+                      ? (selectedRouteId === 'all' ? "all current voyages" : todayRoutes.find(r => r.id === selectedRouteId)?.name)
+                      : getTripInfo(selectedScheduleId).code}
+                  </CardDescription>
                 </div>
                 <div className="relative w-full md:w-80">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
