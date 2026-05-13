@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -222,7 +221,7 @@ export default function BoardingPage() {
                   />
                 </div>
               </div>
-            </Header>
+            </CardHeader>
             <CardContent className="p-0">
               {isSchedulesLoading || isBookingsLoading ? (
                 <div className="flex items-center justify-center py-20">
@@ -294,7 +293,7 @@ export default function BoardingPage() {
                                     variant="ghost" 
                                     size="sm" 
                                     onClick={() => handleDeboardPassenger(booking.id)}
-                                    className="h-8 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 uppercase"
+                                    className="h-8 text-[10px] font-bold text-destructive hover:text-destructive/10 uppercase"
                                   >
                                     <RotateCcw className="h-3 w-3 mr-1" /> Deboard
                                   </Button>
