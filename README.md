@@ -24,6 +24,13 @@ git config pull.rebase false  # This sets merge as the default strategy
 git pull origin main
 ```
 
+### Fixing "Refusing to Merge Unrelated Histories"
+If you receive the `fatal: refusing to merge unrelated histories` error during a pull, use the following command:
+
+```bash
+git pull origin main --allow-unrelated-histories
+```
+
 ### Changing the Firebase Backend
 To connect this application to a different Firebase project (data repository):
 1. Go to the [Firebase Console](https://console.firebase.google.com/).
