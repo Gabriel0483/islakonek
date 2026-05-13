@@ -8,27 +8,26 @@ import {
   Clock, 
   Phone, 
   CheckCircle2, 
-  MoreVertical,
-  Calendar,
-  Tag,
-  Ship,
-  Ban,
-  AlertTriangle,
-  Pencil,
-  Trash2,
-  Check,
-  AlertCircle,
-  RefreshCw,
-  Banknote,
-  Info,
-  User,
-  Mail,
-  Heart,
-  Eye,
-  XCircle,
-  QrCode,
-  Download,
-  Printer
+  MoreVertical, 
+  Calendar, 
+  Tag, 
+  Ship, 
+  AlertTriangle, 
+  Pencil, 
+  Trash2, 
+  Check, 
+  AlertCircle, 
+  RefreshCw, 
+  Banknote, 
+  Info, 
+  User, 
+  Mail, 
+  Heart, 
+  Eye, 
+  XCircle, 
+  QrCode, 
+  Download, 
+  Printer 
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -73,6 +72,8 @@ import { Switch } from "@/components/ui/switch";
 import Image from "next/image";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
+
+const ACTIVE_STATUSES = ["Reserved", "Waitlisted", "Confirmed", "Used"];
 
 export default function ManageBookingsPage() {
   const db = useFirestore();
@@ -124,25 +125,26 @@ export default function ManageBookingsPage() {
     waiveReason: "Weather"
   });
 
-  const activeStatuses = ["Reserved", "Waitlisted", "Confirmed", "Used"];
-
-  const filteredBookings = bookings?.filter(b => {
-    const matchesSearch = 
-      b.passengerName?.toLowerCase().includes(search.toLowerCase()) ||
-      b.id?.toLowerCase().includes(search.toLowerCase()) ||
-      b.travelDate?.includes(search);
-    
-    if (activeTab === "all") return matchesSearch;
-    if (activeTab === "reserved") return matchesSearch && b.status === "Reserved";
-    if (activeTab === "waitlisted") return matchesSearch && b.status === "Waitlisted";
-    if (activeTab === "confirmed") return matchesSearch && b.status === "Confirmed";
-    if (activeTab === "used") return matchesSearch && b.status === "Used";
-    if (activeTab === "inactive") {
-      return matchesSearch && (["Suspended", "Auto-cancelled", "Refunded"].includes(b.status) || !activeStatuses.includes(b.status));
-    }
-    
-    return matchesSearch;
-  }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const filteredBookings = useMemo(() => {
+    if (!bookings) return [];
+    return bookings.filter(b => {
+      const matchesSearch = 
+        b.passengerName?.toLowerCase().includes(search.toLowerCase()) ||
+        b.id?.toLowerCase().includes(search.toLowerCase()) ||
+        b.travelDate?.includes(search);
+      
+      if (activeTab === "all") return matchesSearch;
+      if (activeTab === "reserved") return matchesSearch && b.status === "Reserved";
+      if (activeTab === "waitlisted") return matchesSearch && b.status === "Waitlisted";
+      if (activeTab === "confirmed") return matchesSearch && b.status === "Confirmed";
+      if (activeTab === "used") return matchesSearch && b.status === "Used";
+      if (activeTab === "inactive") {
+        return matchesSearch && (["Suspended", "Auto-cancelled", "Refunded"].includes(b.status) || !ACTIVE_STATUSES.includes(b.status));
+      }
+      
+      return matchesSearch;
+    }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [bookings, search, activeTab]);
 
   const getRoute = (id: string) => routes?.find(r => r.id === id);
   const getSchedule = (id: string) => schedules?.find(s => s.id === id);
@@ -230,7 +232,6 @@ export default function ManageBookingsPage() {
       updatedAt: new Date().toISOString() 
     };
 
-    // If marking as paid/confirmed, assign a boarding sequence number
     if (statusTarget.status === 'Confirmed' && !statusTarget.booking.boardingSequenceNumber) {
       const tripBookings = bookings?.filter(b => 
         b.scheduleId === statusTarget.booking.scheduleId && 
@@ -241,10 +242,8 @@ export default function ManageBookingsPage() {
     }
 
     updateDocumentNonBlocking(bookingRef, updateData);
-
     setIsStatusDialogOpen(false);
 
-    // If it was confirmed, show the pass
     if (statusTarget.status === 'Confirmed') {
       setTimeout(() => {
         const updatedBooking = { ...statusTarget.booking, ...updateData };
@@ -274,7 +273,6 @@ export default function ManageBookingsPage() {
     const fees = calculateRebookingFees;
     const bookingRef = doc(db, "bookings", selectedBooking.id);
     
-    // Calculate new sequence number
     const tripBookings = bookings?.filter(b => 
       b.scheduleId === rebookingData.newScheduleId && 
       b.travelDate === rebookingData.newTravelDate && 
@@ -418,7 +416,7 @@ export default function ManageBookingsPage() {
                             <div className="font-black text-primary">₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}</div>
                             {booking.penaltyFees > 0 && (
                                <div className="text-[9px] text-destructive font-bold uppercase mt-1">
-                                 + ₱{booking.penaltyFees.toLocaleString()} Penalties
+                                 + ₱{isMounted ? booking.penaltyFees.toLocaleString() : "---"} Penalties
                                </div>
                             )}
                           </TableCell>
@@ -639,10 +637,10 @@ export default function ManageBookingsPage() {
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Final Fare</p>
                       <p className="font-black text-primary">₱{isMounted ? selectedBooking?.finalFare?.toLocaleString() : "---"}</p>
                     </div>
-                    {selectedBooking?.penaltyFees > 0 && (
+                    {(selectedBooking?.penaltyFees > 0) && (
                       <div className="flex justify-between text-destructive">
                         <p className="text-[10px] uppercase font-bold">Penalties Applied</p>
-                        <p className="font-black">+ ₱{selectedBooking.penaltyFees.toLocaleString()}</p>
+                        <p className="font-black">+ ₱{isMounted ? selectedBooking.penaltyFees.toLocaleString() : "---"}</p>
                       </div>
                     )}
                     {selectedBooking?.isFeeWaived && (
@@ -806,7 +804,7 @@ export default function ManageBookingsPage() {
                <div className="p-4 bg-primary rounded-lg text-primary-foreground flex justify-between items-center">
                  <div>
                    <p className="text-[10px] uppercase font-bold opacity-70">Penalty Fees to Apply</p>
-                   <p className="text-2xl font-black">₱{calculateRebookingFees.toLocaleString()}</p>
+                   <p className="text-2xl font-black">₱{isMounted ? calculateRebookingFees.toLocaleString() : "---"}</p>
                  </div>
                  <Badge variant="outline" className="text-white border-white/20">
                    {calculateRebookingFees === 0 ? "Complimentary" : "Standard Fee"}
@@ -871,7 +869,7 @@ export default function ManageBookingsPage() {
                <div className="p-4 rounded-lg bg-primary text-primary-foreground flex justify-between items-center">
                  <div>
                    <p className="text-[10px] uppercase font-bold opacity-70">Penalty Fee</p>
-                   <p className="text-2xl font-black">₱{calculateStatusPenalties().toLocaleString()}</p>
+                   <p className="text-2xl font-black">₱{isMounted ? calculateStatusPenalties().toLocaleString() : "---"}</p>
                  </div>
                </div>
              </div>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -322,15 +321,15 @@ export default function FaresPage() {
                   <div className="mt-4 p-6 bg-primary rounded-xl text-primary-foreground space-y-2">
                     <div className="flex justify-between text-xs opacity-70">
                       <span>Subtotal:</span>
-                      <span>₱{(formData.baseFare * (1 - formData.discountPercentage / 100)).toLocaleString()}</span>
+                      <span>₱{isMounted ? (formData.baseFare * (1 - formData.discountPercentage / 100)).toLocaleString() : "---"}</span>
                     </div>
                     <div className="flex justify-between text-xs opacity-70">
                       <span>VAT {formData.isVatExempt ? "(Exempt)" : "(12%)"}:</span>
-                      <span>₱{(formData.isVatExempt ? 0 : (formData.baseFare * (1 - formData.discountPercentage / 100) * 0.12)).toLocaleString()}</span>
+                      <span>₱{isMounted ? (formData.isVatExempt ? 0 : (formData.baseFare * (1 - formData.discountPercentage / 100) * 0.12)).toLocaleString() : "---"}</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t border-primary-foreground/20">
                       <span className="font-bold">Final Passenger Fare:</span>
-                      <span className="text-2xl font-black">₱{calculateFinalFare(formData.baseFare, formData.isVatExempt, formData.discountPercentage).toLocaleString()}</span>
+                      <span className="text-2xl font-black">₱{isMounted ? calculateFinalFare(formData.baseFare, formData.isVatExempt, formData.discountPercentage).toLocaleString() : "---"}</span>
                     </div>
                   </div>
                 )}
