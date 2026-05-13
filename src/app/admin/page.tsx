@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -114,7 +113,7 @@ export default function AdminDashboard() {
 
   const managementModules = [
     {
-      title: "Boarding Gate",
+      title: "Boarding Mode",
       description: "Real-time passenger check-in and manifest boarding for active trips.",
       icon: Scan,
       link: "/admin/boarding",

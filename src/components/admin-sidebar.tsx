@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -35,7 +34,7 @@ export function AdminSidebar() {
 
   const menuItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
-    { label: "Boarding Gate", icon: Scan, href: "/admin/boarding" },
+    { label: "Boarding Mode", icon: Scan, href: "/admin/boarding" },
     { label: "Desk Bookings", icon: Ticket, href: "/admin/bookings" },
     { label: "Manage Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },
   ];

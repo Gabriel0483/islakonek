@@ -165,7 +165,7 @@ export default function BoardingPage() {
             <SidebarTrigger />
             <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
               <Scan className="h-5 w-5 text-accent" />
-              Boarding Gate
+              Boarding Mode
             </h1>
           </div>
           <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase">
