@@ -7,7 +7,15 @@ import {
   Ship, 
   LayoutDashboard, 
   Settings, 
-  Home
+  Home,
+  Scan,
+  Ticket,
+  ClipboardList,
+  MapPin,
+  Waypoints,
+  Banknote,
+  Wrench,
+  CalendarDays
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +33,21 @@ import {
 export function AdminSidebar() {
   const pathname = usePathname();
 
+  const menuItems = [
+    { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
+    { label: "Boarding Gate", icon: Scan, href: "/admin/boarding" },
+    { label: "Desk Bookings", icon: Ticket, href: "/admin/bookings" },
+    { label: "Manage Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },
+  ];
+
+  const configItems = [
+    { label: "Port Registry", icon: MapPin, href: "/admin/ports" },
+    { label: "Route Setup", icon: Waypoints, href: "/admin/routes" },
+    { label: "Fare Tables", icon: Banknote, href: "/admin/fares" },
+    { label: "Fleet Registry", icon: Wrench, href: "/admin/fleet" },
+    { label: "Trip Schedules", icon: CalendarDays, href: "/admin/schedules" },
+  ];
+
   return (
     <Sidebar variant="inset" collapsible="icon" className="border-r-0 bg-sidebar text-sidebar-foreground">
       <SidebarHeader className="p-4">
@@ -40,42 +63,62 @@ export function AdminSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-white/50 px-4 mb-2">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/50 px-4 mb-2">Operations</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={pathname === "/admin"}
-                  tooltip="Dashboard"
-                  className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
-                >
-                  <Link href="/admin">
-                    <LayoutDashboard />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={pathname === "/"}
-                  tooltip="Main Site"
-                  className="hover:bg-accent/10"
-                >
-                  <Link href="/">
-                    <Home />
-                    <span>Public Site</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-white/50 px-4 mb-2">Infrastructure</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {configItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    className="hover:bg-accent/10 data-[active=true]:bg-accent data-[active=true]:text-primary"
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
+      <SidebarFooter className="p-4 border-t border-sidebar-border space-y-2">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Home Site" className="hover:bg-accent/10">
+              <Link href="/">
+                <Home />
+                <span>Return to Site</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Settings" className="hover:bg-accent/10">
               <Link href="/admin/settings">

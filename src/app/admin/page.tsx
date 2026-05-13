@@ -18,7 +18,8 @@ import {
   Ticket,
   ClipboardList,
   Lock,
-  Loader2
+  Loader2,
+  Scan
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -112,6 +113,14 @@ export default function AdminDashboard() {
   ];
 
   const managementModules = [
+    {
+      title: "Boarding Gate",
+      description: "Real-time passenger check-in and manifest boarding for active trips.",
+      icon: Scan,
+      link: "/admin/boarding",
+      color: "text-accent",
+      count: "Live Ops"
+    },
     {
       title: "Desk Bookings",
       description: "Counter ticket sales and instant passenger check-in.",
