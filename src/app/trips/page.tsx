@@ -58,6 +58,7 @@ interface PassengerForm {
   passengerDob: string;
   passengerEmail: string;
   passengerContact: string;
+  emergencyContact: string;
   fareId: string;
 }
 
@@ -112,12 +113,12 @@ function TripsContent() {
   const [bookingStep, setBookingStep] = useState(1); // 1: Details, 2: Summary
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   
-  const [emergencyContact, setEmergencyContact] = useState("");
   const [passengers, setPassengers] = useState<PassengerForm[]>([{
     passengerName: "",
     passengerDob: "",
     passengerEmail: "",
     passengerContact: "",
+    emergencyContact: "",
     fareId: ""
   }]);
 
@@ -191,6 +192,7 @@ function TripsContent() {
       passengerDob: "",
       passengerEmail: "",
       passengerContact: "",
+      emergencyContact: "",
       fareId: ""
     }]);
   };
@@ -207,7 +209,7 @@ function TripsContent() {
   };
 
   const handleProcessBooking = () => {
-    if (!db || !selectedSchedule || !phtState || !emergencyContact) return;
+    if (!db || !selectedSchedule || !phtState) return;
 
     const targetDate = searchDate || phtState.date;
     const status = selectedSchedule.isWaitlistOnly ? 'Waitlisted' : 'Reserved';
@@ -227,7 +229,7 @@ function TripsContent() {
         passengerDob: p.passengerDob,
         passengerEmail: p.passengerEmail,
         passengerContact: p.passengerContact,
-        emergencyContact: emergencyContact,
+        emergencyContact: p.emergencyContact,
         fareId: p.fareId,
         segmentLabel: selectedFare?.segmentLabel || "",
         finalFare: selectedFare?.finalFare || 0,
@@ -240,8 +242,7 @@ function TripsContent() {
 
     setIsBookingOpen(false);
     setBookingStep(1);
-    setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: "", passengerContact: "", fareId: "" }]);
-    setEmergencyContact("");
+    setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: "", passengerContact: "", emergencyContact: "", fareId: "" }]);
     
     alert(`Successfully processed ${passengers.length} booking request(s)!`);
   };
@@ -252,7 +253,7 @@ function TripsContent() {
     return sum + (fare?.finalFare || 0);
   }, 0);
 
-  const isDetailsValid = emergencyContact && passengers.every(p => p.passengerName && p.fareId && p.passengerDob);
+  const isDetailsValid = passengers.every(p => p.passengerName && p.fareId && p.passengerDob && p.emergencyContact && p.passengerContact);
 
   return (
     <div className="min-h-screen bg-background font-body">
@@ -419,19 +420,6 @@ function TripsContent() {
                     </div>
                   )}
 
-                  <section className="space-y-4">
-                    <Label htmlFor="emergencyContact" className="flex items-center gap-1.5 font-bold text-xs uppercase text-muted-foreground">
-                      <Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number (Group)
-                    </Label>
-                    <Input 
-                      id="emergencyContact" 
-                      value={emergencyContact} 
-                      onChange={(e) => setEmergencyContact(e.target.value)}
-                      placeholder="Contact name and mobile number"
-                      className="h-11 bg-white border-2"
-                    />
-                  </section>
-
                   <div className="space-y-6">
                     <div className="flex items-center justify-between border-b pb-2">
                        <Label className="flex items-center gap-2 font-black text-primary uppercase text-lg tracking-tight">
@@ -482,6 +470,28 @@ function TripsContent() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Mobile Number</Label>
+                                <Input 
+                                  value={p.passengerContact} 
+                                  onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
+                                  placeholder="09XX XXX XXXX"
+                                  className="bg-white h-11"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1">
+                                  <Heart className="h-2.5 w-2.5 text-destructive" /> Emergency Contact Number
+                                </Label>
+                                <Input 
+                                  value={p.emergencyContact} 
+                                  onChange={(e) => updatePassenger(index, 'emergencyContact', e.target.value)}
+                                  placeholder="ICE name or mobile"
+                                  className="bg-white h-11"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
                                 <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email (Optional)</Label>
                                 <Input 
                                   type="email"
@@ -492,27 +502,18 @@ function TripsContent() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Mobile Number</Label>
-                                <Input 
-                                  value={p.passengerContact} 
-                                  onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
-                                  placeholder="09XX XXX XXXX"
-                                  className="bg-white h-11"
-                                />
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Passenger Type</Label>
+                                <Select value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
+                                  <SelectTrigger className="bg-white h-11 border-2">
+                                    <SelectValue placeholder="Select demographic" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableFares?.map(f => (
+                                      <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Passenger Type</Label>
-                              <Select value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
-                                <SelectTrigger className="bg-white h-11 border-2">
-                                  <SelectValue placeholder="Select demographic" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableFares?.map(f => (
-                                    <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
                             </div>
                           </div>
                         </div>
@@ -543,13 +544,9 @@ function TripsContent() {
                         <Label className="text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
                         <p className="font-bold">{selectedSchedule?.vessel?.name || 'TBA'}</p>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-4">
                         <Label className="text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
                         <p className="font-bold text-sm">{selectedSchedule?.route?.name}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Emergency Group Contact</Label>
-                        <p className="font-bold text-sm truncate">{emergencyContact}</p>
                       </div>
                     </div>
                   </div>
@@ -567,7 +564,9 @@ function TripsContent() {
                               </div>
                               <div>
                                 <p className="font-bold text-primary uppercase text-sm">{p.passengerName}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium">{fare?.segmentLabel} • {p.passengerContact || 'No mobile'}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium">
+                                  {fare?.segmentLabel} • {p.passengerContact || 'No mobile'} • <span className="text-destructive">ICE: {p.emergencyContact}</span>
+                                </p>
                               </div>
                             </div>
                             <div className="text-right">

@@ -67,6 +67,7 @@ interface PassengerForm {
   passengerDob: string;
   passengerEmail: string;
   passengerContact: string;
+  emergencyContact: string;
   fareId: string;
 }
 
@@ -77,13 +78,16 @@ export default function DeskBookingsPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const pht = new Date(utc + (3600000 * 8));
-    const y = pht.getFullYear();
-    const m = String(pht.getMonth() + 1).padStart(2, '0');
-    const d = String(pht.getDate()).padStart(2, '0');
-    setTodayPHT(`${y}-${m}-${d}`);
+    const updateTime = () => {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const pht = new Date(utc + (3600000 * 8));
+      const y = pht.getFullYear();
+      const m = String(pht.getMonth() + 1).padStart(2, '0');
+      const d = String(pht.getDate()).padStart(2, '0');
+      setTodayPHT(`${y}-${m}-${d}`);
+    };
+    updateTime();
   }, []);
   
   const routesRef = useMemoFirebase(() => {
@@ -131,7 +135,6 @@ export default function DeskBookingsPage() {
   const [formData, setFormData] = useState({
     routeId: "",
     scheduleId: "",
-    emergencyContact: "",
     travelDate: "",
     isPaid: true
   });
@@ -141,6 +144,7 @@ export default function DeskBookingsPage() {
     passengerDob: "",
     passengerEmail: "",
     passengerContact: "",
+    emergencyContact: "",
     fareId: ""
   }]);
 
@@ -179,6 +183,7 @@ export default function DeskBookingsPage() {
       passengerDob: "",
       passengerEmail: "",
       passengerContact: "",
+      emergencyContact: "",
       fareId: ""
     }]);
   };
@@ -210,7 +215,7 @@ export default function DeskBookingsPage() {
   };
 
   const handleCreateBooking = () => {
-    if (!db || !formData.routeId || !formData.scheduleId || !formData.travelDate || !formData.emergencyContact) return;
+    if (!db || !formData.routeId || !formData.scheduleId || !formData.travelDate) return;
 
     const tripBookings = bookings?.filter(b => 
       b.scheduleId === formData.scheduleId && 
@@ -240,7 +245,7 @@ export default function DeskBookingsPage() {
         routeId: formData.routeId,
         scheduleId: formData.scheduleId,
         travelDate: formData.travelDate,
-        emergencyContact: formData.emergencyContact,
+        emergencyContact: p.emergencyContact,
         passengerName: p.passengerName,
         passengerDob: p.passengerDob,
         passengerEmail: p.passengerEmail,
@@ -268,7 +273,6 @@ export default function DeskBookingsPage() {
     setFormData({
       routeId: "",
       scheduleId: "",
-      emergencyContact: "",
       travelDate: todayPHT,
       isPaid: true
     });
@@ -277,6 +281,7 @@ export default function DeskBookingsPage() {
       passengerDob: "",
       passengerEmail: "",
       passengerContact: "",
+      emergencyContact: "",
       fareId: ""
     }]);
     setUserSearchTerm({});
@@ -299,7 +304,7 @@ export default function DeskBookingsPage() {
     return sum + (fare?.finalFare || 0);
   }, 0);
 
-  const isDetailsValid = formData.scheduleId && formData.travelDate && formData.emergencyContact && !isFull && passengers.every(p => p.passengerName && p.fareId && p.passengerDob);
+  const isDetailsValid = formData.scheduleId && formData.travelDate && !isFull && passengers.every(p => p.passengerName && p.fareId && p.passengerDob && p.emergencyContact);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -543,19 +548,6 @@ export default function DeskBookingsPage() {
                     </div>
                   </section>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="emergency" className="flex items-center gap-1.5 text-xs font-bold uppercase text-muted-foreground">
-                      <Heart className="h-3 w-3 text-destructive" /> Emergency Contact (Group)
-                    </Label>
-                    <Input 
-                      id="emergency" 
-                      value={formData.emergencyContact} 
-                      onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
-                      placeholder="Name and mobile number for group contact"
-                      className="h-11 bg-white"
-                    />
-                  </div>
-
                   {formData.scheduleId && formData.travelDate && (
                     <div className={cn("p-4 rounded-xl flex items-center justify-between border-2 transition-colors", 
                       isWaitlistOnly ? 'bg-orange-50 border-orange-200' : isFull ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200')}>
@@ -662,13 +654,36 @@ export default function DeskBookingsPage() {
                                   />
                                 </div>
                               </div>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                   <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Contact Number</Label>
                                   <Input 
                                     value={p.passengerContact} 
                                     onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
                                     placeholder="09XX XXX XXXX"
+                                    className="bg-white h-11"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1">
+                                    <Heart className="h-2.5 w-2.5 text-destructive" /> Emergency Contact Number
+                                  </Label>
+                                  <Input 
+                                    value={p.emergencyContact} 
+                                    onChange={(e) => updatePassenger(index, 'emergencyContact', e.target.value)}
+                                    placeholder="Emergency name or mobile"
+                                    className="bg-white h-11"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email (Optional)</Label>
+                                  <Input 
+                                    type="email"
+                                    value={p.passengerEmail} 
+                                    onChange={(e) => updatePassenger(index, 'passengerEmail', e.target.value)}
+                                    placeholder="juan@example.com"
                                     className="bg-white h-11"
                                   />
                                 </div>
@@ -716,13 +731,9 @@ export default function DeskBookingsPage() {
                         <Label className="text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
                         <p className="font-bold">{vessels?.find(v => v.id === selectedSchedule?.vesselId)?.name || 'TBA'}</p>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-4">
                         <Label className="text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
                         <p className="font-bold text-sm">{selectedRoute?.name}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Emergency Contact</Label>
-                        <p className="font-bold text-sm truncate">{formData.emergencyContact}</p>
                       </div>
                     </div>
                   </div>
@@ -740,7 +751,9 @@ export default function DeskBookingsPage() {
                               </div>
                               <div>
                                 <p className="font-bold text-primary uppercase text-sm">{p.passengerName}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium">{fare?.segmentLabel} • {p.passengerContact || 'No contact'}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium">
+                                  {fare?.segmentLabel} • {p.passengerContact || 'No contact'} • <span className="text-destructive">ICE: {p.emergencyContact}</span>
+                                </p>
                               </div>
                             </div>
                             <div className="text-right">
