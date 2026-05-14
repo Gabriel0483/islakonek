@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ship, LayoutDashboard, Menu, User, LogOut } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,7 +32,7 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 mx-auto">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center space-x-2">
             <div className="bg-primary p-1.5 rounded-lg">
               <Ship className="h-6 w-6 text-primary-foreground" />
@@ -41,6 +41,13 @@ export function Navbar() {
               Isla Konek
             </span>
           </Link>
+
+          <div className="hidden md:flex items-center gap-6 ml-4">
+            <Link href="/voyages" className="text-sm font-bold text-muted-foreground hover:text-accent flex items-center gap-1.5 transition-colors">
+              <Radio className="h-4 w-4 text-accent animate-pulse" />
+              Live Status
+            </Link>
+          </div>
         </div>
 
         <div className="hidden md:flex items-center gap-6">
@@ -65,7 +72,6 @@ export function Navbar() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
                   
-                  {/* Public-only links */}
                   {!isSuperAdmin && (
                     <>
                       <DropdownMenuItem asChild>
@@ -107,6 +113,9 @@ export function Navbar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link href="/voyages">Live Status</Link>
+              </DropdownMenuItem>
               {isSuperAdmin && (
                 <DropdownMenuItem asChild>
                   <Link href="/admin">Admin Portal</Link>
