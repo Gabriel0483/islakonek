@@ -24,7 +24,10 @@ import {
   Users,
   Search,
   UserPlus,
-  Phone
+  Phone,
+  ChevronRight,
+  ChevronLeft,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -55,7 +58,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 interface PassengerForm {
   passengerName: string;
@@ -119,6 +124,7 @@ export default function DeskBookingsPage() {
   const { data: registeredUsers } = useCollection(usersRef);
 
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1); // 1: Details, 2: Summary
   const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
   const [lastCreatedBooking, setLastCreatedBooking] = useState<any>(null);
   
@@ -149,6 +155,7 @@ export default function DeskBookingsPage() {
   const availableSchedules = schedules?.filter(s => s.routeId === formData.routeId && s.isActive);
   const availableFares = fares?.filter(f => f.routeId === formData.routeId);
   const selectedSchedule = schedules?.find(s => s.id === formData.scheduleId);
+  const selectedRoute = routes?.find(r => r.id === formData.routeId);
 
   const getSeatsUsed = (scheduleId: string, travelDate: string) => {
     return bookings?.filter(b => 
@@ -250,7 +257,6 @@ export default function DeskBookingsPage() {
 
       setDocumentNonBlocking(bookingRef, newBookingData, { merge: true });
 
-      // If we just created the last one or only one, show it as a boarding pass if confirmed
       if (status === 'Confirmed') {
         setLastCreatedBooking(newBookingData);
         setIsBoardingPassOpen(true);
@@ -258,6 +264,7 @@ export default function DeskBookingsPage() {
     });
 
     setIsNewBookingOpen(false);
+    setBookingStep(1);
     setFormData({
       routeId: "",
       scheduleId: "",
@@ -292,6 +299,8 @@ export default function DeskBookingsPage() {
     return sum + (fare?.finalFare || 0);
   }, 0);
 
+  const isDetailsValid = formData.scheduleId && formData.travelDate && formData.emergencyContact && !isFull && passengers.every(p => p.passengerName && p.fareId && p.passengerDob);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AdminNav />
@@ -319,7 +328,7 @@ export default function DeskBookingsPage() {
                <Ticket className="h-20 w-20 text-accent/20 mx-auto mb-6" />
                <h2 className="text-3xl font-black text-primary mb-2">Ready to Issue?</h2>
                <p className="text-muted-foreground mb-8 max-w-md mx-auto">Select the trip and demographics to generate valid tickets and manifest entries for walk-in passengers.</p>
-               <Button onClick={() => setIsNewBookingOpen(true)} size="lg" className="bg-primary px-12 h-14 text-lg">
+               <Button onClick={() => { setIsNewBookingOpen(true); setBookingStep(1); }} size="lg" className="bg-primary px-12 h-14 text-lg">
                  Start Ticket Booking
                </Button>
              </div>
@@ -336,37 +345,39 @@ export default function DeskBookingsPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-accent" />
               </div>
             ) : deskBookings && deskBookings.length > 0 ? (
-              <Table>
-                <TableHeader className="bg-secondary/30">
-                  <TableRow>
-                    <TableHead>Ticket ID</TableHead>
-                    <TableHead>Passenger</TableHead>
-                    <TableHead>Travel Date</TableHead>
-                    <TableHead>Trip/Route</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {deskBookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="font-mono text-[10px] font-bold">#{booking.id}</TableCell>
-                      <TableCell className="font-bold">{booking.passengerName}</TableCell>
-                      <TableCell className="text-xs">{booking.travelDate}</TableCell>
-                      <TableCell>
-                        <div className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</div>
-                        <div className="text-[10px] text-muted-foreground">{getRouteName(booking.routeId)}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-[10px]">{booking.status}</Badge>
-                      </TableCell>
-                      <TableCell className="font-black text-primary">
-                        ₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="w-full overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/30">
+                    <tr className="border-b">
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Ticket ID</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Passenger</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Travel Date</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Trip/Route</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deskBookings.map((booking) => (
+                      <tr key={booking.id} className="border-b hover:bg-muted/50 transition-colors">
+                        <td className="p-4 align-middle font-mono text-[10px] font-bold">#{booking.id}</td>
+                        <td className="p-4 align-middle font-bold">{booking.passengerName}</td>
+                        <td className="p-4 align-middle text-xs">{booking.travelDate}</td>
+                        <td className="p-4 align-middle">
+                          <div className="text-[10px] font-black text-accent uppercase">{getTripCode(booking.scheduleId)}</div>
+                          <div className="text-[10px] text-muted-foreground">{getRouteName(booking.routeId)}</div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          <Badge variant="outline" className="text-[10px]">{booking.status}</Badge>
+                        </td>
+                        <td className="p-4 align-middle font-black text-primary">
+                          ₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <div className="text-center py-10 opacity-30 text-xs font-bold uppercase">No recent counter sales</div>
             )}
@@ -444,7 +455,7 @@ export default function DeskBookingsPage() {
 
             <div className="bg-secondary/30 p-4 flex gap-2">
               <Button className="flex-1 bg-primary text-white font-bold" onClick={() => window.print()}>
-                <Printer className="h-4 w-4 mr-2" /> Print Representative Pass
+                <Printer className="h-4 w-4 mr-2" /> Print Pass
               </Button>
               <Button variant="outline" className="flex-1 font-bold">
                 <Download className="h-4 w-4 mr-2" /> Save Image
@@ -460,251 +471,352 @@ export default function DeskBookingsPage() {
       </Dialog>
 
       <Dialog open={isNewBookingOpen} onOpenChange={setIsNewBookingOpen}>
-        <DialogContent className="sm:max-w-[850px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Ticket className="h-5 w-5 text-accent" /> Desk Issuance (Multi-Passenger)
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[80vh] pr-4">
-            <div className="grid gap-6 py-4">
-              <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><CalendarIcon className="h-3 w-3" /> Travel Date</Label>
-                  <Input 
-                    type="date" 
-                    value={formData.travelDate} 
-                    onChange={(e) => setFormData({...formData, travelDate: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Select Route</Label>
-                  <Select value={formData.routeId} onValueChange={(val) => setFormData({...formData, routeId: val, scheduleId: ""})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose Route" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {routes?.map(r => (
-                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Select Schedule</Label>
-                  <Select disabled={!formData.routeId} value={formData.scheduleId} onValueChange={(val) => setFormData({...formData, scheduleId: val})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose Departure" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSchedules?.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </section>
-
-              <div className="space-y-2">
-                <Label htmlFor="emergency" className="flex items-center gap-1.5"><Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number (Group)</Label>
-                <Input 
-                  id="emergency" 
-                  value={formData.emergencyContact} 
-                  onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
-                  placeholder="Name and number for entire group"
-                />
+        <DialogContent className="sm:max-w-[850px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 border-b bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+                <Ticket className="h-6 w-6 text-accent" /> Desk Issuance
+              </DialogTitle>
+            </div>
+            {/* Progress Indicator */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 flex items-center gap-2">
+                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors", 
+                  bookingStep >= 1 ? "bg-primary text-white" : "bg-secondary text-muted-foreground")}>1</div>
+                <span className={cn("text-xs font-bold uppercase", bookingStep >= 1 ? "text-primary" : "text-muted-foreground")}>Details</span>
               </div>
+              <Separator className="w-12 h-px bg-border" />
+              <div className="flex-1 flex items-center gap-2">
+                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors", 
+                  bookingStep >= 2 ? "bg-primary text-white" : "bg-secondary text-muted-foreground")}>2</div>
+                <span className={cn("text-xs font-bold uppercase", bookingStep >= 2 ? "text-primary" : "text-muted-foreground")}>Summary</span>
+              </div>
+              <Separator className="w-12 h-px bg-border" />
+              <div className="flex-1 flex items-center gap-2 opacity-50">
+                <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-secondary text-muted-foreground">3</div>
+                <span className="text-xs font-bold uppercase text-muted-foreground">Confirm</span>
+              </div>
+            </div>
+          </DialogHeader>
 
-              {formData.scheduleId && formData.travelDate && (
-                <div className={`p-4 rounded-lg flex items-center justify-between border ${isWaitlistOnly ? 'bg-orange-50 border-orange-200' : isFull ? 'bg-red-50 border-red-200' : 'bg-secondary/20'}`}>
-                  <div className="flex items-center gap-3">
-                    {isWaitlistOnly ? <ListOrdered className="h-5 w-5 text-orange-600" /> : isFull ? <AlertCircle className="h-5 w-5 text-red-600" /> : <Ship className="h-5 w-5 text-primary" />}
-                    <div>
-                      <p className="text-xs font-bold text-muted-foreground uppercase">Availability for {formData.travelDate}</p>
-                      <p className={`font-bold ${isFull ? 'text-red-700' : isWaitlistOnly ? 'text-orange-700' : 'text-primary'}`}>
-                        {isFull ? 'TRIP FULL' : isWaitlistOnly ? 'WAITLISTING' : `${currentCapacity - seatsUsed} Seats Available`}
-                      </p>
+          <ScrollArea className="max-h-[70vh]">
+            <div className="p-6 space-y-8">
+              {bookingStep === 1 && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+                  <section className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-secondary/5 p-4 rounded-xl border">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
+                        <CalendarIcon className="h-3 w-3" /> 1. Travel Date
+                      </Label>
+                      <Input 
+                        type="date" 
+                        value={formData.travelDate} 
+                        onChange={(e) => setFormData({...formData, travelDate: e.target.value})}
+                        className="bg-white h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">2. Select Route</Label>
+                      <Select value={formData.routeId} onValueChange={(val) => setFormData({...formData, routeId: val, scheduleId: ""})}>
+                        <SelectTrigger className="bg-white h-11">
+                          <SelectValue placeholder="Choose Route" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {routes?.map(r => (
+                            <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">3. Select Schedule</Label>
+                      <Select disabled={!formData.routeId} value={formData.scheduleId} onValueChange={(val) => setFormData({...formData, scheduleId: val})}>
+                        <SelectTrigger className="bg-white h-11">
+                          <SelectValue placeholder="Choose Departure" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableSchedules?.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </section>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency" className="flex items-center gap-1.5 text-xs font-bold uppercase text-muted-foreground">
+                      <Heart className="h-3 w-3 text-destructive" /> Emergency Contact (Group)
+                    </Label>
+                    <Input 
+                      id="emergency" 
+                      value={formData.emergencyContact} 
+                      onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                      placeholder="Name and mobile number for group contact"
+                      className="h-11 bg-white"
+                    />
+                  </div>
+
+                  {formData.scheduleId && formData.travelDate && (
+                    <div className={cn("p-4 rounded-xl flex items-center justify-between border-2 transition-colors", 
+                      isWaitlistOnly ? 'bg-orange-50 border-orange-200' : isFull ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200')}>
+                      <div className="flex items-center gap-3">
+                        {isWaitlistOnly ? <ListOrdered className="h-6 w-6 text-orange-600" /> : isFull ? <AlertCircle className="h-6 w-6 text-red-600" /> : <Ship className="h-6 w-6 text-primary" />}
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">Availability for {formData.travelDate}</p>
+                          <p className={cn("text-lg font-black", isFull ? 'text-red-700' : isWaitlistOnly ? 'text-orange-700' : 'text-primary')}>
+                            {isFull ? 'TRIP FULL' : isWaitlistOnly ? 'WAITLISTING' : `${currentCapacity - seatsUsed} Seats Available`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <section className="space-y-6">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <Label className="flex items-center gap-2 text-lg font-black text-primary uppercase tracking-tight">
+                        <Users className="h-5 w-5 text-accent" /> Passengers ({passengers.length})
+                      </Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-2 h-9 font-bold">
+                        <Plus className="h-4 w-4" /> Add Another
+                      </Button>
+                    </div>
+
+                    <div className="space-y-10">
+                      {passengers.map((p, index) => {
+                        const searchTerm = userSearchTerm[index] || "";
+                        const filteredUsers = searchTerm.length > 1 
+                          ? registeredUsers?.filter(u => 
+                              u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              u.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+                            ).slice(0, 3) 
+                          : [];
+
+                        return (
+                          <div key={index} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-6 pt-8 group hover:border-accent/40 transition-colors">
+                            <div className="absolute -top-4 left-6 bg-white border-2 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary tracking-widest z-10">
+                              Passenger #{index + 1}
+                            </div>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              className="absolute -top-3 -right-3 h-8 w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20"
+                              onClick={() => removePassenger(index)}
+                              disabled={passengers.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+
+                            <div className="space-y-6">
+                              <div className="space-y-2 relative">
+                                <Label className="text-[10px] font-black uppercase text-accent flex items-center gap-1.5 tracking-wider">
+                                  <Search className="h-3 w-3" /> Rapid Profile Lookup
+                                </Label>
+                                <Input 
+                                  placeholder="Search registered passengers by name or mobile..." 
+                                  value={searchTerm}
+                                  onChange={(e) => setUserSearchTerm({ ...userSearchTerm, [index]: e.target.value })}
+                                  className="bg-white border-accent/20 h-11 focus-visible:ring-accent"
+                                />
+                                {filteredUsers && filteredUsers.length > 0 && (
+                                  <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
+                                    {filteredUsers.map(user => (
+                                      <button
+                                        key={user.id}
+                                        onClick={() => handleApplyProfile(index, user)}
+                                        className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors"
+                                      >
+                                        <div className="bg-primary/10 p-2 rounded-lg">
+                                          <User className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div>
+                                          <p className="text-sm font-bold text-primary">{user.displayName}</p>
+                                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
+                                            <Phone className="h-2.5 w-2.5" /> {user.phoneNumber || "No mobile set"}
+                                          </p>
+                                        </div>
+                                        <UserPlus className="h-5 w-5 ml-auto text-accent" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Full Name</Label>
+                                  <Input 
+                                    value={p.passengerName} 
+                                    onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
+                                    placeholder="Juan Dela Cruz"
+                                    className="bg-white h-11"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Date of Birth</Label>
+                                  <Input 
+                                    type="date"
+                                    value={p.passengerDob} 
+                                    onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
+                                    className="bg-white h-11"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Contact Number</Label>
+                                  <Input 
+                                    value={p.passengerContact} 
+                                    onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
+                                    placeholder="09XX XXX XXXX"
+                                    className="bg-white h-11"
+                                  />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Fare Demographic</Label>
+                                  <Select disabled={!formData.routeId} value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
+                                    <SelectTrigger className="bg-white h-11">
+                                      <SelectValue placeholder="Choose demographic tier" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {availableFares?.map(f => (
+                                        <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {bookingStep === 2 && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                    <h3 className="text-xs font-black uppercase text-primary tracking-[0.2em] mb-4">Voyage Summary</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Trip ID</Label>
+                        <p className="font-black text-accent text-lg">{selectedSchedule?.tripCode}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Departure</Label>
+                        <p className="font-bold text-primary">{selectedSchedule?.departureTime}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Travel Date</Label>
+                        <p className="font-bold">{formData.travelDate}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
+                        <p className="font-bold">{vessels?.find(v => v.id === selectedSchedule?.vesselId)?.name || 'TBA'}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
+                        <p className="font-bold text-sm">{selectedRoute?.name}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Emergency Contact</Label>
+                        <p className="font-bold text-sm truncate">{formData.emergencyContact}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black uppercase text-muted-foreground tracking-[0.2em] border-b pb-2">Passenger Roster</h3>
+                    <div className="space-y-3">
+                      {passengers.map((p, i) => {
+                        const fare = fares?.find(f => f.id === p.fareId);
+                        return (
+                          <div key={i} className="flex items-center justify-between bg-white p-4 rounded-xl border-2">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-black text-primary text-xs">
+                                {i + 1}
+                              </div>
+                              <div>
+                                <p className="font-bold text-primary uppercase text-sm">{p.passengerName}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium">{fare?.segmentLabel} • {p.passengerContact || 'No contact'}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-primary">₱{fare?.finalFare?.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-4 border-t">
+                    <div className="flex items-center justify-between p-5 border-2 rounded-2xl bg-secondary/5">
+                      <div className="space-y-0.5">
+                        <Label className="font-black text-primary uppercase text-xs tracking-wider">Collect Payment Now</Label>
+                        <p className="text-[10px] text-muted-foreground italic">Enabling this issues a CONFIRMED ticket immediately.</p>
+                      </div>
+                      <Switch 
+                        checked={formData.isPaid} 
+                        onCheckedChange={(checked) => setFormData({...formData, isPaid: checked})}
+                        disabled={isWaitlistOnly}
+                      />
+                    </div>
+
+                    <div className="p-8 bg-primary rounded-2xl text-primary-foreground shadow-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Banknote className="h-32 w-32 -rotate-12 translate-x-8 translate-y-8" />
+                      </div>
+                      <div className="relative z-10 flex justify-between items-end">
+                        <div>
+                          <p className="text-xs opacity-70 uppercase font-black tracking-widest mb-1">Total Counter Payable</p>
+                          <p className="text-5xl font-black">₱{isMounted ? totalFare.toLocaleString() : "---"}</p>
+                        </div>
+                        <div className="text-right space-y-2">
+                          <Badge variant="outline" className="bg-white/10 text-white border-white/30 uppercase text-[10px] px-3 py-1 font-bold">
+                            {isWaitlistOnly ? 'Waitlist Submission' : formData.isPaid ? 'Immediate Issuance' : 'Reservation Only'}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
-
-              <section className="space-y-6 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2 text-lg font-bold">
-                    <Users className="h-5 w-5 text-accent" /> Passengers ({passengers.length})
-                  </Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-2">
-                    <Plus className="h-4 w-4" /> Add Another Passenger
-                  </Button>
-                </div>
-
-                <div className="space-y-8">
-                  {passengers.map((p, index) => {
-                    const searchTerm = userSearchTerm[index] || "";
-                    const filteredUsers = searchTerm.length > 1 
-                      ? registeredUsers?.filter(u => 
-                          u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          u.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-                        ).slice(0, 3) 
-                      : [];
-
-                    return (
-                      <Card key={index} className="relative bg-secondary/10 border-none shadow-none overflow-visible">
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute -top-3 -right-3 h-7 w-7 bg-white shadow-sm border rounded-full text-destructive hover:text-destructive hover:bg-white z-20"
-                          onClick={() => removePassenger(index)}
-                          disabled={passengers.length === 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <CardContent className="p-4 space-y-4">
-                          <div className="space-y-2 relative">
-                            <Label className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
-                              <Search className="h-3 w-3" /> Rapid Profile Lookup
-                            </Label>
-                            <Input 
-                              placeholder="Search by name or mobile number..." 
-                              value={searchTerm}
-                              onChange={(e) => setUserSearchTerm({ ...userSearchTerm, [index]: e.target.value })}
-                              className="bg-white border-accent/20 focus-visible:ring-accent"
-                            />
-                            {filteredUsers && filteredUsers.length > 0 && (
-                              <div className="absolute top-full left-0 w-full bg-white border rounded-md shadow-lg z-50 mt-1 animate-in fade-in slide-in-from-top-1">
-                                {filteredUsers.map(user => (
-                                  <button
-                                    key={user.id}
-                                    onClick={() => handleApplyProfile(index, user)}
-                                    className="w-full text-left px-4 py-3 hover:bg-secondary/50 border-b last:border-0 flex items-center gap-3 transition-colors"
-                                  >
-                                    <div className="bg-primary/10 p-2 rounded-full">
-                                      <User className="h-4 w-4 text-primary" />
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-bold text-primary">{user.displayName}</p>
-                                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                        <Phone className="h-2 w-2" /> {user.phoneNumber || "No mobile set"}
-                                      </p>
-                                    </div>
-                                    <UserPlus className="h-4 w-4 ml-auto text-accent" />
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Passenger #{index + 1} Name</Label>
-                              <Input 
-                                value={p.passengerName} 
-                                onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
-                                placeholder="Juan Dela Cruz"
-                                className="bg-white"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Date of Birth</Label>
-                              <Input 
-                                type="date"
-                                value={p.passengerDob} 
-                                onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
-                                className="bg-white"
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Contact Number</Label>
-                              <Input 
-                                value={p.passengerContact} 
-                                onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
-                                placeholder="09XX XXX XXXX"
-                                className="bg-white"
-                              />
-                            </div>
-                            <div className="md:col-span-2 space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Fare Demographic</Label>
-                              <Select disabled={!formData.routeId} value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
-                                <SelectTrigger className="bg-white">
-                                  <SelectValue placeholder="Choose demographic" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableFares?.map(f => (
-                                    <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="space-y-4 border-t pt-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/10">
-                  <div className="space-y-0.5">
-                    <Label className="font-bold">Mark Group as Paid</Label>
-                    <p className="text-[10px] text-muted-foreground italic">Instant Confirmation for all</p>
-                  </div>
-                  <Switch 
-                    checked={formData.isPaid} 
-                    onCheckedChange={(checked) => setFormData({...formData, isPaid: checked})}
-                    disabled={isWaitlistOnly}
-                  />
-                </div>
-
-                <div className="p-6 bg-primary rounded-xl text-primary-foreground">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs opacity-70 uppercase font-bold">Total Group Fare</p>
-                      <p className="text-4xl font-black">₱{isMounted ? totalFare.toLocaleString() : "---"}</p>
-                    </div>
-                    <Badge variant="outline" className="bg-white/10 text-white border-white/20 uppercase text-[10px]">
-                      {isWaitlistOnly ? 'Waitlist Entry' : formData.isPaid ? 'Confirmed Tickets' : 'Reserved Seats'}
-                    </Badge>
-                  </div>
-                </div>
-              </section>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsNewBookingOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleCreateBooking} 
-              className="bg-primary text-white"
-              disabled={!formData.scheduleId || !formData.travelDate || !formData.emergencyContact || isFull || passengers.some(p => !p.passengerName || !p.fareId)}
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" /> {isWaitlistOnly ? 'Add Group to Waitlist' : 'Issue Group Tickets'}
-            </Button>
+
+          <DialogFooter className="p-6 border-t bg-secondary/5 flex items-center justify-between">
+            {bookingStep === 1 ? (
+              <Button variant="outline" onClick={() => setIsNewBookingOpen(false)} className="h-12 font-bold px-8">
+                Cancel
+              </Button>
+            ) : (
+              <Button variant="ghost" onClick={() => setBookingStep(1)} className="h-12 font-bold px-8">
+                <ChevronLeft className="h-4 w-4 mr-2" /> Back to Details
+              </Button>
+            )}
+
+            {bookingStep === 1 ? (
+              <Button 
+                onClick={() => setBookingStep(2)} 
+                disabled={!isDetailsValid}
+                className="bg-primary text-white h-12 px-10 font-bold group"
+              >
+                Review Summary <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleCreateBooking} 
+                className="bg-accent text-primary h-12 px-10 font-black uppercase tracking-wider hover:bg-accent/90"
+              >
+                {isWaitlistOnly ? 'Confirm Waitlist Entry' : formData.isPaid ? 'Issue Final Tickets' : 'Finalize Reservation'} <Check className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
-
-function Table({ children }: { children: React.ReactNode }) {
-  return <div className="w-full overflow-auto"><table className="w-full text-sm">{children}</table></div>;
-}
-function TableHeader({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <thead className={className}>{children}</thead>;
-}
-function TableBody({ children }: { children: React.ReactNode }) {
-  return <tbody>{children}</tbody>;
-}
-function TableRow({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <tr className={`border-b hover:bg-muted/50 transition-colors ${className}`}>{children}</tr>;
-}
-function TableHead({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <th className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground ${className}`}>{children}</th>;
-}
-function TableCell({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <td className={`p-4 align-middle ${className}`}>{children}</td>;
 }

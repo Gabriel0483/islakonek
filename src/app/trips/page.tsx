@@ -26,7 +26,9 @@ import {
   Mail,
   Heart,
   Plus,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  Check
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -48,6 +50,8 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface PassengerForm {
   passengerName: string;
@@ -105,6 +109,7 @@ function TripsContent() {
   const searchDate = searchParams.get("date");
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1); // 1: Details, 2: Summary
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   
   const [emergencyContact, setEmergencyContact] = useState("");
@@ -176,6 +181,7 @@ function TripsContent() {
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
+    setBookingStep(1);
     setIsBookingOpen(true);
   };
 
@@ -233,6 +239,7 @@ function TripsContent() {
     });
 
     setIsBookingOpen(false);
+    setBookingStep(1);
     setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: "", passengerContact: "", fareId: "" }]);
     setEmergencyContact("");
     
@@ -244,6 +251,8 @@ function TripsContent() {
     const fare = fares?.find(f => f.id === p.fareId);
     return sum + (fare?.finalFare || 0);
   }, 0);
+
+  const isDetailsValid = emergencyContact && passengers.every(p => p.passengerName && p.fareId && p.passengerDob);
 
   return (
     <div className="min-h-screen bg-background font-body">
@@ -368,145 +377,256 @@ function TripsContent() {
       </div>
 
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
-        <DialogContent className="sm:max-w-[750px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Ticket className="h-5 w-5 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Passenger Information'}
-            </DialogTitle>
-            <DialogDescription>
-              Trip: <span className="font-bold text-primary">{selectedSchedule?.tripCode}</span> ({selectedSchedule?.route?.name})
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[750px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 border-b bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+                <Ticket className="h-6 w-6 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Trip Booking'}
+              </DialogTitle>
+            </div>
+            {/* Progress Indicator */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 flex items-center gap-2">
+                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors", 
+                  bookingStep >= 1 ? "bg-primary text-white" : "bg-secondary text-muted-foreground")}>1</div>
+                <span className={cn("text-xs font-bold uppercase", bookingStep >= 1 ? "text-primary" : "text-muted-foreground")}>Details</span>
+              </div>
+              <Separator className="w-12 h-px bg-border" />
+              <div className="flex-1 flex items-center gap-2">
+                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors", 
+                  bookingStep >= 2 ? "bg-primary text-white" : "bg-secondary text-muted-foreground")}>2</div>
+                <span className={cn("text-xs font-bold uppercase", bookingStep >= 2 ? "text-primary" : "text-muted-foreground")}>Summary</span>
+              </div>
+              <Separator className="w-12 h-px bg-border" />
+              <div className="flex-1 flex items-center gap-2 opacity-50">
+                <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-secondary text-muted-foreground">3</div>
+                <span className="text-xs font-bold uppercase text-muted-foreground">Confirm</span>
+              </div>
+            </div>
           </DialogHeader>
-          <ScrollArea className="max-h-[80vh] pr-4">
-            <div className="grid gap-6 py-4">
-              {selectedSchedule?.isWaitlistOnly && (
-                <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-bold text-orange-800">Trip is Full</p>
-                    <p className="text-xs text-orange-700">You are joining the waitlist. Status will be 'Waitlisted'.</p>
+
+          <ScrollArea className="max-h-[75vh]">
+            <div className="p-6">
+              {bookingStep === 1 && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+                  {selectedSchedule?.isWaitlistOnly && (
+                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-orange-800">Trip is Full</p>
+                        <p className="text-xs text-orange-700">You are joining the waitlist for this voyage. Confirmations are subject to seat availability.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <section className="space-y-4">
+                    <Label htmlFor="emergencyContact" className="flex items-center gap-1.5 font-bold text-xs uppercase text-muted-foreground">
+                      <Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number (Group)
+                    </Label>
+                    <Input 
+                      id="emergencyContact" 
+                      value={emergencyContact} 
+                      onChange={(e) => setEmergencyContact(e.target.value)}
+                      placeholder="Contact name and mobile number"
+                      className="h-11 bg-white border-2"
+                    />
+                  </section>
+
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b pb-2">
+                       <Label className="flex items-center gap-2 font-black text-primary uppercase text-lg tracking-tight">
+                        <Users className="h-5 w-5 text-accent" /> Passengers ({passengers.length})
+                      </Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-2 h-9 font-bold">
+                        <Plus className="h-4 w-4" /> Add Passenger
+                      </Button>
+                    </div>
+
+                    <div className="space-y-8">
+                      {passengers.map((p, index) => (
+                        <div key={index} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-6 pt-8 group hover:border-accent/40 transition-colors">
+                          <div className="absolute -top-4 left-6 bg-white border-2 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary tracking-widest z-10">
+                            Passenger #{index + 1}
+                          </div>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute -top-3 -right-3 h-8 w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20"
+                            onClick={() => removePassenger(index)}
+                            disabled={passengers.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Full Name</Label>
+                                <Input 
+                                  value={p.passengerName} 
+                                  onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
+                                  placeholder="As shown in ID"
+                                  className="bg-white h-11"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Date of Birth</Label>
+                                <Input 
+                                  type="date"
+                                  value={p.passengerDob} 
+                                  onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
+                                  className="bg-white h-11"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email (Optional)</Label>
+                                <Input 
+                                  type="email"
+                                  value={p.passengerEmail} 
+                                  onChange={(e) => updatePassenger(index, 'passengerEmail', e.target.value)}
+                                  placeholder="your@email.com"
+                                  className="bg-white h-11"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Mobile Number</Label>
+                                <Input 
+                                  value={p.passengerContact} 
+                                  onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
+                                  placeholder="09XX XXX XXXX"
+                                  className="bg-white h-11"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Passenger Type</Label>
+                              <Select value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
+                                <SelectTrigger className="bg-white h-11 border-2">
+                                  <SelectValue placeholder="Select demographic" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableFares?.map(f => (
+                                    <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
-              <section className="space-y-4">
-                <Label htmlFor="emergencyContact" className="flex items-center gap-1.5 font-bold">
-                  <Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number (Group)
-                </Label>
-                <Input 
-                  id="emergencyContact" 
-                  value={emergencyContact} 
-                  onChange={(e) => setEmergencyContact(e.target.value)}
-                  placeholder="Maria Dela Cruz - 0917 123 4567"
-                />
-              </section>
-
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center justify-between">
-                   <Label className="flex items-center gap-2 font-bold">
-                    <Users className="h-4 w-4 text-accent" /> Passengers ({passengers.length})
-                  </Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-2">
-                    <Plus className="h-4 w-4" /> Add Another Passenger
-                  </Button>
-                </div>
-
-                <div className="space-y-6">
-                  {passengers.map((p, index) => (
-                    <Card key={index} className="relative bg-secondary/10 border-none shadow-none">
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
-                        className="absolute -top-3 -right-3 h-7 w-7 bg-white shadow-sm border rounded-full text-destructive hover:bg-white"
-                        onClick={() => removePassenger(index)}
-                        disabled={passengers.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <CardContent className="p-4 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Passenger #{index + 1} Name</Label>
-                            <Input 
-                              value={p.passengerName} 
-                              onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
-                              placeholder="Juan Dela Cruz"
-                              className="bg-white"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Date of Birth</Label>
-                            <Input 
-                              type="date"
-                              value={p.passengerDob} 
-                              onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
-                              className="bg-white"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email (Optional)</Label>
-                            <Input 
-                              type="email"
-                              value={p.passengerEmail} 
-                              onChange={(e) => updatePassenger(index, 'passengerEmail', e.target.value)}
-                              placeholder="juan@example.com"
-                              className="bg-white"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Mobile Number</Label>
-                            <Input 
-                              value={p.passengerContact} 
-                              onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
-                              placeholder="0912 345 6789"
-                              className="bg-white"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase text-muted-foreground">Passenger Type</Label>
-                          <Select value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
-                            <SelectTrigger className="bg-white">
-                              <SelectValue placeholder="Select demographic" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableFares?.map(f => (
-                                <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-4 p-6 bg-primary rounded-xl text-primary-foreground">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-xs opacity-70 uppercase font-bold">Total Fare Amount</p>
-                    <p className="text-4xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
+              {bookingStep === 2 && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                    <h3 className="text-xs font-black uppercase text-primary tracking-[0.2em] mb-4">Voyage Review</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Trip ID</Label>
+                        <p className="font-black text-accent text-lg">{selectedSchedule?.tripCode}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Departure</Label>
+                        <p className="font-bold text-primary">{selectedSchedule?.departureTime}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Travel Date</Label>
+                        <p className="font-bold">{searchDate || phtState?.date}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
+                        <p className="font-bold">{selectedSchedule?.vessel?.name || 'TBA'}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
+                        <p className="font-bold text-sm">{selectedSchedule?.route?.name}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Emergency Group Contact</Label>
+                        <p className="font-bold text-sm truncate">{emergencyContact}</p>
+                      </div>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="bg-white/10 text-white border-white/20 uppercase text-[10px]">
-                    {passengers.length} Tickets
-                  </Badge>
+
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black uppercase text-muted-foreground tracking-[0.2em] border-b pb-2">Passenger Roster</h3>
+                    <div className="space-y-3">
+                      {passengers.map((p, i) => {
+                        const fare = fares?.find(f => f.id === p.fareId);
+                        return (
+                          <div key={i} className="flex items-center justify-between bg-white p-4 rounded-xl border-2">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-black text-primary text-xs">
+                                {i + 1}
+                              </div>
+                              <div>
+                                <p className="font-bold text-primary uppercase text-sm">{p.passengerName}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium">{fare?.segmentLabel} • {p.passengerContact || 'No mobile'}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-primary">₱{fare?.finalFare?.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-8 bg-primary rounded-2xl text-primary-foreground p-8 relative overflow-hidden shadow-2xl">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <Banknote className="h-32 w-32 -rotate-12 translate-x-8 translate-y-8" />
+                    </div>
+                    <div className="relative z-10 flex justify-between items-end">
+                      <div>
+                        <p className="text-xs opacity-70 uppercase font-black tracking-widest mb-1">Estimated Total Fare</p>
+                        <p className="text-5xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
+                        <p className="text-[10px] mt-4 opacity-60 font-medium italic">* Final payment will be collected during validation/issuance.</p>
+                      </div>
+                      <Badge variant="outline" className="bg-white/10 text-white border-white/30 uppercase text-[10px] px-4 py-1.5 font-black">
+                        {selectedSchedule?.isWaitlistOnly ? 'Waitlist Submission' : 'Reservation Only'}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsBookingOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleProcessBooking} 
-              className={selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-primary text-white'}
-              disabled={!emergencyContact || passengers.some(p => !p.passengerName || !p.fareId || !p.passengerDob)}
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" /> {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'}
-            </Button>
+
+          <DialogFooter className="p-6 border-t bg-secondary/5 flex items-center justify-between">
+            {bookingStep === 1 ? (
+              <Button variant="outline" onClick={() => setIsBookingOpen(false)} className="h-12 font-bold px-8">
+                Cancel
+              </Button>
+            ) : (
+              <Button variant="ghost" onClick={() => setBookingStep(1)} className="h-12 font-bold px-8">
+                <ChevronLeft className="h-4 w-4 mr-2" /> Back to Details
+              </Button>
+            )}
+
+            {bookingStep === 1 ? (
+              <Button 
+                onClick={() => setBookingStep(2)} 
+                disabled={!isDetailsValid}
+                className="bg-primary text-white h-12 px-10 font-bold group"
+              >
+                Review Summary <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleProcessBooking} 
+                className={cn("h-12 px-10 font-black uppercase tracking-wider", 
+                  selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-accent text-primary hover:bg-accent/90')}
+              >
+                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'} <Check className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
