@@ -299,11 +299,6 @@ export default function DeskBookingsPage() {
             Desk Bookings (Counter)
           </h1>
         </div>
-        <Link href="/admin/manage-bookings">
-          <Button variant="outline" size="sm" className="gap-2">
-            <ClipboardList className="h-4 w-4" /> View Full Manifest
-          </Button>
-        </Link>
       </header>
 
       <main className="p-6 space-y-6 container mx-auto">
