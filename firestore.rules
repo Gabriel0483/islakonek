@@ -1,7 +1,7 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 2.6
+ * Version: 2.7
  * SuperAdmin Designation: rielmagpantay@gmail.com
  */
 
@@ -56,9 +56,9 @@ service cloud.firestore {
     }
 
     // Users: 
-    // - Any logged-in user can read profiles (supports desk lookup feature).
-    // - Users can update their own profile.
-    // - SuperAdmin can manage all profiles.
+    // - Any authenticated user can read profiles (supports desk lookup and personal access).
+    // - Users can create and update their own profile document.
+    // - SuperAdmin can create, update, or delete any profile.
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
