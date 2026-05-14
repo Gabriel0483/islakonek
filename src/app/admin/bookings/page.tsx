@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -34,6 +33,7 @@ import {
   FormDescription,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -55,7 +55,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AdminNav } from "@/components/admin-nav"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
 const passengerSchema = z.object({
@@ -110,7 +110,6 @@ export default function DeskBookingsPage() {
   const [dateRange, setDateRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   
   const [lookupSearch, setLookupSearch] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -241,8 +240,6 @@ export default function DeskBookingsPage() {
         const capacity = scheduleData.passengerCapacity || 0;
         const waitlistLimit = scheduleData.waitlistLimit || 0;
         
-        // In a real multi-user scenario, we'd query total bookings for this specific date/trip
-        // For MVP, we use the local availability logic
         const currentTripBookingsQuery = query(
           collection(firestore, 'bookings'),
           where('scheduleId', '==', data.scheduleId),
@@ -302,7 +299,7 @@ export default function DeskBookingsPage() {
         id: bookingId,
         travelDate: data.travelDate,
         routeName: routes?.find(r => r.id === data.routeId)?.name || 'Unknown Route',
-        departurePortName: '', // Could lookup from ports
+        departurePortName: '', 
         departureTime: filteredSchedules.find(s => s.id === data.scheduleId)?.departureTime || '',
         passengers: data.passengers.map(p => ({ fullName: p.fullName, fareType: p.fareType })),
         totalPrice: summary.totalPrice,
@@ -317,6 +314,18 @@ export default function DeskBookingsPage() {
         setIsReserving(false);
     }
   }
+
+  const sortedRecentBookings = useMemo(() => {
+    if (!recentBookings) return [];
+    return recentBookings
+      .filter(b => b.bookingSource === 'Desk')
+      .sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 10);
+  }, [recentBookings]);
 
   const isLoading = isLoadingSchedules || isLoadingRoutes || isLoadingFares || !isMounted;
 
@@ -348,7 +357,7 @@ export default function DeskBookingsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="text-xl">Counter Sales</CardTitle>
-                <CardDescription className="text-primary-foreground/70">Process tickets for walk-in passengers.</CardDescription>
+                <CardDescription className="text-primary-foreground/70">Record manifest details for walk-in passengers.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -367,7 +376,7 @@ export default function DeskBookingsPage() {
             <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recent Desk Activity</CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
-            {!isLoadingBookings && recentBookings && recentBookings.length > 0 ? (
+            {!isLoadingBookings && sortedRecentBookings.length > 0 ? (
               <div className="w-full min-w-[700px]">
                 <table className="w-full text-sm">
                   <thead className="bg-secondary/30">
@@ -380,7 +389,7 @@ export default function DeskBookingsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentBookings.filter(b => b.bookingSource === 'Desk').slice(0, 10).map((booking) => (
+                    {sortedRecentBookings.map((booking) => (
                       <tr key={booking.id} className="border-b hover:bg-muted/50">
                         <td className="p-4 align-middle font-mono text-[10px] font-bold">#{booking.id}</td>
                         <td className="p-4 align-middle font-bold">{booking.passengerName}</td>
@@ -534,7 +543,7 @@ export default function DeskBookingsPage() {
                                 {lookupSearch.length > 1 && (
                                   <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
                                     {registeredUsers?.filter(u => u.displayName?.toLowerCase().includes(lookupSearch.toLowerCase()) || u.phoneNumber?.includes(lookupSearch)).slice(0, 3).map(user => (
-                                      <button key={user.id} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors">
+                                      <button key={user.uid} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors">
                                         <div className="bg-primary/10 p-2 rounded-lg shrink-0">
                                           <Users className="h-5 w-5 text-primary" />
                                         </div>
