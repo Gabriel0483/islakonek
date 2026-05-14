@@ -331,7 +331,7 @@ function TripsContent() {
                             {trip.route?.name?.split(' - ')[1]}
                           </div>
                           {trip.arrivalTime && (
-                            <div className="text-sm sm:text-base font-bold flex items-center gap-1.5 text-muted-foreground md:justify-end">
+                            <div className="text-sm sm:text-base font-bold flex items-center gap-1.5 text-accent md:justify-end">
                               <span className="text-[10px] font-black uppercase mr-1">ETA</span> {trip.arrivalTime}
                             </div>
                           )}
