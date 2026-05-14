@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Ticket, 
   Plus, 
@@ -21,7 +22,9 @@ import {
   Download,
   Printer,
   Trash2,
-  Users
+  Users,
+  Search,
+  UserPlus
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -104,11 +107,17 @@ export default function DeskBookingsPage() {
     return collection(db, "vessels");
   }, [db]);
 
+  const usersRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "users");
+  }, [db]);
+
   const { data: routes } = useCollection(routesRef);
   const { data: schedules } = useCollection(schedulesRef);
   const { data: fares } = useCollection(faresRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
   const { data: vessels } = useCollection(vesselsRef);
+  const { data: registeredUsers } = useCollection(usersRef);
 
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
@@ -129,6 +138,8 @@ export default function DeskBookingsPage() {
     passengerContact: "",
     fareId: ""
   }]);
+
+  const [userSearchTerm, setUserSearchTerm] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
     if (todayPHT && !formData.travelDate) {
@@ -169,12 +180,27 @@ export default function DeskBookingsPage() {
   const removePassenger = (index: number) => {
     if (passengers.length === 1) return;
     setPassengers(passengers.filter((_, i) => i !== index));
+    const newSearchTerm = { ...userSearchTerm };
+    delete newSearchTerm[index];
+    setUserSearchTerm(newSearchTerm);
   };
 
   const updatePassenger = (index: number, field: keyof PassengerForm, value: string) => {
     const updated = [...passengers];
     updated[index] = { ...updated[index], [field]: value };
     setPassengers(updated);
+  };
+
+  const handleApplyProfile = (index: number, user: any) => {
+    const updated = [...passengers];
+    updated[index] = {
+      ...updated[index],
+      passengerName: user.displayName || "",
+      passengerEmail: user.email || "",
+      passengerContact: user.phoneNumber || ""
+    };
+    setPassengers(updated);
+    setUserSearchTerm({ ...userSearchTerm, [index]: "" });
   };
 
   const handleCreateBooking = () => {
@@ -226,7 +252,6 @@ export default function DeskBookingsPage() {
 
       setDocumentNonBlocking(bookingRef, newBookingData, { merge: true });
 
-      // If it's the first one confirmed, we show its boarding pass as a representative
       if (status === 'Confirmed' && confirmedCount === 0) {
         setLastCreatedBooking(newBookingData);
         setIsBoardingPassOpen(true);
@@ -249,6 +274,7 @@ export default function DeskBookingsPage() {
       passengerContact: "",
       fareId: ""
     }]);
+    setUserSearchTerm({});
   };
 
   const deskBookings = bookings?.filter(b => b.bookingSource === "Desk")
@@ -523,66 +549,108 @@ export default function DeskBookingsPage() {
                   </div>
 
                   <div className="space-y-8">
-                    {passengers.map((p, index) => (
-                      <Card key={index} className="relative bg-secondary/10 border-none shadow-none">
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute -top-3 -right-3 h-7 w-7 bg-white shadow-sm border rounded-full text-destructive hover:text-destructive hover:bg-white"
-                          onClick={() => removePassenger(index)}
-                          disabled={passengers.length === 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <CardContent className="p-4 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Passenger #{index + 1} Name</Label>
+                    {passengers.map((p, index) => {
+                      const searchTerm = userSearchTerm[index] || "";
+                      const filteredUsers = searchTerm.length > 1 
+                        ? registeredUsers?.filter(u => 
+                            u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+                          ).slice(0, 3) 
+                        : [];
+
+                      return (
+                        <Card key={index} className="relative bg-secondary/10 border-none shadow-none overflow-visible">
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute -top-3 -right-3 h-7 w-7 bg-white shadow-sm border rounded-full text-destructive hover:text-destructive hover:bg-white z-20"
+                            onClick={() => removePassenger(index)}
+                            disabled={passengers.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <CardContent className="p-4 space-y-4">
+                            <div className="space-y-2 relative">
+                              <Label className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
+                                <Search className="h-3 w-3" /> Rapid Profile Lookup
+                              </Label>
                               <Input 
-                                value={p.passengerName} 
-                                onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
-                                placeholder="Juan Dela Cruz"
-                                className="bg-white"
+                                placeholder="Search by name or email..." 
+                                value={searchTerm}
+                                onChange={(e) => setUserSearchTerm({ ...userSearchTerm, [index]: e.target.value })}
+                                className="bg-white border-accent/20 focus-visible:ring-accent"
                               />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Date of Birth</Label>
-                              <Input 
-                                type="date"
-                                value={p.passengerDob} 
-                                onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
-                                className="bg-white"
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Contact Number</Label>
-                              <Input 
-                                value={p.passengerContact} 
-                                onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
-                                placeholder="09XX XXX XXXX"
-                                className="bg-white"
-                              />
-                            </div>
-                            <div className="md:col-span-2 space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Fare Demographic</Label>
-                              <Select disabled={!formData.routeId} value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
-                                <SelectTrigger className="bg-white">
-                                  <SelectValue placeholder="Choose demographic" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {availableFares?.map(f => (
-                                    <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
+                              {filteredUsers && filteredUsers.length > 0 && (
+                                <div className="absolute top-full left-0 w-full bg-white border rounded-md shadow-lg z-50 mt-1 animate-in fade-in slide-in-from-top-1">
+                                  {filteredUsers.map(user => (
+                                    <button
+                                      key={user.id}
+                                      onClick={() => handleApplyProfile(index, user)}
+                                      className="w-full text-left px-4 py-3 hover:bg-secondary/50 border-b last:border-0 flex items-center gap-3 transition-colors"
+                                    >
+                                      <div className="bg-primary/10 p-2 rounded-full">
+                                        <User className="h-4 w-4 text-primary" />
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-bold text-primary">{user.displayName}</p>
+                                        <p className="text-[10px] text-muted-foreground">{user.email}</p>
+                                      </div>
+                                      <UserPlus className="h-4 w-4 ml-auto text-accent" />
+                                    </button>
                                   ))}
-                                </SelectContent>
-                              </Select>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Passenger #{index + 1} Name</Label>
+                                <Input 
+                                  value={p.passengerName} 
+                                  onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
+                                  placeholder="Juan Dela Cruz"
+                                  className="bg-white"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Date of Birth</Label>
+                                <Input 
+                                  type="date"
+                                  value={p.passengerDob} 
+                                  onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
+                                  className="bg-white"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Contact Number</Label>
+                                <Input 
+                                  value={p.passengerContact} 
+                                  onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
+                                  placeholder="09XX XXX XXXX"
+                                  className="bg-white"
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Fare Demographic</Label>
+                                <Select disabled={!formData.routeId} value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
+                                  <SelectTrigger className="bg-white">
+                                    <SelectValue placeholder="Choose demographic" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableFares?.map(f => (
+                                      <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </section>
 
