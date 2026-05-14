@@ -149,11 +149,8 @@ function TripsContent() {
 
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const matchesRoute = route?.name?.toLowerCase().includes(query);
         const matchesCode = schedule.tripCode?.toLowerCase().includes(query);
-        const originPortName = ports?.find(p => p.id === route?.originPortId)?.name?.toLowerCase().includes(query);
-        const destPortName = ports?.find(p => p.id === route?.destinationPortId)?.name?.toLowerCase().includes(query);
-        if (!matchesRoute && !originPortName && !destPortName && !matchesCode) return false;
+        if (!matchesCode) return false;
       }
 
       return true;
@@ -276,7 +273,7 @@ function TripsContent() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search trip ID or destination..." 
+                placeholder="Search trip ID..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-11 sm:h-12 bg-white border-none shadow-sm text-sm" 
@@ -434,16 +431,6 @@ function TripsContent() {
                           <div className="absolute -top-4 left-4 sm:left-6 bg-white border-2 px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase text-primary tracking-widest z-10">
                             Passenger #{index + 1}
                           </div>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            className="absolute -top-3 -right-3 h-7 w-7 sm:h-8 sm:w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20"
-                            onClick={() => removePassenger(index)}
-                            disabled={passengers.length === 1}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          </Button>
                           
                           <div className="space-y-4 sm:space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -514,6 +501,20 @@ function TripsContent() {
                               </div>
                             </div>
                           </div>
+                          
+                          {passengers.length > 1 && (
+                            <div className="flex justify-end pt-4 mt-4 border-t border-dashed">
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:bg-red-50 font-bold text-[10px] uppercase"
+                                onClick={() => removePassenger(index)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Remove Passenger
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                       <Button type="button" variant="outline" onClick={addPassenger} className="w-full gap-2 h-11 font-bold text-xs sm:text-sm border-2 border-dashed">
