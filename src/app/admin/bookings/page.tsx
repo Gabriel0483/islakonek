@@ -103,6 +103,7 @@ export default function DeskBookingsPage() {
   const [dateRange, setDateRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   
   const [lookupSearch, setLookupSearch] = useState('');
+  const [activeLookupIndex, setActiveLookupIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -244,6 +245,7 @@ export default function DeskBookingsPage() {
     form.setValue('primaryEmail', user.email || "");
     form.setValue('primaryPhone', user.phoneNumber || "");
     setLookupSearch('');
+    setActiveLookupIndex(null);
   };
 
   async function handleFinalReserve(data: BookingFormData) {
@@ -525,14 +527,18 @@ export default function DeskBookingsPage() {
                                 </Label>
                                 <Input 
                                   placeholder="Search by name or mobile..." 
-                                  value={lookupSearch}
-                                  onChange={(e) => setLookupSearch(e.target.value)}
+                                  value={activeLookupIndex === index ? lookupSearch : ''}
+                                  onChange={(e) => {
+                                    setLookupSearch(e.target.value);
+                                    setActiveLookupIndex(index);
+                                  }}
+                                  onFocus={() => setActiveLookupIndex(index)}
                                   className="bg-white border-accent/20 h-11 text-sm focus-visible:ring-accent"
                                 />
-                                {lookupSearch.length > 1 && (
+                                {activeLookupIndex === index && lookupSearch.length > 1 && (
                                   <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
                                     {registeredUsers?.filter(u => u.displayName?.toLowerCase().includes(lookupSearch.toLowerCase()) || u.phoneNumber?.includes(lookupSearch)).slice(0, 3).map(user => (
-                                      <button key={user.uid} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors">
+                                      <button key={user.id} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors">
                                         <div className="bg-primary/10 p-2 rounded-lg shrink-0">
                                           <Users className="h-5 w-5 text-primary" />
                                         </div>
