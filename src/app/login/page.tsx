@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -109,10 +108,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8 text-center space-y-4">
-            <Link href="/" className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors block">
-              Return to Public Site
-            </Link>
+          <div className="mt-8 text-center">
             <div className="pt-4 border-t border-dashed">
               <Link href="/admin/login" className="text-[10px] font-black uppercase text-accent hover:underline tracking-widest">
                 Internal Staff Access

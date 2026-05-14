@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -114,12 +113,6 @@ export default function AdminLoginPage() {
             <p className="text-[10px] leading-relaxed text-yellow-800 font-medium">
               Restricted Area. Authorized staff only. All login attempts are recorded for terminal security audit logs.
             </p>
-          </div>
-
-          <div className="mt-8 text-center">
-            <Link href="/" className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
-              Return to Public Site
-            </Link>
           </div>
         </CardContent>
       </Card>
