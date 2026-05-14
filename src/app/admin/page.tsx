@@ -40,36 +40,12 @@ export default function AdminDashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  const portsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "ports");
-  }, [db]);
-
-  const routesRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "routes");
-  }, [db]);
-
   const vesselsRef = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, "vessels");
   }, [db]);
 
-  const schedulesRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "schedules");
-  }, [db]);
-
-  const bookingsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "bookings");
-  }, [db]);
-
-  const { data: ports } = useCollection(portsRef);
-  const { data: routes } = useCollection(routesRef);
   const { data: vessels } = useCollection(vesselsRef);
-  const { data: schedules } = useCollection(schedulesRef);
-  const { data: bookings } = useCollection(bookingsRef);
 
   if (isUserLoading) {
     return (
@@ -104,14 +80,15 @@ export default function AdminDashboard() {
     );
   }
 
-  const statusTiles = [
-    { label: "Active Ports", value: ports?.length || 0, icon: MapPin, color: "text-blue-500", bg: "bg-blue-500/10", description: "Configured maritime terminals." },
-    { label: "Routes Defined", value: routes?.length || 0, icon: Waypoints, color: "text-accent", bg: "bg-accent/10", description: "Active island connections." },
-    { label: "Total Bookings", value: bookings?.length || 0, icon: Ticket, color: "text-green-500", bg: "bg-green-500/10", description: "Confirmed passenger records." },
-    { label: "Fleet Size", value: vessels?.length || 0, icon: Ship, color: "text-primary", bg: "bg-primary/10", description: "Operational maritime vessels." }
-  ];
-
   const managementModules = [
+    {
+      title: "Operational Overview",
+      description: "Real-time summary of ports, routes, fleet, and passenger sales.",
+      icon: Activity,
+      link: "/admin/operational-overview",
+      color: "text-blue-500",
+      count: "System Stats"
+    },
     {
       title: "Boarding Mode",
       description: "Real-time passenger check-in and manifest boarding.",
@@ -134,7 +111,7 @@ export default function AdminDashboard() {
       icon: ClipboardList,
       link: "/admin/manage-bookings",
       color: "text-indigo-600",
-      count: bookings?.length || 0
+      count: "Manifest"
     },
     {
       title: "Port Registry",
@@ -142,7 +119,7 @@ export default function AdminDashboard() {
       icon: MapPin,
       link: "/admin/ports",
       color: "text-blue-500",
-      count: ports?.length || 0
+      count: "Terminals"
     },
     {
       title: "Route Management",
@@ -150,7 +127,7 @@ export default function AdminDashboard() {
       icon: Waypoints,
       link: "/admin/routes",
       color: "text-accent",
-      count: routes?.length || 0
+      count: "Connections"
     },
     {
       title: "Fare Management",
@@ -158,7 +135,7 @@ export default function AdminDashboard() {
       icon: Banknote,
       link: "/admin/fares",
       color: "text-green-500",
-      count: "Pricing Active"
+      count: "Pricing"
     },
     {
       title: "Fleet & Maintenance",
@@ -166,7 +143,7 @@ export default function AdminDashboard() {
       icon: Wrench,
       link: "/admin/fleet",
       color: "text-orange-500",
-      count: vessels?.length || 0
+      count: "Vessels"
     },
     {
       title: "Trip Schedules",
@@ -174,7 +151,7 @@ export default function AdminDashboard() {
       icon: CalendarDays,
       link: "/admin/schedules",
       color: "text-primary",
-      count: schedules?.length || 0
+      count: "Timetables"
     }
   ];
 
@@ -195,29 +172,10 @@ export default function AdminDashboard() {
         <section className="space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <LayoutGrid className="h-5 w-5 text-accent" />
-            <h2 className="text-xl font-bold font-headline">Operational Overview</h2>
+            <h2 className="text-xl font-bold font-headline">Command Center</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Status Tiles */}
-            {statusTiles.map((tile, i) => (
-              <Card key={`stat-${i}`} className="border-none shadow-sm bg-white overflow-hidden group">
-                <CardHeader className="pb-2">
-                  <div className={`${tile.bg} ${tile.color} p-2 w-fit rounded-lg mb-2 group-hover:scale-110 transition-transform`}>
-                    <tile.icon className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-2xl font-black text-primary">{tile.value}</CardTitle>
-                  <p className="text-xs font-bold uppercase text-muted-foreground">{tile.label}</p>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                    {tile.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Management Modules */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {managementModules.map((module, i) => (
               <Link href={module.link} key={`module-${i}`}>
                 <Card className="h-full border-none shadow-sm bg-white hover:ring-2 hover:ring-accent/50 transition-all group relative overflow-hidden">
@@ -235,7 +193,7 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent className="pt-4 flex justify-between items-center">
                     <span className="text-xs font-bold text-muted-foreground bg-secondary px-2 py-0.5 rounded">
-                      {typeof module.count === 'number' ? `${module.count} records` : module.count}
+                      {module.count}
                     </span>
                     <div className="flex items-center gap-1 text-xs font-bold text-accent group-hover:gap-2 transition-all">
                       Open <ArrowRight className="h-3 w-3" />
@@ -255,7 +213,7 @@ export default function AdminDashboard() {
             <div className="relative z-10 space-y-4 max-w-2xl">
               <h2 className="text-3xl font-black font-headline tracking-tight uppercase">Maritime Command</h2>
               <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                Your command center is fully operational. Manage your fleet, terminals, and manifests in real-time.
+                Manage your fleet, terminals, and manifests in real-time. Select a module above to begin.
               </p>
             </div>
           </Card>

@@ -15,6 +15,7 @@ import {
   CalendarDays, 
   Home,
   Menu,
+  Activity,
   X
 } from "lucide-react";
 import { useState } from "react";
@@ -31,6 +32,7 @@ import {
 
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
+  { label: "Overview", icon: Activity, href: "/admin/operational-overview" },
   { label: "Boarding", icon: Scan, href: "/admin/boarding" },
   { label: "Desk", icon: Ticket, href: "/admin/bookings" },
   { label: "Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },
@@ -46,7 +48,6 @@ const configItems = [
 
 export function AdminNav() {
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   return (
     <nav className="bg-primary text-white border-b sticky top-0 z-50">
