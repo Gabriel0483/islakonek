@@ -23,7 +23,8 @@ import {
   Trash2,
   Users,
   Search,
-  UserPlus
+  UserPlus,
+  Phone
 } from "lucide-react";
 import Link from "next/link";
 import { collection, doc } from "firebase/firestore";
@@ -550,7 +551,7 @@ export default function DeskBookingsPage() {
                     const filteredUsers = searchTerm.length > 1 
                       ? registeredUsers?.filter(u => 
                           u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+                          u.phoneNumber?.toLowerCase().includes(searchTerm.toLowerCase())
                         ).slice(0, 3) 
                       : [];
 
@@ -567,12 +568,13 @@ export default function DeskBookingsPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                         <CardContent className="p-4 space-y-4">
+                          {/* Profile Lookup moved to top of each passenger card */}
                           <div className="space-y-2 relative">
                             <Label className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
                               <Search className="h-3 w-3" /> Rapid Profile Lookup
                             </Label>
                             <Input 
-                              placeholder="Search by name or email..." 
+                              placeholder="Search by name or mobile number..." 
                               value={searchTerm}
                               onChange={(e) => setUserSearchTerm({ ...userSearchTerm, [index]: e.target.value })}
                               className="bg-white border-accent/20 focus-visible:ring-accent"
@@ -590,7 +592,9 @@ export default function DeskBookingsPage() {
                                     </div>
                                     <div>
                                       <p className="text-sm font-bold text-primary">{user.displayName}</p>
-                                      <p className="text-[10px] text-muted-foreground">{user.email}</p>
+                                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                        <Phone className="h-2 w-2" /> {user.phoneNumber || "No mobile set"}
+                                      </p>
                                     </div>
                                     <UserPlus className="h-4 w-4 ml-auto text-accent" />
                                   </button>
