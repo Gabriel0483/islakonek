@@ -184,7 +184,7 @@ export default function AdminDashboard() {
       <AdminNav />
       <main className="flex-1 flex flex-col gap-8 p-6 container mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">System Overview</h1>
+          <h1 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Operational Overview</h1>
           <div className="flex items-center gap-2">
             <div className="text-[10px] font-bold text-muted-foreground uppercase mr-2 hidden sm:block">Logged in as: <span className="text-primary">{user?.email}</span></div>
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="System Online" />
