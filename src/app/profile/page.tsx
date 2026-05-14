@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { doc, collection } from "firebase/firestore";
 import { useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -75,10 +75,10 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = () => {
     if (!profileRef) return;
-    updateDocumentNonBlocking(profileRef, {
+    setDocumentNonBlocking(profileRef, {
       ...profileForm,
       updatedAt: new Date().toISOString()
-    });
+    }, { merge: true });
     setIsProfileEditing(false);
   };
 
@@ -114,10 +114,10 @@ export default function ProfilePage() {
       updatedMembers.push({ ...familyForm, id: nanoid() });
     }
 
-    updateDocumentNonBlocking(profileRef, {
+    setDocumentNonBlocking(profileRef, {
       familyMembers: updatedMembers,
       updatedAt: new Date().toISOString()
-    });
+    }, { merge: true });
     
     setIsFamilyDialogOpen(false);
   };
@@ -126,10 +126,10 @@ export default function ProfilePage() {
     if (!profileRef) return;
     if (confirm("Are you sure you want to remove this family member?")) {
       const updatedMembers = (profile?.familyMembers || []).filter((m: any) => m.id !== id);
-      updateDocumentNonBlocking(profileRef, {
+      setDocumentNonBlocking(profileRef, {
         familyMembers: updatedMembers,
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
     }
   };
 
@@ -156,7 +156,7 @@ export default function ProfilePage() {
           </div>
           <div className="bg-primary/5 px-4 py-2 rounded-full border border-primary/10 flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-green-600" />
-            <span className="text-[10px] font-black uppercase text-primary tracking-widest">{profile?.email}</span>
+            <span className="text-[10px] font-black uppercase text-primary tracking-widest">{profile?.email || user?.email}</span>
           </div>
         </header>
 
