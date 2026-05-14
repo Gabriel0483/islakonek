@@ -329,7 +329,6 @@ function TripsContent() {
                           <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
                             {trip.route?.name?.split(' - ')[1]}
                           </div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase sm:hidden">Arrival Destination</p>
                         </div>
                       </div>
 
