@@ -27,7 +27,9 @@ import {
   XCircle, 
   QrCode, 
   Download, 
-  Printer 
+  Printer,
+  ChevronRight,
+  ChevronLeft
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -69,6 +71,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
 
@@ -481,8 +484,8 @@ export default function ManageBookingsPage() {
 
       {/* Rebook Dialog */}
       <Dialog open={isRebookDialogOpen} onOpenChange={setIsRebookDialogOpen}>
-         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[500px] p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
-           <DialogHeader>
+         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden">
+           <DialogHeader className="p-4 sm:p-6 border-b shrink-0">
              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
                <RefreshCw className="h-5 w-5 text-accent" /> Rebooking Ticket
              </DialogTitle>
@@ -490,84 +493,366 @@ export default function ManageBookingsPage() {
                Rebook Ticket ID: <span className="font-bold text-primary">#{selectedBooking?.id}</span>
              </DialogDescription>
            </DialogHeader>
-           <div className="grid gap-4 sm:gap-6 py-4">
-             <div className="space-y-3 p-3 sm:p-4 border rounded-lg bg-secondary/5">
-               <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="font-bold text-xs sm:text-sm">Waive Penalties</Label>
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground italic">Exempt from standard rebooking fees.</p>
-                  </div>
-                  <Switch 
-                    checked={rebookingData.isFeeWaived} 
-                    onCheckedChange={(checked) => setRebookingData({...rebookingData, isFeeWaived: checked})}
-                  />
+           <ScrollArea className="max-h-[60vh]">
+             <div className="p-4 sm:p-6 space-y-6">
+               <div className="space-y-3 p-4 border rounded-xl bg-secondary/5">
+                 <div className="flex items-center justify-between">
+                    <div className="space-y-0.5 pr-2">
+                      <Label className="font-bold text-xs sm:text-sm">Waive Penalties</Label>
+                      <p className="text-[10px] text-muted-foreground italic leading-tight">Exempt from standard rebooking fees.</p>
+                    </div>
+                    <Switch 
+                      checked={rebookingData.isFeeWaived} 
+                      onCheckedChange={(checked) => setRebookingData({...rebookingData, isFeeWaived: checked})}
+                    />
+                 </div>
+                 {rebookingData.isFeeWaived && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 pt-2 border-t mt-2">
+                      <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">Reason for Waiving</Label>
+                      <Select value={rebookingData.waiveReason} onValueChange={(val) => setRebookingData({...rebookingData, waiveReason: val})}>
+                        <SelectTrigger className="h-10 text-sm bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Weather">Adverse Weather</SelectItem>
+                          <SelectItem value="Technical">Technical Issue</SelectItem>
+                          <SelectItem value="Force Majeure">Force Majeure</SelectItem>
+                          <SelectItem value="Passenger Request">Special Request</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                 )}
                </div>
-               {rebookingData.isFeeWaived && (
-                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                    <Label className="text-[10px] sm:text-xs">Reason for Waiving</Label>
-                    <Select value={rebookingData.waiveReason} onValueChange={(val) => setRebookingData({...rebookingData, waiveReason: val})}>
-                      <SelectTrigger className="h-8 text-[10px] sm:text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Weather">Adverse Weather</SelectItem>
-                        <SelectItem value="Technical">Technical Issue</SelectItem>
-                        <SelectItem value="Force Majeure">Force Majeure</SelectItem>
-                        <SelectItem value="Passenger Request">Special Request</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-               )}
-             </div>
 
-             <div className="space-y-1.5">
-               <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">New Travel Date</Label>
-               <Input 
-                 type="date" 
-                 value={rebookingData.newTravelDate} 
-                 onChange={(e) => setRebookingData({...rebookingData, newTravelDate: e.target.value, newScheduleId: ""})} 
-                 className="h-10 text-sm"
-               />
-             </div>
-
-             <div className="space-y-1.5">
-               <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">Select New Voyage</Label>
-               <Select value={rebookingData.newScheduleId} onValueChange={(val) => setRebookingData({...rebookingData, newScheduleId: val})}>
-                 <SelectTrigger className="h-10 text-sm">
-                   <SelectValue placeholder="Select available trip" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   {availableRebookingSchedules?.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>
-                   ))}
-                 </SelectContent>
-               </Select>
-             </div>
-
-             <div className="p-4 bg-primary rounded-lg text-primary-foreground flex justify-between items-center">
-               <div>
-                 <p className="text-[10px] uppercase font-bold opacity-70">Penalty Fees</p>
-                 <p className="text-xl sm:text-2xl font-black">₱{isMounted ? calculateRebookingFees.toLocaleString() : "---"}</p>
+               <div className="space-y-2">
+                 <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">New Travel Date</Label>
+                 <Input 
+                   type="date" 
+                   value={rebookingData.newTravelDate} 
+                   onChange={(e) => setRebookingData({...rebookingData, newTravelDate: e.target.value, newScheduleId: ""})} 
+                   className="h-11 text-sm"
+                 />
                </div>
-               <Badge variant="outline" className="text-white border-white/20 text-[9px]">
-                 {calculateRebookingFees === 0 ? "Complimentary" : "Standard Fee"}
-               </Badge>
+
+               <div className="space-y-2">
+                 <Label className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">Select New Voyage</Label>
+                 <Select value={rebookingData.newScheduleId} onValueChange={(val) => setRebookingData({...rebookingData, newScheduleId: val})}>
+                   <SelectTrigger className="h-11 text-sm bg-white">
+                     <SelectValue placeholder="Select available trip" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {availableRebookingSchedules?.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+
+               <div className="p-5 bg-primary rounded-xl text-primary-foreground flex justify-between items-center shadow-lg relative overflow-hidden">
+                 <div className="absolute top-0 right-0 p-3 opacity-10">
+                   <Banknote className="h-12 w-12 -rotate-12" />
+                 </div>
+                 <div className="relative z-10">
+                   <p className="text-[10px] uppercase font-black opacity-70 tracking-widest">Rebooking Penalty</p>
+                   <p className="text-2xl sm:text-3xl font-black">₱{isMounted ? calculateRebookingFees.toLocaleString() : "---"}</p>
+                 </div>
+                 <Badge variant="outline" className="text-white border-white/20 text-[9px] font-black uppercase shrink-0">
+                   {calculateRebookingFees === 0 ? "Complimentary" : "Standard Fee"}
+                 </Badge>
+               </div>
              </div>
-           </div>
-           <DialogFooter className="gap-2 sm:gap-0">
-             <Button variant="outline" onClick={() => setIsRebookDialogOpen(false)} className="h-10 text-sm">Cancel</Button>
+           </ScrollArea>
+           <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-col sm:flex-row gap-2">
+             <Button variant="outline" onClick={() => setIsRebookDialogOpen(false)} className="w-full sm:w-auto h-11 text-sm">Cancel</Button>
              <Button 
               onClick={handlePerformRebook} 
-              className="bg-primary text-white h-10 text-sm"
+              className="w-full sm:flex-1 bg-primary text-white h-11 text-sm font-bold"
               disabled={!rebookingData.newScheduleId || !rebookingData.newTravelDate}
              >
-               Process Rebooking
+               Process Rebooking <ChevronRight className="h-4 w-4 ml-2" />
              </Button>
            </DialogFooter>
          </DialogContent>
       </Dialog>
-      
-      {/* Other dialogs (View Details, Edit, Status, Delete, Boarding Pass) would also be optimized similarly */}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[600px] p-0 overflow-hidden">
+          <DialogHeader className="p-4 sm:p-6 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-accent" /> Edit Passenger Info
+            </DialogTitle>
+            <DialogDescription className="text-xs">Update demographics or contact details for Ticket #{selectedBooking?.id}</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</Label>
+                  <Input value={editFormData.passengerName} onChange={(e) => setEditFormData({...editFormData, passengerName: e.target.value})} className="h-11 text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Date of Birth</Label>
+                  <Input type="date" value={editFormData.passengerDob} onChange={(e) => setEditFormData({...editFormData, passengerDob: e.target.value})} className="h-11 text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Mobile Number</Label>
+                  <Input value={editFormData.passengerContact} onChange={(e) => setEditFormData({...editFormData, passengerContact: e.target.value})} className="h-11 text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Emergency Contact</Label>
+                  <Input value={editFormData.emergencyContact} onChange={(e) => setEditFormData({...editFormData, emergencyContact: e.target.value})} className="h-11 text-sm" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Address</Label>
+                <Input type="email" value={editFormData.passengerEmail} onChange={(e) => setEditFormData({...editFormData, passengerEmail: e.target.value})} className="h-11 text-sm" />
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-11">Cancel</Button>
+            <Button onClick={handleSaveEdit} className="w-full sm:flex-1 bg-primary text-white h-11 font-bold">Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden">
+          <DialogHeader className="p-4 sm:p-6 border-b bg-primary text-primary-foreground">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" /> Ticket Details
+            </DialogTitle>
+            <DialogDescription className="text-primary-foreground/70">Full manifest entry for #{selectedBooking?.id}</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh]">
+            <div className="p-4 sm:p-6 space-y-6">
+              <section className="space-y-3">
+                <h4 className="text-[10px] font-black uppercase text-accent tracking-widest">Passenger Information</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Name</Label>
+                    <p className="font-bold">{selectedBooking?.passengerName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Demographic</Label>
+                    <p className="font-bold">{selectedBooking?.segmentLabel}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Contact</Label>
+                    <p className="font-bold">{selectedBooking?.passengerContact}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Birthdate</Label>
+                    <p className="font-bold">{selectedBooking?.passengerDob}</p>
+                  </div>
+                </div>
+              </section>
+              <DropdownMenuSeparator />
+              <section className="space-y-3">
+                <h4 className="text-[10px] font-black uppercase text-accent tracking-widest">Voyage Details</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Trip ID</Label>
+                    <p className="font-black text-primary">{getTripCode(selectedBooking?.scheduleId)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Departure</Label>
+                    <p className="font-bold">{getDeparture(selectedBooking?.scheduleId)}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-[10px] text-muted-foreground">Route</Label>
+                    <p className="font-bold truncate">{getRoute(selectedBooking?.routeId)?.name}</p>
+                  </div>
+                </div>
+              </section>
+              <DropdownMenuSeparator />
+              <section className="space-y-3">
+                <h4 className="text-[10px] font-black uppercase text-accent tracking-widest">Status & Financials</h4>
+                <div className="flex justify-between items-center bg-secondary/20 p-4 rounded-xl">
+                   <div>
+                     <Label className="text-[10px] text-muted-foreground">Booking Status</Label>
+                     <div className="mt-1">{getStatusBadge(selectedBooking?.status)}</div>
+                   </div>
+                   <div className="text-right">
+                     <Label className="text-[10px] text-muted-foreground">Final Amount</Label>
+                     <p className="text-xl font-black text-primary">₱{isMounted ? selectedBooking?.finalFare?.toLocaleString() : "---"}</p>
+                   </div>
+                </div>
+              </section>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="p-4 sm:p-6 border-t">
+            <Button className="w-full h-11" onClick={() => setIsViewDetailsOpen(false)}>Close Details</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[400px]">
+          <DialogHeader>
+            <div className="bg-destructive/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </div>
+            <DialogTitle className="text-center">Permanent Removal</DialogTitle>
+            <DialogDescription className="text-center">
+              Are you sure you want to delete Ticket <span className="font-bold text-primary">#{selectedBooking?.id}</span>? 
+              This will remove the entry from the manifest permanently.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <Button variant="outline" className="w-full sm:flex-1" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
+            <Button variant="destructive" className="w-full sm:flex-1 font-bold" onClick={handleDeleteRecord}>Delete Record</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Update Dialog */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[450px] p-0 overflow-hidden">
+          <DialogHeader className="p-4 sm:p-6 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-accent" /> Update Booking Status
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Change Ticket #{statusTarget?.booking.id} to <span className="font-black text-primary uppercase">{statusTarget?.status}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="bg-secondary/10 p-4 rounded-xl border-2 border-dashed space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="font-bold text-xs sm:text-sm">Waive Associated Fees</Label>
+                  <p className="text-[10px] text-muted-foreground italic">Skip cancellation/no-show penalties.</p>
+                </div>
+                <Switch 
+                  checked={statusActionData.isFeeWaived} 
+                  onCheckedChange={(checked) => setStatusActionData({...statusActionData, isFeeWaived: checked})}
+                />
+              </div>
+              {statusActionData.isFeeWaived && (
+                <div className="pt-2 border-t">
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase">Reason for Exception</Label>
+                  <Select value={statusActionData.waiveReason} onValueChange={(val) => setStatusActionData({...statusActionData, waiveReason: val})}>
+                    <SelectTrigger className="mt-1 h-10 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Weather">Adverse Weather</SelectItem>
+                      <SelectItem value="Technical">Technical/Vessel Issue</SelectItem>
+                      <SelectItem value="Force Majeure">Force Majeure</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-primary p-5 rounded-xl text-primary-foreground flex justify-between items-center shadow-lg">
+              <div>
+                <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Penalty Applied</p>
+                <p className="text-3xl font-black">₱{isMounted ? calculateStatusPenalties().toLocaleString() : "---"}</p>
+              </div>
+              <div className={cn("p-2 rounded-full", calculateStatusPenalties() > 0 ? "bg-red-500/20" : "bg-green-500/20")}>
+                <Banknote className="h-6 w-6" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsStatusDialogOpen(false)}>Cancel</Button>
+            <Button className="w-full sm:flex-1 bg-primary font-bold" onClick={handleConfirmStatusUpdate}>Apply Status Change</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Boarding Pass View */}
+      <Dialog open={isBoardingPassOpen} onOpenChange={setIsBoardingPassOpen}>
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[450px] p-0 bg-transparent border-none shadow-none overflow-y-auto max-h-[95vh]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Boarding Pass</DialogTitle>
+            <DialogDescription>Digital boarding pass with voyage details and QR code.</DialogDescription>
+          </DialogHeader>
+          <div className="bg-white rounded-2xl overflow-hidden shadow-2xl relative mx-auto my-4">
+            <div className="bg-primary p-4 sm:p-6 text-primary-foreground text-center space-y-2">
+              <div className="flex justify-center mb-1 sm:mb-2">
+                <div className="bg-white/20 p-1.5 sm:p-2 rounded-xl">
+                  <Ship className="h-6 w-6 sm:h-8 sm:w-8" />
+                </div>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black font-headline uppercase tracking-tight">Boarding Pass</h2>
+              <p className="text-[10px] opacity-80 font-bold uppercase tracking-widest">Isla Konek Maritime Services</p>
+            </div>
+
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              <div className="flex justify-between items-start border-b border-dashed pb-4">
+                <div className="flex-1 mr-2 overflow-hidden">
+                  <Label className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-bold">Passenger Name</Label>
+                  <p className="text-base sm:text-lg font-black text-primary uppercase truncate">{selectedBooking?.passengerName}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <Label className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-bold">Ticket ID</Label>
+                  <p className="font-mono text-xs sm:text-sm font-bold">#{selectedBooking?.id}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-y-3 sm:gap-y-4 gap-x-4 sm:gap-x-8">
+                <div>
+                  <Label className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-bold">Trip ID</Label>
+                  <p className="font-black text-accent uppercase text-sm sm:text-base">{getTripCode(selectedBooking?.scheduleId)}</p>
+                </div>
+                <div>
+                  <Label className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-bold">Date of Travel</Label>
+                  <p className="font-bold text-sm">{selectedBooking?.travelDate}</p>
+                </div>
+                <div>
+                  <Label className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-bold">Departure Time</Label>
+                  <p className="font-bold text-sm">{getDeparture(selectedBooking?.scheduleId)}</p>
+                </div>
+                <div>
+                  <Label className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-bold">Boarding Seq</Label>
+                  <div className="bg-primary/10 text-primary h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center font-black text-xs sm:text-sm">
+                    {selectedBooking?.boardingSequenceNumber || "N/A"}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-bold">Routing</Label>
+                  <p className="font-bold text-xs sm:text-sm truncate">{getRoute(selectedBooking?.routeId)?.name}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center justify-center py-4 sm:py-6 border-t border-dashed">
+                <div className="bg-secondary/20 p-3 sm:p-4 rounded-2xl mb-4">
+                  <Image 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber}`}
+                    alt="Boarding Pass QR"
+                    width={120}
+                    height={120}
+                    className="mix-blend-multiply w-[100px] h-[100px] sm:w-[120px] sm:h-[120px]"
+                  />
+                </div>
+                <p className="text-[9px] sm:text-[10px] text-primary/60 font-black uppercase tracking-[0.2em] italic">Scan at the boarding gate</p>
+              </div>
+            </div>
+
+            <div className="bg-secondary/30 p-4 flex gap-2">
+              <Button className="flex-1 bg-primary text-white font-bold h-9 text-xs sm:text-sm" onClick={() => window.print()}>
+                <Printer className="h-4 w-4 mr-2 shrink-0" /> Print Pass
+              </Button>
+              <Button variant="outline" className="flex-1 font-bold h-9 text-xs sm:text-sm">
+                <Download className="h-4 w-4 mr-2 shrink-0" /> Save
+              </Button>
+            </div>
+          </div>
+          <div className="mt-2 text-center pb-6">
+            <Button variant="link" className="text-white text-xs" onClick={() => setIsBoardingPassOpen(false)}>
+              Close Boarding Pass
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
