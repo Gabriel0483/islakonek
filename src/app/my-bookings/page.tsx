@@ -74,6 +74,7 @@ export default function MyBookingsPage() {
   }, [userBookings, search]);
 
   const getTripInfo = (booking: any) => {
+    if (!booking) return { code: "TBA", route: "Unknown Route", time: "--:--" };
     const s = schedules?.find(item => item.id === booking.scheduleId);
     const r = routes?.find(item => item.id === booking.routeId);
     return {
