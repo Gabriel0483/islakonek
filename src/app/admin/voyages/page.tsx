@@ -12,13 +12,13 @@ import {
   AlertCircle, 
   MapPin, 
   Ship, 
-  ChevronRight,
-  Info,
-  Timer,
-  XCircle,
-  PlayCircle,
-  Anchor,
-  Filter
+  ChevronRight, 
+  Info, 
+  Timer, 
+  XCircle, 
+  PlayCircle, 
+  Anchor, 
+  Filter 
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -283,9 +283,9 @@ export default function VoyageManagementPage() {
       </main>
 
       <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px]">
-          <DialogHeader>
-             <div className="flex items-center gap-3 mb-2">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden flex flex-col max-h-[95vh]">
+          <DialogHeader className="p-4 sm:p-6 border-b shrink-0">
+             <div className="flex items-center gap-3">
                 <div className="p-2 bg-accent/20 rounded-lg">
                    <Radio className="h-5 w-5 text-primary" />
                 </div>
@@ -296,59 +296,61 @@ export default function VoyageManagementPage() {
              </div>
           </DialogHeader>
           
-          <div className="grid gap-6 py-4">
-             <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Current Condition</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                   {["Scheduled", "On-time", "Delayed", "Departed", "Arrived", "Cancelled"].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setStatusForm({...statusForm, status: s as VoyageStatusValue})}
-                        className={cn(
-                          "h-10 px-2 rounded-lg text-[10px] font-black uppercase transition-all border-2",
-                          statusForm.status === s 
-                            ? "border-primary bg-primary/5 text-primary" 
-                            : "border-secondary bg-white text-muted-foreground hover:border-primary/20"
-                        )}
-                      >
-                         {s}
-                      </button>
-                   ))}
-                </div>
-             </div>
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-6">
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Current Condition</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                     {["Scheduled", "On-time", "Delayed", "Departed", "Arrived", "Cancelled"].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setStatusForm({...statusForm, status: s as VoyageStatusValue})}
+                          className={cn(
+                            "h-10 px-2 rounded-lg text-[10px] font-black uppercase transition-all border-2",
+                            statusForm.status === s 
+                              ? "border-primary bg-primary/5 text-primary" 
+                              : "border-secondary bg-white text-muted-foreground hover:border-primary/20"
+                          )}
+                        >
+                           {s}
+                        </button>
+                     ))}
+                  </div>
+               </div>
 
-             <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Operator Remarks</Label>
-                <Textarea 
-                  placeholder="e.g. Delayed due to vessel cleaning or high tide..." 
-                  value={statusForm.remarks}
-                  onChange={(e) => setStatusForm({...statusForm, remarks: e.target.value})}
-                  className="min-h-[80px] text-sm"
-                />
-             </div>
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Operator Remarks</Label>
+                  <Textarea 
+                    placeholder="e.g. Delayed due to vessel cleaning or high tide..." 
+                    value={statusForm.remarks}
+                    onChange={(e) => setStatusForm({...statusForm, remarks: e.target.value})}
+                    className="min-h-[100px] text-sm"
+                  />
+               </div>
 
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">Actual Dept.</Label>
-                   <Input 
-                     type="time" 
-                     value={statusForm.actualDeparture} 
-                     onChange={(e) => setStatusForm({...statusForm, actualDeparture: e.target.value})} 
-                   />
-                </div>
-                <div className="space-y-1.5">
-                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">Actual Arrv.</Label>
-                   <Input 
-                     type="time" 
-                     value={statusForm.actualArrival} 
-                     onChange={(e) => setStatusForm({...statusForm, actualArrival: e.target.value})} 
-                   />
-                </div>
-             </div>
-          </div>
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Actual Dept.</Label>
+                     <Input 
+                       type="time" 
+                       value={statusForm.actualDeparture} 
+                       onChange={(e) => setStatusForm({...statusForm, actualDeparture: e.target.value})} 
+                     />
+                  </div>
+                  <div className="space-y-1.5">
+                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Actual Arrv.</Label>
+                     <Input 
+                       type="time" 
+                       value={statusForm.actualArrival} 
+                       onChange={(e) => setStatusForm({...statusForm, actualArrival: e.target.value})} 
+                     />
+                  </div>
+               </div>
+            </div>
+          </ScrollArea>
 
-          <DialogFooter className="pt-4 border-t gap-2">
+          <DialogFooter className="p-4 sm:p-6 border-t gap-2 shrink-0 bg-secondary/5">
              <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)} className="flex-1">Cancel</Button>
              <Button onClick={handleSaveStatus} className="flex-1 bg-primary text-white font-bold uppercase text-xs tracking-wider">
                Broadcast Status
