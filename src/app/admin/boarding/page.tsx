@@ -62,9 +62,20 @@ export default function BoardingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
-  const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
-  const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
+  const routesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "routes");
+  }, [db]);
+
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "schedules");
+  }, [db]);
+
+  const bookingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "bookings");
+  }, [db]);
 
   const { data: routes } = useCollection(routesRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
@@ -246,8 +257,7 @@ export default function BoardingPage() {
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Remaining</p>
                   <p className="text-3xl sm:text-4xl font-black">{stats.pending}</p>
                 </CardContent>
-              </Card>
-            </div>
+              </div>
 
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="border-b bg-secondary/10 py-4">

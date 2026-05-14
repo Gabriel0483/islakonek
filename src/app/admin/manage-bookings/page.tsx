@@ -85,9 +85,20 @@ export default function ManageBookingsPage() {
     setIsMounted(true);
   }, []);
   
-  const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
-  const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
-  const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
+  const routesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "routes");
+  }, [db]);
+
+  const bookingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "bookings");
+  }, [db]);
+
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "schedules");
+  }, [db]);
 
   const { data: routes } = useCollection(routesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
@@ -145,7 +156,11 @@ export default function ManageBookingsPage() {
       }
       
       return matchesSearch;
-    }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }).sort((a: any, b: any) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   }, [bookings, search, activeTab]);
 
   const getRoute = (id: string) => routes?.find(r => r.id === id);
@@ -251,7 +266,7 @@ export default function ManageBookingsPage() {
         const updatedBooking = { ...statusTarget.booking, ...updateData };
         setSelectedBooking(updatedBooking);
         setIsBoardingPassOpen(true);
-      }, 500);
+      }, 300);
     }
   };
 
@@ -433,34 +448,34 @@ export default function ManageBookingsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onSelect={() => handleOpenViewDetails(booking)}>
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenViewDetails(booking); }}>
                                   <Eye className="h-4 w-4 mr-2 text-muted-foreground" /> View Details
                                 </DropdownMenuItem>
                                 {(booking.status === 'Confirmed' || booking.status === 'Used') && (
-                                  <DropdownMenuItem onSelect={() => handleViewBoardingPass(booking)}>
+                                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleViewBoardingPass(booking); }}>
                                     <QrCode className="h-4 w-4 mr-2 text-primary" /> Boarding Pass
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onSelect={() => handleOpenEdit(booking)}>
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenEdit(booking); }}>
                                   <Pencil className="h-4 w-4 mr-2 text-muted-foreground" /> Edit Info
                                 </DropdownMenuItem>
                                 {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
-                                  <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Confirmed')} className="text-green-600">
+                                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenStatusDialog(booking, 'Confirmed'); }} className="text-green-600">
                                     <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onSelect={() => handleOpenRebook(booking)}>
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenRebook(booking); }}>
                                   <RefreshCw className="h-4 w-4 mr-2 text-accent" /> Rebook
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Refunded')} className="text-blue-600">
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenStatusDialog(booking, 'Refunded'); }} className="text-blue-600">
                                   <Banknote className="h-4 w-4 mr-2" /> Refund
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => handleOpenStatusDialog(booking, 'Auto-cancelled')} className="text-orange-600">
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenStatusDialog(booking, 'Auto-cancelled'); }} className="text-orange-600">
                                   <XCircle className="h-4 w-4 mr-2" /> Cancel
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => handleOpenDelete(booking)} className="text-destructive">
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenDelete(booking); }} className="text-destructive">
                                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
