@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   MapPin, 
   Waypoints, 
@@ -9,7 +9,11 @@ import {
   ArrowLeft, 
   Loader2,
   Activity,
-  Calendar
+  Calendar,
+  AlertCircle,
+  Wrench,
+  CheckCircle2,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
@@ -53,6 +57,10 @@ export default function OperationalOverviewPage() {
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
 
   const isLoading = isPortsLoading || isRoutesLoading || isVesselsLoading || isBookingsLoading;
+
+  const maintenanceNeeded = useMemo(() => {
+    return vessels?.filter(v => v.status === "Maintenance").length || 0;
+  }, [vessels]);
 
   const statusTiles = [
     { 
@@ -143,18 +151,54 @@ export default function OperationalOverviewPage() {
           )}
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border-none shadow-sm bg-primary text-primary-foreground p-8 flex flex-col justify-center gap-4">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1 border-none shadow-sm bg-primary text-primary-foreground p-8 flex flex-col justify-center gap-4">
             <h3 className="text-xl font-black uppercase tracking-tight">Data Synchronized</h3>
             <p className="text-sm opacity-80 leading-relaxed">
-              All statistics are fetched directly from the live Firestore database. Fleet statuses and manifest counts are updated in real-time as operations proceed at the terminals.
+              All statistics are fetched directly from the live Firestore database. Fleet statuses and manifest counts are updated in real-time.
             </p>
             <div className="flex items-center gap-2 mt-4 text-[10px] font-bold uppercase tracking-widest bg-white/10 w-fit px-3 py-1.5 rounded-full">
                <Calendar className="h-3 w-3" /> Last sync: {isMounted ? new Date().toLocaleTimeString() : "--"}
             </div>
           </Card>
+
+          <Card className="lg:col-span-1 border-none shadow-sm bg-white border">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                Operational Alerts
+              </CardTitle>
+              <CardDescription>Real-time status of the fleet and terminals.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {maintenanceNeeded > 0 ? (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-yellow-500/10 text-yellow-700 border border-yellow-200">
+                  <Wrench className="h-5 w-5" />
+                  <div>
+                    <p className="font-bold text-sm">{maintenanceNeeded} Vessel(s) in Maintenance</p>
+                    <p className="text-xs">Service schedule required.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground border rounded-xl border-dashed bg-secondary/10">
+                  <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
+                  <p className="font-bold text-primary text-sm">Nominal Status</p>
+                  <p className="text-[10px]">All vessels operational.</p>
+                </div>
+              )}
+              
+              <div className="pt-4 border-t space-y-2">
+                 <div className="flex justify-between text-xs font-medium">
+                    <span className="text-muted-foreground">Gateway Status:</span>
+                    <span className="text-green-600 flex items-center gap-1 font-black">
+                      <CheckCircle2 className="h-3 w-3" /> ONLINE
+                    </span>
+                 </div>
+              </div>
+            </CardContent>
+          </Card>
           
-          <Card className="border-none shadow-sm p-8 bg-white border">
+          <Card className="lg:col-span-1 border-none shadow-sm p-8 bg-white border">
             <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
               <Activity className="h-5 w-5 text-accent" />
               Infrastructure Health

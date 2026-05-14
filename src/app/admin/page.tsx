@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { 
   Ship, 
-  AlertCircle, 
-  CheckCircle2, 
   MapPin, 
   Waypoints, 
   Banknote, 
@@ -22,13 +20,11 @@ import {
   Activity
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { AdminNav } from "@/components/admin-nav";
 
 export default function AdminDashboard() {
-  const db = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
@@ -39,13 +35,6 @@ export default function AdminDashboard() {
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
-
-  const vesselsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "vessels");
-  }, [db]);
-
-  const { data: vessels } = useCollection(vesselsRef);
 
   if (isUserLoading) {
     return (
@@ -83,7 +72,7 @@ export default function AdminDashboard() {
   const managementModules = [
     {
       title: "Operational Overview",
-      description: "Real-time summary of ports, routes, fleet, and passenger sales.",
+      description: "Real-time summary of ports, routes, fleet, and system alerts.",
       icon: Activity,
       link: "/admin/operational-overview",
       color: "text-blue-500",
@@ -155,8 +144,6 @@ export default function AdminDashboard() {
     }
   ];
 
-  const maintenanceNeeded = vessels?.filter(v => v.status === "Maintenance").length || 0;
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AdminNav />
@@ -205,52 +192,22 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-12">
-          <Card className="md:col-span-2 border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden p-8 flex items-center">
+        <section className="pb-12">
+          <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden p-8 flex items-center">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Activity className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
             </div>
             <div className="relative z-10 space-y-4 max-w-2xl">
               <h2 className="text-3xl font-black font-headline tracking-tight uppercase">Maritime Command</h2>
               <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                Manage your fleet, terminals, and manifests in real-time. Select a module above to begin.
+                Manage your fleet, terminals, and manifests in real-time. System alerts and operational statistics are consolidated in the <strong>Operational Overview</strong> module.
               </p>
+              <Link href="/admin/operational-overview">
+                <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4">
+                  Go to Operational Overview
+                </Button>
+              </Link>
             </div>
-          </Card>
-
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                Quick Alerts
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {maintenanceNeeded > 0 ? (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-yellow-500/10 text-yellow-700 border border-yellow-200">
-                  <Wrench className="h-5 w-5" />
-                  <div>
-                    <p className="font-bold text-sm">{maintenanceNeeded} Vessel(s) in Maintenance</p>
-                    <p className="text-xs">Service schedule required.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground border rounded-xl border-dashed bg-secondary/10">
-                  <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
-                  <p className="font-bold text-primary text-sm">Nominal Status</p>
-                  <p className="text-[10px]">All vessels operational.</p>
-                </div>
-              )}
-              
-              <div className="pt-4 border-t space-y-2">
-                 <div className="flex justify-between text-xs font-medium">
-                    <span className="text-muted-foreground">Gateway Status:</span>
-                    <span className="text-green-600 flex items-center gap-1 font-black">
-                      <CheckCircle2 className="h-3 w-3" /> ONLINE
-                    </span>
-                 </div>
-              </div>
-            </CardContent>
           </Card>
         </section>
       </main>
