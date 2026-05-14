@@ -327,7 +327,6 @@ function TripsContent() {
 
                         <div className="md:col-span-2 space-y-0.5 sm:space-y-1 text-right">
                           <div className="text-base sm:text-lg font-bold text-primary truncate">{trip.route?.name?.split(' - ')[1]}</div>
-                          <div className="text-xs sm:text-sm font-medium">Direct Arrival</div>
                         </div>
                       </div>
 
