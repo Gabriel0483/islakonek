@@ -28,7 +28,8 @@ import {
   Plus,
   Trash2,
   ChevronLeft,
-  Check
+  Check,
+  Timer
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -301,7 +302,7 @@ function TripsContent() {
                 onClick={() => !trip.isFull && handleBookNow(trip)}
               >
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="flex-1 space-y-4 w-full">
                       <div className="flex items-center gap-2 sm:gap-3">
                         <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
@@ -313,8 +314,8 @@ function TripsContent() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-7 items-center gap-4">
-                        <div className="md:col-span-2 space-y-0.5 sm:space-y-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+                        <div className="space-y-0.5 sm:space-y-1">
                           <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
                             {trip.route?.name?.split(' - ')[0]}
                           </div>
@@ -323,18 +324,7 @@ function TripsContent() {
                           </div>
                         </div>
                         
-                        <div className="md:col-span-3 hidden md:flex flex-col items-center justify-center px-4">
-                          <div className="w-full h-px bg-border relative">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 group-hover:scale-110 transition-transform">
-                              <Ship className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
-                            </div>
-                          </div>
-                          <span className="text-[9px] sm:text-[10px] font-black text-muted-foreground mt-2 uppercase tracking-widest">
-                            {trip.route?.estimatedDurationMinutes} MINS VOYAGE
-                          </span>
-                        </div>
-
-                        <div className="md:col-span-2 space-y-0.5 sm:space-y-1 sm:text-right">
+                        <div className="space-y-0.5 sm:space-y-1 md:text-right">
                           <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
                             {trip.route?.name?.split(' - ')[1]}
                           </div>
@@ -361,22 +351,17 @@ function TripsContent() {
                             <span className="text-destructive font-black uppercase text-[10px]">Fully Booked</span>
                           )}
                         </div>
+                        <div className="flex items-center gap-1.5">
+                          <Timer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
+                          <span className="font-bold text-primary/70">{trip.route?.estimatedDurationMinutes} mins voyage</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="w-full sm:w-auto">
-                      <Button 
-                        disabled={trip.isFull}
-                        variant={trip.isWaitlistOnly ? "outline" : "default"}
-                        className={cn(
-                          "w-full sm:w-40 font-black h-11 sm:h-14 gap-2 text-xs sm:text-sm uppercase tracking-wider shadow-lg",
-                          trip.isWaitlistOnly 
-                            ? 'border-orange-500 text-orange-600 hover:bg-orange-50' 
-                            : 'bg-accent text-primary hover:bg-accent/90 border-none'
-                        )}
-                      >
-                        {trip.isWaitlistOnly ? "Join Waitlist" : "Select & Book"} <ChevronRight className="h-4 w-4" />
-                      </Button>
+                    <div className="hidden md:flex flex-col justify-center">
+                       <div className="bg-primary/5 p-3 rounded-full group-hover:bg-accent transition-colors">
+                          <ChevronRight className="h-6 w-6 text-primary" />
+                       </div>
                     </div>
                   </div>
                 </CardContent>
