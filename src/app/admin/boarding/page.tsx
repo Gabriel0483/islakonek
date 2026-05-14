@@ -257,7 +257,8 @@ export default function BoardingPage() {
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Remaining</p>
                   <p className="text-3xl sm:text-4xl font-black">{stats.pending}</p>
                 </CardContent>
-              </div>
+              </Card>
+            </div>
 
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="border-b bg-secondary/10 py-4">
