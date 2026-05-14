@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -329,6 +330,11 @@ function TripsContent() {
                           <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
                             {trip.route?.name?.split(' - ')[1]}
                           </div>
+                          {trip.arrivalTime && (
+                            <div className="text-sm sm:text-base font-bold flex items-center gap-1.5 text-muted-foreground md:justify-end">
+                              <span className="text-[10px] font-black uppercase mr-1">ETA</span> {trip.arrivalTime}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -526,14 +532,18 @@ function TripsContent() {
                 <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-32">
                   <div className="bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
                     <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-3 sm:mb-4">Voyage Review</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
                       <div>
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Trip ID</Label>
-                        <p className="font-black text-accent text-sm sm:text-lg">{selectedSchedule?.tripCode}</p>
+                        <p className="font-black text-accent text-sm sm:lg">{selectedSchedule?.tripCode}</p>
                       </div>
                       <div>
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Departure</Label>
                         <p className="font-bold text-primary text-sm">{selectedSchedule?.departureTime}</p>
+                      </div>
+                      <div>
+                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Arrival</Label>
+                        <p className="font-bold text-primary text-sm">{selectedSchedule?.arrivalTime || '--:--'}</p>
                       </div>
                       <div>
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Travel Date</Label>
@@ -543,7 +553,7 @@ function TripsContent() {
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
                         <p className="font-bold text-sm truncate">{selectedSchedule?.vessel?.name || 'TBA'}</p>
                       </div>
-                      <div className="col-span-2 sm:col-span-4">
+                      <div className="col-span-2 sm:col-span-5">
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
                         <p className="font-bold text-xs sm:text-sm">{selectedSchedule?.route?.name}</p>
                       </div>

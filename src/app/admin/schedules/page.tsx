@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -15,7 +16,8 @@ import {
   CheckCircle2,
   X,
   Users,
-  Tag
+  Tag,
+  ArrowRight
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -79,6 +81,7 @@ export default function SchedulesPage() {
     routeId: "",
     vesselId: "",
     departureTime: "08:00",
+    arrivalTime: "12:00",
     passengerCapacity: 0,
     waitlistLimit: 10,
     type: "Daily",
@@ -106,6 +109,7 @@ export default function SchedulesPage() {
         routeId: schedule.routeId || "",
         vesselId: schedule.vesselId || "",
         departureTime: schedule.departureTime || "08:00",
+        arrivalTime: schedule.arrivalTime || "12:00",
         passengerCapacity: schedule.passengerCapacity || 0,
         waitlistLimit: schedule.waitlistLimit !== undefined ? schedule.waitlistLimit : 10,
         type: schedule.type || "Daily",
@@ -120,6 +124,7 @@ export default function SchedulesPage() {
         routeId: "",
         vesselId: "",
         departureTime: "08:00",
+        arrivalTime: "12:00",
         passengerCapacity: 0,
         waitlistLimit: 10,
         type: "Daily",
@@ -245,8 +250,15 @@ export default function SchedulesPage() {
                     <Waypoints className="h-4 w-4 text-accent" />
                     {getRouteName(schedule.routeId)}
                   </CardTitle>
-                  <CardDescription className="flex items-center gap-2">
-                    <Clock className="h-3 w-3" /> {schedule.departureTime}
+                  <CardDescription className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-accent" /> {schedule.departureTime}
+                    </div>
+                    {schedule.arrivalTime && (
+                      <div className="flex items-center gap-1 text-muted-foreground border-l pl-3">
+                        <span className="text-[9px] font-bold uppercase mr-1">ETA:</span> {schedule.arrivalTime}
+                      </div>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -378,6 +390,17 @@ export default function SchedulesPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>Arrival Time (Estimated)</Label>
+                  <Input 
+                    type="time" 
+                    value={formData.arrivalTime} 
+                    onChange={(e) => setFormData({...formData, arrivalTime: e.target.value})} 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label>Passenger Capacity</Label>
                   <Input 
                     type="number"
@@ -386,9 +409,6 @@ export default function SchedulesPage() {
                     onChange={(e) => setFormData({...formData, passengerCapacity: Number(e.target.value)})} 
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Waitlist Limit</Label>
                   <Input 
@@ -397,13 +417,14 @@ export default function SchedulesPage() {
                     onChange={(e) => setFormData({...formData, waitlistLimit: Number(e.target.value)})} 
                   />
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/5 self-end h-[40px]">
-                  <Label className="flex items-center gap-2">Trip Active</Label>
-                  <Switch 
-                    checked={formData.isActive} 
-                    onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
-                  />
-                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/5 h-[48px]">
+                <Label className="flex items-center gap-2">Trip Active</Label>
+                <Switch 
+                  checked={formData.isActive} 
+                  onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
+                />
               </div>
 
               <div className="space-y-4 border-t pt-4">

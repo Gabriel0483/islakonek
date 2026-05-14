@@ -184,6 +184,7 @@
         "routeId": { "type": "string" },
         "vesselId": { "type": "string", "description": "ID of the assigned vessel. Optional if assignment is pending." },
         "departureTime": { "type": "string", "description": "Time in HH:mm format" },
+        "arrivalTime": { "type": "string", "description": "Estimated arrival time in HH:mm format" },
         "passengerCapacity": { "type": "number", "description": "Seat capacity for this specific schedule." },
         "waitlistLimit": { "type": "number", "default": 10, "description": "Maximum number of waitlisted passengers allowed." },
         "type": { "type": "string", "enum": ["Daily", "Special"] },
