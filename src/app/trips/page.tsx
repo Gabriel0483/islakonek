@@ -377,14 +377,13 @@ function TripsContent() {
       </div>
 
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[750px] p-0 overflow-hidden max-h-[95vh] flex flex-col">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[750px] p-0 overflow-hidden h-[95vh] flex flex-col">
           <DialogHeader className="p-4 sm:p-6 border-b bg-white shrink-0">
             <div className="flex items-center justify-between mb-4">
               <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold text-primary">
                 <Ticket className="h-5 w-5 sm:h-6 sm:w-6 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Trip Booking'}
               </DialogTitle>
             </div>
-            {/* Progress Indicator */}
             <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 no-scrollbar">
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <div className={cn("h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors", 
@@ -405,8 +404,8 @@ function TripsContent() {
             </div>
           </DialogHeader>
 
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="p-4 sm:p-6 pb-20">
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <div className="p-4 sm:p-6 pb-32">
               {bookingStep === 1 && (
                 <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
                   {selectedSchedule?.isWaitlistOnly && (
@@ -523,7 +522,7 @@ function TripsContent() {
               )}
 
               {bookingStep === 2 && (
-                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-12">
+                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-32">
                   <div className="bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
                     <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-3 sm:mb-4">Voyage Review</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">

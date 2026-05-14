@@ -88,15 +88,6 @@ type BookingSummary = {
   totalTickets: number;
 };
 
-const generateBookingReference = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-};
-
 export default function DeskBookingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -215,7 +206,7 @@ export default function DeskBookingsPage() {
     currentPassengers[index] = {
       ...currentPassengers[index],
       fullName: user.displayName || "",
-      emergencyContact: "", // Reset to ensure manual entry for safety
+      emergencyContact: "", 
     };
     form.setValue('passengers', currentPassengers);
     form.setValue('primaryEmail', user.email || "");
@@ -414,7 +405,7 @@ export default function DeskBookingsPage() {
       </main>
 
       <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[800px] p-0 overflow-hidden max-h-[95vh] flex flex-col">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[800px] p-0 overflow-hidden h-[95vh] flex flex-col">
           <DialogHeader className="p-4 sm:p-6 border-b bg-white shrink-0">
             <div className="flex items-center justify-between mb-4">
               <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold text-primary uppercase tracking-tight">
@@ -446,8 +437,8 @@ export default function DeskBookingsPage() {
             </div>
           </DialogHeader>
 
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="p-4 sm:p-6 space-y-8 pb-20">
+          <ScrollArea className="flex-1 min-h-0 w-full">
+            <div className="p-4 sm:p-6 space-y-8 pb-32">
               {step === 'form' && (
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -664,15 +655,12 @@ export default function DeskBookingsPage() {
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" size="lg" className="w-full bg-primary h-14 font-black uppercase tracking-widest text-lg">
-                      Review Summary <ChevronRight className="h-5 w-5 ml-2" />
-                    </Button>
                   </form>
                 </Form>
               )}
 
               {step === 'summary' && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-12">
+                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-32">
                    <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
                     <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4">Voyage Summary</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -729,7 +717,7 @@ export default function DeskBookingsPage() {
               )}
 
               {step === 'confirmation' && confirmedBooking && (
-                <div className="py-6 animate-in zoom-in-95 duration-300">
+                <div className="py-6 animate-in zoom-in-95 duration-300 pb-32">
                   <TripItinerary booking={confirmedBooking} />
                   <Button variant="outline" className="w-full mt-8 h-12 font-bold" onClick={() => { form.reset(); setStep('form'); setConfirmedBooking(null); }}>
                     Start New Booking
@@ -741,18 +729,29 @@ export default function DeskBookingsPage() {
 
           <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-row items-center justify-between shrink-0">
             {step === 'form' ? (
-              <Button variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="h-12 font-bold px-8">Cancel</Button>
+              <>
+                <Button variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="h-12 font-bold px-8">Cancel</Button>
+                <Button 
+                  type="button"
+                  onClick={form.handleSubmit(handleFormSubmit)} 
+                  className="bg-primary h-12 px-10 font-black uppercase tracking-wider"
+                  disabled={!watchScheduleId || fields.length === 0}
+                >
+                  Review Summary <ChevronRight className="h-5 w-5 ml-2" />
+                </Button>
+              </>
             ) : step === 'summary' ? (
-              <Button variant="ghost" onClick={() => setStep('form')} className="h-12 font-bold px-8">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Details
-              </Button>
-            ) : null}
-
-            {step === 'summary' && (
-              <Button onClick={() => handleFinalReserve(form.getValues())} size="lg" className="bg-accent text-primary h-12 px-10 font-black uppercase tracking-wider" disabled={isReserving}>
-                {isReserving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                Confirm & Issue
-              </Button>
+              <>
+                <Button variant="ghost" onClick={() => setStep('form')} className="h-12 font-bold px-8">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Details
+                </Button>
+                <Button onClick={() => handleFinalReserve(form.getValues())} size="lg" className="bg-accent text-primary h-12 px-10 font-black uppercase tracking-wider" disabled={isReserving}>
+                  {isReserving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                  Confirm & Issue
+                </Button>
+              </>
+            ) : (
+               <Button className="w-full h-12 font-bold" onClick={() => setIsBookingDialogOpen(false)}>Close Window</Button>
             )}
           </DialogFooter>
         </DialogContent>
