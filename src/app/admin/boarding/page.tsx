@@ -162,20 +162,21 @@ export default function BoardingPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
             <Scan className="h-5 w-5 text-accent" />
-            Boarding Mode
+            <span className="hidden sm:inline">Boarding Mode</span>
+            <span className="sm:hidden">Boarding</span>
           </h1>
         </div>
-        <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase">
-          <div className="flex items-center gap-1.5 bg-secondary/50 px-3 py-1.5 rounded-full">
+        <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
+          <div className="flex items-center gap-1.5 bg-secondary/50 px-2 sm:px-3 py-1.5 rounded-full">
             <Calendar className="h-3 w-3" /> {todayPHT}
           </div>
-          <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1.5 rounded-full">
-            <Clock className="h-3 w-3" /> {currentTimePHT} PHT
+          <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2 sm:px-3 py-1.5 rounded-full">
+            <Clock className="h-3 w-3" /> {currentTimePHT}
           </div>
         </div>
       </header>
 
-      <main className="p-6 space-y-6 container mx-auto">
+      <main className="p-4 sm:p-6 space-y-6 container mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <Card className="lg:col-span-1 border-none shadow-sm bg-white">
             <CardHeader className="pb-2 border-b">
@@ -229,21 +230,21 @@ export default function BoardingPage() {
           <div className="lg:col-span-3 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card className="border-none shadow-sm bg-primary text-primary-foreground">
-                <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center h-full">
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Total Manifest</p>
-                  <p className="text-4xl font-black">{stats.total}</p>
+                  <p className="text-3xl sm:text-4xl font-black">{stats.total}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm bg-green-600 text-white">
-                <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center h-full">
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Boarded</p>
-                  <p className="text-4xl font-black">{stats.boarded}</p>
+                  <p className="text-3xl sm:text-4xl font-black">{stats.boarded}</p>
                 </CardContent>
               </Card>
               <Card className="border-none shadow-sm bg-accent text-primary">
-                <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full">
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center h-full">
                   <p className="text-[10px] uppercase font-bold opacity-70 mb-1">Remaining</p>
-                  <p className="text-4xl font-black">{stats.pending}</p>
+                  <p className="text-3xl sm:text-4xl font-black">{stats.pending}</p>
                 </CardContent>
               </Card>
             </div>
@@ -253,7 +254,7 @@ export default function BoardingPage() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <CardTitle className="text-lg">Passenger Manifest</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs">
                       Verify and board passengers for {selectedScheduleId === 'all' 
                         ? (selectedRouteId === 'all' ? "all current voyages" : todayRoutes.find(r => r.id === selectedRouteId)?.name)
                         : getTripInfo(selectedScheduleId).code}
@@ -265,7 +266,7 @@ export default function BoardingPage() {
                       placeholder="Search by name or ticket ID..." 
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-10 bg-white h-10"
+                      className="pl-10 bg-white h-10 text-sm"
                     />
                   </div>
                 </div>
@@ -276,13 +277,13 @@ export default function BoardingPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-accent" />
                   </div>
                 ) : filteredBookings.length > 0 ? (
-                  <ScrollArea className="h-[60vh]">
+                  <div className="w-full overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-secondary/30 sticky top-0 z-10 shadow-sm">
                         <TableRow>
-                          <TableHead className="w-[100px]">Seq</TableHead>
+                          <TableHead className="w-[80px]">Seq</TableHead>
                           <TableHead>Passenger</TableHead>
-                          <TableHead>Trip Details</TableHead>
+                          <TableHead className="hidden sm:table-cell">Trip Details</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Action</TableHead>
                         </TableRow>
@@ -298,10 +299,16 @@ export default function BoardingPage() {
                                 #{booking.boardingSequenceNumber || "--"}
                               </TableCell>
                               <TableCell>
-                                <div className="font-bold text-primary">{booking.passengerName}</div>
+                                <div className="font-bold text-primary text-sm">{booking.passengerName}</div>
                                 <div className="text-[10px] font-mono text-muted-foreground">ID: #{booking.id}</div>
+                                <div className="sm:hidden mt-1 flex items-center gap-1">
+                                  <Badge variant="outline" className="text-[8px] font-black uppercase text-accent border-accent/20 px-1 py-0 h-4">
+                                    {trip.code}
+                                  </Badge>
+                                  <span className="text-[9px] font-bold">{trip.time}</span>
+                                </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="hidden sm:table-cell">
                                 <div className="flex items-center gap-1.5">
                                   <Badge variant="outline" className="text-[9px] font-black uppercase text-accent border-accent/20">
                                     {trip.code}
@@ -314,11 +321,11 @@ export default function BoardingPage() {
                               </TableCell>
                               <TableCell>
                                 {isBoarded ? (
-                                  <Badge className="bg-green-600 text-white gap-1 py-0.5">
-                                    <UserCheck className="h-3 w-3" /> Boarded
+                                  <Badge className="bg-green-600 text-white gap-1 py-0 px-1.5 h-5 text-[9px] sm:text-xs">
+                                    <UserCheck className="h-2.5 w-2.5" /> Boarded
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                                  <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 py-0 px-1.5 h-5 text-[9px] sm:text-xs">
                                     Confirmed
                                   </Badge>
                                 )}
@@ -328,20 +335,20 @@ export default function BoardingPage() {
                                   <Button 
                                     size="sm" 
                                     onClick={() => handleBoardPassenger(booking.id)}
-                                    className="bg-primary hover:bg-primary/90 text-white font-bold h-8 px-4"
+                                    className="bg-primary hover:bg-primary/90 text-white font-bold h-7 sm:h-8 px-2 sm:px-4 text-[10px] sm:text-sm"
                                   >
-                                    Board <ChevronRight className="h-4 w-4 ml-1" />
+                                    Board <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                                   </Button>
                                 ) : (
-                                  <div className="flex items-center justify-end gap-2">
-                                    <div className="text-[10px] font-bold text-green-600 uppercase flex items-center gap-1">
+                                  <div className="flex items-center justify-end gap-1 sm:gap-2">
+                                    <div className="hidden sm:flex items-center gap-1 text-[10px] font-bold text-green-600 uppercase">
                                       <CheckCircle2 className="h-3.5 w-3.5" /> Complete
                                     </div>
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
                                       onClick={() => handleDeboardPassenger(booking.id)}
-                                      className="h-8 text-[10px] font-bold text-destructive hover:text-destructive/10 uppercase"
+                                      className="h-7 sm:h-8 px-1 sm:px-2 text-[9px] sm:text-[10px] font-bold text-destructive hover:text-destructive/10 uppercase"
                                     >
                                       <RotateCcw className="h-3 w-3 mr-1" /> Deboard
                                     </Button>
@@ -353,11 +360,11 @@ export default function BoardingPage() {
                         })}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
+                  </div>
                 ) : (
                   <div className="text-center py-32 opacity-30 flex flex-col items-center">
                     <Ticket className="h-16 w-16 mb-4" />
-                    <p className="font-black uppercase tracking-widest">No passengers matching criteria</p>
+                    <p className="font-black uppercase tracking-widest text-sm sm:text-base">No passengers matching criteria</p>
                   </div>
                 )}
               </CardContent>

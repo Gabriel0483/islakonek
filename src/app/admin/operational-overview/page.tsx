@@ -69,7 +69,7 @@ export default function OperationalOverviewPage() {
       icon: MapPin, 
       color: "text-blue-500", 
       bg: "bg-blue-500/10", 
-      description: "Configured maritime terminals and facilities." 
+      description: "Configured maritime terminals." 
     },
     { 
       label: "Routes Defined", 
@@ -77,7 +77,7 @@ export default function OperationalOverviewPage() {
       icon: Waypoints, 
       color: "text-accent", 
       bg: "bg-accent/10", 
-      description: "Active inter-island shipping connections." 
+      description: "Inter-island shipping connections." 
     },
     { 
       label: "Total Bookings", 
@@ -85,7 +85,7 @@ export default function OperationalOverviewPage() {
       icon: Ticket, 
       color: "text-green-500", 
       bg: "bg-green-500/10", 
-      description: "Validated passenger manifest records." 
+      description: "Validated passenger records." 
     },
     { 
       label: "Fleet Size", 
@@ -93,7 +93,7 @@ export default function OperationalOverviewPage() {
       icon: Ship, 
       color: "text-primary", 
       bg: "bg-primary/10", 
-      description: "Vessels currently in the operational registry." 
+      description: "Vessels in the operational registry." 
     }
   ];
 
@@ -101,25 +101,25 @@ export default function OperationalOverviewPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <AdminNav />
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link href="/admin">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary">
-              <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary h-9">
+              <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Back to Dashboard</span><span className="sm:hidden">Back</span>
             </Button>
           </Link>
           <div className="h-6 w-px bg-border" />
-          <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold font-headline text-primary flex items-center gap-2">
             <Activity className="h-5 w-5 text-accent" />
-            Operational Overview
+            Overview
           </h1>
         </div>
       </header>
 
-      <main className="p-6 space-y-8 container mx-auto">
+      <main className="p-4 sm:p-6 space-y-8 container mx-auto">
         <section>
           <div className="mb-6">
-            <h2 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Operational Statistics</h2>
-            <p className="text-sm text-muted-foreground">High-level overview of maritime infrastructure and operations.</p>
+            <h2 className="text-xl sm:text-2xl font-black font-headline text-primary uppercase tracking-tight">Operational Statistics</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">High-level summary of maritime infrastructure.</p>
           </div>
 
           {isLoading ? (
@@ -128,20 +128,20 @@ export default function OperationalOverviewPage() {
               <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Aggregating Data...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {statusTiles.map((tile, i) => (
                 <Card key={i} className="border-none shadow-sm bg-white overflow-hidden group hover:ring-2 hover:ring-primary/10 transition-all">
-                  <CardHeader className="pb-2">
+                  <CardHeader className="pb-2 p-4 sm:p-6">
                     <div className={`${tile.bg} ${tile.color} p-2 w-fit rounded-lg mb-2 group-hover:scale-110 transition-transform`}>
                       <tile.icon className="h-5 w-5" />
                     </div>
-                    <CardTitle className="text-4xl font-black text-primary">
+                    <CardTitle className="text-3xl sm:text-4xl font-black text-primary">
                       {isMounted ? tile.value : "--"}
                     </CardTitle>
-                    <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{tile.label}</p>
+                    <p className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground tracking-wider">{tile.label}</p>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+                  <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-relaxed italic">
                       {tile.description}
                     </p>
                   </CardContent>
@@ -152,43 +152,43 @@ export default function OperationalOverviewPage() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1 border-none shadow-sm bg-primary text-primary-foreground p-8 flex flex-col justify-center gap-4">
-            <h3 className="text-xl font-black uppercase tracking-tight">Data Synchronized</h3>
-            <p className="text-sm opacity-80 leading-relaxed">
-              All statistics are fetched directly from the live Firestore database. Fleet statuses and manifest counts are updated in real-time.
+          <Card className="lg:col-span-1 border-none shadow-sm bg-primary text-primary-foreground p-6 sm:p-8 flex flex-col justify-center gap-4">
+            <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight">Live Sync</h3>
+            <p className="text-xs sm:text-sm opacity-80 leading-relaxed">
+              Operational data is fetched in real-time from the cloud. Fleet statuses and manifest counts reflect current terminal activity.
             </p>
-            <div className="flex items-center gap-2 mt-4 text-[10px] font-bold uppercase tracking-widest bg-white/10 w-fit px-3 py-1.5 rounded-full">
-               <Calendar className="h-3 w-3" /> Last sync: {isMounted ? new Date().toLocaleTimeString() : "--"}
+            <div className="flex items-center gap-2 mt-2 sm:mt-4 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest bg-white/10 w-fit px-3 py-1.5 rounded-full">
+               <Calendar className="h-3 w-3" /> Sync: {isMounted ? new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--"}
             </div>
           </Card>
 
           <Card className="lg:col-span-1 border-none shadow-sm bg-white border">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-destructive" />
                 Operational Alerts
               </CardTitle>
-              <CardDescription>Real-time status of the fleet and terminals.</CardDescription>
+              <CardDescription className="text-xs">System health and fleet notifications.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
               {maintenanceNeeded > 0 ? (
-                <div className="flex items-center gap-3 p-4 rounded-lg bg-yellow-500/10 text-yellow-700 border border-yellow-200">
-                  <Wrench className="h-5 w-5" />
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-500/10 text-yellow-700 border border-yellow-200">
+                  <Wrench className="h-5 w-5 shrink-0" />
                   <div>
-                    <p className="font-bold text-sm">{maintenanceNeeded} Vessel(s) in Maintenance</p>
-                    <p className="text-xs">Service schedule required.</p>
+                    <p className="font-bold text-xs sm:text-sm">{maintenanceNeeded} Vessel(s) in Maintenance</p>
+                    <p className="text-[10px] sm:text-xs">Schedule review required.</p>
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground border rounded-xl border-dashed bg-secondary/10">
-                  <CheckCircle2 className="h-10 w-10 text-green-500 mb-3" />
-                  <p className="font-bold text-primary text-sm">Nominal Status</p>
+                <div className="flex flex-col items-center justify-center py-4 text-center text-muted-foreground border rounded-xl border-dashed bg-secondary/10">
+                  <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                  <p className="font-bold text-primary text-xs sm:text-sm">Nominal Status</p>
                   <p className="text-[10px]">All vessels operational.</p>
                 </div>
               )}
               
               <div className="pt-4 border-t space-y-2">
-                 <div className="flex justify-between text-xs font-medium">
+                 <div className="flex justify-between text-[10px] sm:text-xs font-medium">
                     <span className="text-muted-foreground">Gateway Status:</span>
                     <span className="text-green-600 flex items-center gap-1 font-black">
                       <CheckCircle2 className="h-3 w-3" /> ONLINE
@@ -198,23 +198,23 @@ export default function OperationalOverviewPage() {
             </CardContent>
           </Card>
           
-          <Card className="lg:col-span-1 border-none shadow-sm p-8 bg-white border">
-            <h3 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+          <Card className="lg:col-span-1 border-none shadow-sm p-6 sm:p-8 bg-white border">
+            <h3 className="text-lg sm:text-xl font-bold text-primary mb-4 flex items-center gap-2">
               <Activity className="h-5 w-5 text-accent" />
-              Infrastructure Health
+              Health Indicators
             </h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground font-medium">Database Latency</span>
-                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200 uppercase text-[10px]">Optimal</Badge>
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium">DB Latency</span>
+                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200 uppercase text-[9px]">Optimal</Badge>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-sm text-muted-foreground font-medium">Terminal Gateways</span>
-                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200 uppercase text-[10px]">Active</Badge>
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium">Gateways</span>
+                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200 uppercase text-[9px]">Active</Badge>
               </div>
               <div className="flex justify-between items-center py-2">
-                <span className="text-sm text-muted-foreground font-medium">Cloud Function Triggers</span>
-                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200 uppercase text-[10px]">Healthy</Badge>
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium">Triggers</span>
+                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200 uppercase text-[9px]">Healthy</Badge>
               </div>
             </div>
           </Card>

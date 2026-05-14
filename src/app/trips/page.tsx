@@ -259,92 +259,92 @@ function TripsContent() {
     <div className="min-h-screen bg-background font-body">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold font-headline text-primary mb-2">Available Trips</h1>
-          <p className="text-muted-foreground text-sm">
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-5xl">
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary mb-1 sm:mb-2">Available Trips</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm">
             Voyages for <span className="text-primary font-bold">{searchDate || phtState?.date}</span> 
-            {selectedOriginPort !== 'all' && <> originating from <span className="text-primary font-bold">{ports?.find(p => p.id === selectedOriginPort)?.name}</span></>}
+            {selectedOriginPort !== 'all' && <> from <span className="text-primary font-bold truncate inline-block max-w-[150px] align-bottom">{ports?.find(p => p.id === selectedOriginPort)?.name}</span></>}
           </p>
         </header>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Quick search trip ID or destination..." 
+                placeholder="Search trip ID or destination..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-12 bg-white border-none shadow-sm" 
+                className="pl-10 h-11 sm:h-12 bg-white border-none shadow-sm text-sm" 
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground py-2 border-b">
-            <p>Showing <span className="text-foreground font-bold">{filteredTrips.length}</span> results</p>
+          <div className="flex items-center justify-between text-[10px] sm:text-sm text-muted-foreground py-2 border-b">
+            <p>Showing <span className="text-foreground font-bold">{filteredTrips.length}</span> voyages</p>
           </div>
 
           <div className="space-y-4">
             {isSchedulesLoading || !phtState ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-accent" />
-                <p>Searching for active voyages...</p>
+                <p className="text-sm">Searching for active voyages...</p>
               </div>
             ) : filteredTrips.length > 0 ? filteredTrips.map((trip) => (
               <Card key={trip.id} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 bg-white">
                 <CardContent className="p-0">
                   <div className="flex flex-col md:flex-row">
-                    <div className="p-6 flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
+                    <div className="p-4 sm:p-6 flex-1">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-4">
+                        <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
                           {trip.vessel?.type || "Standard"}
                         </Badge>
-                        <span className="text-xs text-muted-foreground font-medium">{trip.type} Schedule</span>
-                        <div className="flex items-center gap-1 text-[10px] font-black text-primary/50 uppercase ml-auto">
-                           <Tag className="h-3 w-3" /> {trip.tripCode}
+                        <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">{trip.type}</span>
+                        <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-primary/50 uppercase ml-auto">
+                           <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {trip.tripCode}
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-7 items-center gap-4">
-                        <div className="md:col-span-2 space-y-1">
-                          <div className="text-lg font-bold text-primary">{trip.route?.name?.split(' - ')[0]}</div>
-                          <div className="text-sm font-medium flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-accent" /> {trip.departureTime}
+                        <div className="md:col-span-2 space-y-0.5 sm:space-y-1">
+                          <div className="text-base sm:text-lg font-bold text-primary truncate">{trip.route?.name?.split(' - ')[0]}</div>
+                          <div className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+                            <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-accent" /> {trip.departureTime}
                           </div>
                         </div>
                         
                         <div className="md:col-span-3 flex flex-col items-center justify-center px-4">
                           <div className="w-full h-px bg-border relative">
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2">
-                              <Ship className="h-5 w-5 text-accent" />
+                              <Ship className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                             </div>
                           </div>
-                          <span className="text-[10px] font-bold text-muted-foreground mt-2 uppercase tracking-tighter">
+                          <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground mt-2 uppercase tracking-tighter">
                             {trip.route?.estimatedDurationMinutes} mins travel
                           </span>
                         </div>
 
-                        <div className="md:col-span-2 space-y-1 text-right">
-                          <div className="text-lg font-bold text-primary">{trip.route?.name?.split(' - ')[1]}</div>
-                          <div className="text-sm font-medium">Direct Arrival</div>
+                        <div className="md:col-span-2 space-y-0.5 sm:space-y-1 text-right">
+                          <div className="text-base sm:text-lg font-bold text-primary truncate">{trip.route?.name?.split(' - ')[1]}</div>
+                          <div className="text-xs sm:text-sm font-medium">Direct Arrival</div>
                         </div>
                       </div>
 
-                      <div className="mt-6 flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="mt-6 flex flex-wrap items-center gap-4 sm:gap-6 text-[11px] sm:text-sm text-muted-foreground">
                         <div className="flex items-center gap-1.5">
-                          <Ship className="h-4 w-4" />
-                          {trip.vessel?.name || "TBA"}
+                          <Ship className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span className="truncate max-w-[100px] sm:max-w-none">{trip.vessel?.name || "TBA"}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Users className="h-4 w-4" />
+                          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           {trip.availability > 0 ? (
                             <span className={trip.availability < 10 ? "text-orange-500 font-bold" : ""}>
                               {trip.availability} seats left
                             </span>
                           ) : trip.isWaitlistOnly ? (
                             <span className="text-orange-600 font-bold flex items-center gap-1">
-                              <ListOrdered className="h-3 w-3" /> Waitlist Open
+                              <ListOrdered className="h-3 w-3 sm:h-3 sm:w-3" /> Waitlist Open
                             </span>
                           ) : (
                             <span className="text-destructive font-bold">Fully Booked</span>
@@ -353,12 +353,12 @@ function TripsContent() {
                       </div>
                     </div>
 
-                    <div className="bg-secondary/30 p-6 md:w-64 border-t md:border-t-0 md:border-l flex flex-col justify-center items-center text-center gap-4">
+                    <div className="bg-secondary/30 p-4 sm:p-6 md:w-64 border-t md:border-t-0 md:border-l flex flex-col justify-center items-center text-center gap-4">
                       <Button 
                         onClick={() => handleBookNow(trip)}
                         disabled={trip.isFull}
                         variant={trip.isWaitlistOnly ? "outline" : "default"}
-                        className={`w-full font-bold gap-2 transition-transform ${trip.isWaitlistOnly ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : 'bg-accent text-primary hover:bg-accent/90'}`}
+                        className={`w-full font-bold h-10 sm:h-12 gap-2 text-xs sm:text-sm ${trip.isWaitlistOnly ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : 'bg-accent text-primary hover:bg-accent/90'}`}
                       >
                         {trip.isWaitlistOnly ? "Join Waitlist" : "Select & Book"} <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -378,134 +378,134 @@ function TripsContent() {
       </div>
 
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
-        <DialogContent className="sm:max-w-[750px] p-0 overflow-hidden">
-          <DialogHeader className="p-6 border-b bg-white">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[750px] p-0 overflow-hidden max-h-[95vh] flex flex-col">
+          <DialogHeader className="p-4 sm:p-6 border-b bg-white shrink-0">
             <div className="flex items-center justify-between mb-4">
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-primary">
-                <Ticket className="h-6 w-6 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Trip Booking'}
+              <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold text-primary">
+                <Ticket className="h-5 w-5 sm:h-6 sm:w-6 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Trip Booking'}
               </DialogTitle>
             </div>
             {/* Progress Indicator */}
-            <div className="flex items-center gap-4">
-              <div className="flex-1 flex items-center gap-2">
-                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors", 
+            <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 no-scrollbar">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <div className={cn("h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors", 
                   bookingStep >= 1 ? "bg-primary text-white" : "bg-secondary text-muted-foreground")}>1</div>
-                <span className={cn("text-xs font-bold uppercase", bookingStep >= 1 ? "text-primary" : "text-muted-foreground")}>Details</span>
+                <span className={cn("text-[10px] sm:text-xs font-bold uppercase", bookingStep >= 1 ? "text-primary" : "text-muted-foreground")}>Details</span>
               </div>
-              <Separator className="w-12 h-px bg-border" />
-              <div className="flex-1 flex items-center gap-2">
-                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors", 
+              <Separator className="w-6 sm:w-12 h-px bg-border shrink-0" />
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <div className={cn("h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors", 
                   bookingStep >= 2 ? "bg-primary text-white" : "bg-secondary text-muted-foreground")}>2</div>
-                <span className={cn("text-xs font-bold uppercase", bookingStep >= 2 ? "text-primary" : "text-muted-foreground")}>Summary</span>
+                <span className={cn("text-[10px] sm:text-xs font-bold uppercase", bookingStep >= 2 ? "text-primary" : "text-muted-foreground")}>Summary</span>
               </div>
-              <Separator className="w-12 h-px bg-border" />
-              <div className="flex-1 flex items-center gap-2 opacity-50">
-                <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold bg-secondary text-muted-foreground">3</div>
-                <span className="text-xs font-bold uppercase text-muted-foreground">Confirm</span>
+              <Separator className="w-6 sm:w-12 h-px bg-border shrink-0" />
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 opacity-50">
+                <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold bg-secondary text-muted-foreground">3</div>
+                <span className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">Confirm</span>
               </div>
             </div>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[75vh]">
-            <div className="p-6">
+          <ScrollArea className="flex-1">
+            <div className="p-4 sm:p-6">
               {bookingStep === 1 && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
+                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
                   {selectedSchedule?.isWaitlistOnly && (
-                    <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                    <div className="bg-orange-50 border border-orange-200 p-3 sm:p-4 rounded-xl flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-sm font-bold text-orange-800">Trip is Full</p>
-                        <p className="text-xs text-orange-700">You are joining the waitlist for this voyage. Confirmations are subject to seat availability.</p>
+                        <p className="text-xs sm:text-sm font-bold text-orange-800">Trip is Full</p>
+                        <p className="text-[10px] sm:text-xs text-orange-700 leading-tight">You are joining the waitlist for this voyage. Confirmations are subject to seat availability.</p>
                       </div>
                     </div>
                   )}
 
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div className="flex items-center justify-between border-b pb-2">
-                       <Label className="flex items-center gap-2 font-black text-primary uppercase text-lg tracking-tight">
-                        <Users className="h-5 w-5 text-accent" /> Passengers ({passengers.length})
+                       <Label className="flex items-center gap-2 font-black text-primary uppercase text-base sm:text-lg tracking-tight">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> Passengers ({passengers.length})
                       </Label>
-                      <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-2 h-9 font-bold">
-                        <Plus className="h-4 w-4" /> Add Passenger
+                      <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-1 sm:gap-2 h-8 sm:h-9 font-bold text-[10px] sm:text-xs">
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" /> Add
                       </Button>
                     </div>
 
-                    <div className="space-y-8">
+                    <div className="space-y-6 sm:space-y-8">
                       {passengers.map((p, index) => (
-                        <div key={index} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-6 pt-8 group hover:border-accent/40 transition-colors">
-                          <div className="absolute -top-4 left-6 bg-white border-2 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary tracking-widest z-10">
+                        <div key={index} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-4 sm:p-6 pt-8 group hover:border-accent/40 transition-colors">
+                          <div className="absolute -top-4 left-4 sm:left-6 bg-white border-2 px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase text-primary tracking-widest z-10">
                             Passenger #{index + 1}
                           </div>
                           <Button 
                             type="button" 
                             variant="ghost" 
                             size="icon" 
-                            className="absolute -top-3 -right-3 h-8 w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20"
+                            className="absolute -top-3 -right-3 h-7 w-7 sm:h-8 sm:w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20"
                             onClick={() => removePassenger(index)}
                             disabled={passengers.length === 1}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </Button>
                           
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Full Name</Label>
+                          <div className="space-y-4 sm:space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Full Name</Label>
                                 <Input 
                                   value={p.passengerName} 
                                   onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
                                   placeholder="As shown in ID"
-                                  className="bg-white h-11"
+                                  className="bg-white h-10 sm:h-11 text-sm"
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Date of Birth</Label>
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Date of Birth</Label>
                                 <Input 
                                   type="date"
                                   value={p.passengerDob} 
                                   onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
-                                  className="bg-white h-11"
+                                  className="bg-white h-10 sm:h-11 text-sm"
                                 />
                               </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Mobile Number</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Mobile Number</Label>
                                 <Input 
                                   value={p.passengerContact} 
                                   onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
                                   placeholder="09XX XXX XXXX"
-                                  className="bg-white h-11"
+                                  className="bg-white h-10 sm:h-11 text-sm"
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1">
-                                  <Heart className="h-2.5 w-2.5 text-destructive" /> Emergency Contact Number
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1">
+                                  <Heart className="h-2.5 w-2.5 text-destructive" /> Emergency Contact
                                 </Label>
                                 <Input 
                                   value={p.emergencyContact} 
                                   onChange={(e) => updatePassenger(index, 'emergencyContact', e.target.value)}
                                   placeholder="ICE name or mobile"
-                                  className="bg-white h-11"
+                                  className="bg-white h-10 sm:h-11 text-sm"
                                 />
                               </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email (Optional)</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email (Optional)</Label>
                                 <Input 
                                   type="email"
                                   value={p.passengerEmail} 
                                   onChange={(e) => updatePassenger(index, 'passengerEmail', e.target.value)}
                                   placeholder="your@email.com"
-                                  className="bg-white h-11"
+                                  className="bg-white h-10 sm:h-11 text-sm"
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Passenger Type</Label>
+                              <div className="space-y-1.5">
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Passenger Type</Label>
                                 <Select value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
-                                  <SelectTrigger className="bg-white h-11 border-2">
-                                    <SelectValue placeholder="Select demographic" />
+                                  <SelectTrigger className="bg-white h-10 sm:h-11 border-2 text-sm">
+                                    <SelectValue placeholder="Select type" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {availableFares?.map(f => (
@@ -524,53 +524,53 @@ function TripsContent() {
               )}
 
               {bookingStep === 2 && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
-                    <h3 className="text-xs font-black uppercase text-primary tracking-[0.2em] mb-4">Voyage Review</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
+                    <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-3 sm:mb-4">Voyage Review</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                       <div>
-                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Trip ID</Label>
-                        <p className="font-black text-accent text-lg">{selectedSchedule?.tripCode}</p>
+                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Trip ID</Label>
+                        <p className="font-black text-accent text-sm sm:text-lg">{selectedSchedule?.tripCode}</p>
                       </div>
                       <div>
-                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Departure</Label>
-                        <p className="font-bold text-primary">{selectedSchedule?.departureTime}</p>
+                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Departure</Label>
+                        <p className="font-bold text-primary text-sm">{selectedSchedule?.departureTime}</p>
                       </div>
                       <div>
-                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Travel Date</Label>
-                        <p className="font-bold">{searchDate || phtState?.date}</p>
+                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Travel Date</Label>
+                        <p className="font-bold text-sm">{searchDate || phtState?.date}</p>
                       </div>
                       <div>
-                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
-                        <p className="font-bold">{selectedSchedule?.vessel?.name || 'TBA'}</p>
+                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
+                        <p className="font-bold text-sm truncate">{selectedSchedule?.vessel?.name || 'TBA'}</p>
                       </div>
-                      <div className="col-span-4">
-                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
-                        <p className="font-bold text-sm">{selectedSchedule?.route?.name}</p>
+                      <div className="col-span-2 sm:col-span-4">
+                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
+                        <p className="font-bold text-xs sm:text-sm">{selectedSchedule?.route?.name}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-muted-foreground tracking-[0.2em] border-b pb-2">Passenger Roster</h3>
-                    <div className="space-y-3">
+                  <div className="space-y-3 sm:space-y-4">
+                    <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] border-b pb-2">Passenger Roster</h3>
+                    <div className="space-y-2 sm:space-y-3">
                       {passengers.map((p, i) => {
                         const fare = fares?.find(f => f.id === p.fareId);
                         return (
-                          <div key={i} className="flex items-center justify-between bg-white p-4 rounded-xl border-2">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-black text-primary text-xs">
+                          <div key={i} className="flex items-center justify-between bg-white p-3 sm:p-4 rounded-xl border-2">
+                            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 mr-2">
+                              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-secondary flex items-center justify-center font-black text-primary text-[10px] sm:text-xs shrink-0">
                                 {i + 1}
                               </div>
-                              <div>
-                                <p className="font-bold text-primary uppercase text-sm">{p.passengerName}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium">
-                                  {fare?.segmentLabel} • {p.passengerContact || 'No mobile'} • <span className="text-destructive">ICE: {p.emergencyContact}</span>
+                              <div className="min-w-0">
+                                <p className="font-bold text-primary uppercase text-xs sm:text-sm truncate">{p.passengerName}</p>
+                                <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium truncate">
+                                  {fare?.segmentLabel} • {p.passengerContact || 'No mobile'}
                                 </p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-black text-primary">₱{fare?.finalFare?.toLocaleString()}</p>
+                            <div className="text-right shrink-0">
+                              <p className="font-black text-primary text-xs sm:text-base">₱{fare?.finalFare?.toLocaleString()}</p>
                             </div>
                           </div>
                         );
@@ -578,18 +578,18 @@ function TripsContent() {
                     </div>
                   </div>
 
-                  <div className="pt-8 bg-primary rounded-2xl text-primary-foreground p-8 relative overflow-hidden shadow-2xl">
+                  <div className="pt-4 sm:pt-8 bg-primary rounded-2xl text-primary-foreground p-6 sm:p-8 relative overflow-hidden shadow-2xl">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Banknote className="h-32 w-32 -rotate-12 translate-x-8 translate-y-8" />
+                      <Banknote className="h-24 w-24 sm:h-32 sm:w-32 -rotate-12 translate-x-8 translate-y-8" />
                     </div>
-                    <div className="relative z-10 flex justify-between items-end">
+                    <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                       <div>
-                        <p className="text-xs opacity-70 uppercase font-black tracking-widest mb-1">Estimated Total Fare</p>
-                        <p className="text-5xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
-                        <p className="text-[10px] mt-4 opacity-60 font-medium italic">* Final payment will be collected during validation/issuance.</p>
+                        <p className="text-[10px] opacity-70 uppercase font-black tracking-widest mb-1">Estimated Total Fare</p>
+                        <p className="text-3xl sm:text-5xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
+                        <p className="text-[9px] sm:text-[10px] mt-3 sm:mt-4 opacity-60 font-medium italic leading-tight">* Final payment collected during issuance.</p>
                       </div>
-                      <Badge variant="outline" className="bg-white/10 text-white border-white/30 uppercase text-[10px] px-4 py-1.5 font-black">
-                        {selectedSchedule?.isWaitlistOnly ? 'Waitlist Submission' : 'Reservation Only'}
+                      <Badge variant="outline" className="bg-white/10 text-white border-white/30 uppercase text-[9px] px-3 py-1 sm:px-4 sm:py-1.5 font-black shrink-0">
+                        {selectedSchedule?.isWaitlistOnly ? 'Waitlist' : 'Reserved'}
                       </Badge>
                     </div>
                   </div>
@@ -598,14 +598,14 @@ function TripsContent() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t bg-secondary/5 flex items-center justify-between">
+          <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-row items-center justify-between shrink-0">
             {bookingStep === 1 ? (
-              <Button variant="outline" onClick={() => setIsBookingOpen(false)} className="h-12 font-bold px-8">
+              <Button variant="outline" onClick={() => setIsBookingOpen(false)} className="h-10 sm:h-12 font-bold px-4 sm:px-8 text-xs sm:text-sm">
                 Cancel
               </Button>
             ) : (
-              <Button variant="ghost" onClick={() => setBookingStep(1)} className="h-12 font-bold px-8">
-                <ChevronLeft className="h-4 w-4 mr-2" /> Back to Details
+              <Button variant="ghost" onClick={() => setBookingStep(1)} className="h-10 sm:h-12 font-bold px-2 sm:px-8 text-xs sm:text-sm">
+                <ChevronLeft className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Back to Details</span><span className="sm:hidden">Back</span>
               </Button>
             )}
 
@@ -613,17 +613,17 @@ function TripsContent() {
               <Button 
                 onClick={() => setBookingStep(2)} 
                 disabled={!isDetailsValid}
-                className="bg-primary text-white h-12 px-10 font-bold group"
+                className="bg-primary text-white h-10 sm:h-12 px-6 sm:px-10 font-bold group text-xs sm:text-sm"
               >
-                Review Summary <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                Review <span className="hidden sm:inline">Summary</span> <ChevronRight className="h-4 w-4 ml-1 sm:ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             ) : (
               <Button 
                 onClick={handleProcessBooking} 
-                className={cn("h-12 px-10 font-black uppercase tracking-wider", 
+                className={cn("h-10 sm:h-12 px-6 sm:px-10 font-black uppercase tracking-wider text-[10px] sm:text-xs", 
                   selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-accent text-primary hover:bg-accent/90')}
               >
-                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'} <Check className="h-4 w-4 ml-2" />
+                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'} <Check className="h-4 w-4 ml-1 sm:ml-2" />
               </Button>
             )}
           </DialogFooter>

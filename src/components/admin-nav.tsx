@@ -16,7 +16,7 @@ import {
   Home,
   Menu,
   Activity,
-  X
+  LogOut
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
@@ -48,16 +50,21 @@ const configItems = [
 
 export function AdminNav() {
   const pathname = usePathname();
+  const auth = useAuth();
+
+  const handleLogout = () => {
+    if (auth) signOut(auth);
+  };
   
   return (
     <nav className="bg-primary text-white border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/admin" className="flex items-center gap-2 mr-4">
-             <div className="bg-accent p-1 rounded-md">
+          <Link href="/admin" className="flex items-center gap-2 mr-2 sm:mr-4">
+             <div className="bg-accent p-1 rounded-md shrink-0">
                <Ship className="h-5 w-5 text-primary" />
              </div>
-             <span className="font-headline font-bold text-lg hidden lg:inline">Isla Konek Admin</span>
+             <span className="font-headline font-bold text-base sm:text-lg hidden xs:inline lg:inline">Isla Konek Admin</span>
           </Link>
           
           <div className="hidden lg:flex items-center gap-1">
@@ -91,7 +98,7 @@ export function AdminNav() {
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
            <Link href="/" className="text-xs font-bold flex items-center gap-1.5 hover:text-accent transition-colors hidden sm:flex">
              <Home className="h-4 w-4" /> Public Site
            </Link>
@@ -99,11 +106,11 @@ export function AdminNav() {
            <div className="lg:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10">
                     <Menu className="h-6 w-6" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-56 max-h-[85vh] overflow-y-auto">
                   <DropdownMenuLabel>Operations</DropdownMenuLabel>
                   {menuItems.map(item => (
                     <DropdownMenuItem key={item.href} asChild>
@@ -124,11 +131,20 @@ export function AdminNav() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/" className="flex items-center gap-2">
-                      <Home className="h-4 w-4" /> Return to Site
+                      <Home className="h-4 w-4" /> Public Site
                     </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="h-4 w-4" /> Log Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+           </div>
+           
+           <div className="hidden lg:block border-l border-white/20 pl-4 ml-2">
+             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider">
+               <LogOut className="h-3 w-3 mr-1.5" /> Out
+             </Button>
            </div>
         </div>
       </div>
