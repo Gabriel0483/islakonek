@@ -17,7 +17,8 @@ import {
   Menu,
   Activity,
   LogOut,
-  User
+  User,
+  TrendingUp
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,8 @@ import { signOut } from "firebase/auth";
 
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
-  { label: "Overview", icon: Activity, href: "/admin/operational-overview" },
+  { label: "Sales", icon: TrendingUp, href: "/admin/sales-overview" },
+  { label: "Ops", icon: Activity, href: "/admin/operational-overview" },
   { label: "Boarding", icon: Scan, href: "/admin/boarding" },
   { label: "Desk", icon: Ticket, href: "/admin/bookings" },
   { label: "Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },

@@ -17,7 +17,8 @@ import {
   CalendarDays,
   Ticket,
   ClipboardList,
-  UserCircle
+  UserCircle,
+  TrendingUp
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser } from "@/firebase";
@@ -70,6 +71,14 @@ export default function AdminDashboard() {
   }
 
   const managementModules = [
+    {
+      title: "Sales Overview",
+      description: "Revenue momentum, route volume analysis, and sales performance.",
+      icon: TrendingUp,
+      link: "/admin/sales-overview",
+      color: "text-green-600",
+      count: "Finance Stats"
+    },
     {
       title: "Operational Overview",
       description: "Real-time summary of ports, routes, fleet, and system alerts.",
@@ -210,11 +219,18 @@ export default function AdminDashboard() {
               <p className="text-lg text-primary-foreground/80 leading-relaxed">
                 Manage your fleet, terminals, and manifests in real-time. System alerts and operational statistics are consolidated in the <strong>Operational Overview</strong> module.
               </p>
-              <Link href="/admin/operational-overview">
-                <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4">
-                  Go to Operational Overview
-                </Button>
-              </Link>
+              <div className="flex gap-4">
+                <Link href="/admin/operational-overview">
+                  <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4">
+                    Operational Overview
+                  </Button>
+                </Link>
+                <Link href="/admin/sales-overview">
+                  <Button variant="outline" className="bg-white/10 text-white border-white/20 font-bold hover:bg-white/20 mt-4">
+                    Sales Overview
+                  </Button>
+                </Link>
+              </div>
             </div>
           </Card>
         </section>
