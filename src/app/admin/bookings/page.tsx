@@ -111,11 +111,11 @@ export default function DeskBookingsPage() {
     return collection(db, "users");
   }, [db]);
 
-  const { data: routes } = useCollection(usersRef ? routesRef : null);
-  const { data: schedules } = useCollection(usersRef ? schedulesRef : null);
-  const { data: fares } = useCollection(usersRef ? faresRef : null);
-  const { data: bookings, isLoading: isBookingsLoading } = useCollection(usersRef ? bookingsRef : null);
-  const { data: vessels } = useCollection(usersRef ? vesselsRef : null);
+  const { data: routes } = useCollection(routesRef);
+  const { data: schedules } = useCollection(schedulesRef);
+  const { data: fares } = useCollection(faresRef);
+  const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
+  const { data: vessels } = useCollection(vesselsRef);
   const { data: registeredUsers } = useCollection(usersRef);
 
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
@@ -205,7 +205,6 @@ export default function DeskBookingsPage() {
   const handleCreateBooking = () => {
     if (!db || !formData.routeId || !formData.scheduleId || !formData.travelDate || !formData.emergencyContact) return;
 
-    let confirmedCount = 0;
     const tripBookings = bookings?.filter(b => 
       b.scheduleId === formData.scheduleId && 
       b.travelDate === formData.travelDate && 
@@ -213,7 +212,7 @@ export default function DeskBookingsPage() {
     ) || [];
     let currentSeq = tripBookings.length + 1;
 
-    passengers.forEach((p, index) => {
+    passengers.forEach((p) => {
       const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
       const timestamp = new Date().toISOString();
       const bookingRef = doc(db, "bookings", newId);
@@ -251,10 +250,10 @@ export default function DeskBookingsPage() {
 
       setDocumentNonBlocking(bookingRef, newBookingData, { merge: true });
 
-      if (status === 'Confirmed' && confirmedCount === 0) {
+      // If we just created the last one or only one, show it as a boarding pass if confirmed
+      if (status === 'Confirmed') {
         setLastCreatedBooking(newBookingData);
         setIsBoardingPassOpen(true);
-        confirmedCount++;
       }
     });
 
@@ -276,9 +275,13 @@ export default function DeskBookingsPage() {
     setUserSearchTerm({});
   };
 
-  const deskBookings = bookings?.filter(b => b.bookingSource === "Desk")
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 10);
+  const deskBookings = useMemo(() => {
+    if (!bookings) return [];
+    return bookings
+      .filter(b => b.bookingSource === "Desk")
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10);
+  }, [bookings]);
 
   const getRouteName = (id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
