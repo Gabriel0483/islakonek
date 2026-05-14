@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -18,7 +19,8 @@ import {
   Ticket,
   ClipboardList,
   UserCircle,
-  TrendingUp
+  TrendingUp,
+  Radio
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser } from "@/firebase";
@@ -71,6 +73,14 @@ export default function AdminDashboard() {
   }
 
   const managementModules = [
+    {
+      title: "Voyage Control",
+      description: "Manage real-time status (Delayed, Departed, etc.) for daily trips.",
+      icon: Radio,
+      link: "/admin/voyages",
+      color: "text-accent",
+      count: "Real-time"
+    },
     {
       title: "Sales Overview",
       description: "Revenue momentum, route volume analysis, and sales performance.",
@@ -220,14 +230,14 @@ export default function AdminDashboard() {
                 Manage your fleet, terminals, and manifests in real-time. System alerts and operational statistics are consolidated in the <strong>Operational Overview</strong> module.
               </p>
               <div className="flex gap-4">
-                <Link href="/admin/operational-overview">
+                <Link href="/admin/voyages">
                   <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4">
-                    Operational Overview
+                    Voyage Control
                   </Button>
                 </Link>
-                <Link href="/admin/sales-overview">
+                <Link href="/admin/operational-overview">
                   <Button variant="outline" className="bg-white/10 text-white border-white/20 font-bold hover:bg-white/20 mt-4">
-                    Sales Overview
+                    Operational Overview
                   </Button>
                 </Link>
               </div>

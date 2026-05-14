@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -29,7 +30,11 @@ import {
   Trash2,
   ChevronLeft,
   Check,
-  Timer
+  Timer,
+  Anchor,
+  PlayCircle,
+  XCircle,
+  Radio
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -99,6 +104,7 @@ function TripsContent() {
   const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
   const vesselsRef = useMemoFirebase(() => collection(db!, "vessels"), [db]);
   const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
+  const voyagesRef = useMemoFirebase(() => collection(db!, "voyages"), [db]);
 
   const { data: routes } = useCollection(routesRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
@@ -106,6 +112,7 @@ function TripsContent() {
   const { data: bookings } = useCollection(bookingsRef);
   const { data: vessels } = useCollection(vesselsRef);
   const { data: ports } = useCollection(portsRef);
+  const { data: voyageStatuses } = useCollection(voyagesRef);
 
   const [searchQuery, setSearchQuery] = useState("");
   const selectedOriginPort = searchParams.get("originPortId") || "all";
@@ -173,10 +180,14 @@ function TripsContent() {
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
       const waitlistLimit = schedule.waitlistLimit || 0;
       
+      const voyageId = `${schedule.id}_${targetDate}`;
+      const voyageInfo = voyageStatuses?.find(v => v.id === voyageId);
+
       return {
         ...schedule,
         route,
         vessel,
+        voyageInfo,
         availability: capacity - usedSeats,
         waitlistCapacity: (capacity + waitlistLimit) - usedSeats,
         isWaitlistOnly: usedSeats >= capacity && usedSeats < (capacity + waitlistLimit),
@@ -184,7 +195,7 @@ function TripsContent() {
         estimatedDurationMinutes: route?.estimatedDurationMinutes || 0
       };
     });
-  }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, searchDate, isMounted, phtState]);
+  }, [schedules, routes, vessels, ports, bookings, voyageStatuses, searchQuery, selectedOriginPort, searchDate, isMounted, phtState]);
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -228,7 +239,7 @@ function TripsContent() {
 
       setDocumentNonBlocking(bookingRef, {
         id: newId,
-        userId: user?.uid || null, // Associate with logged-in user if available
+        userId: user?.uid || null,
         scheduleId: selectedSchedule.id,
         routeId: selectedSchedule.routeId,
         travelDate: targetDate,
@@ -261,6 +272,17 @@ function TripsContent() {
   }, 0);
 
   const isDetailsValid = passengers.every(p => p.passengerName && p.fareId && p.passengerDob && p.emergencyContact && p.passengerContact && p.passengerEmail);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'On-time': return <Badge className="bg-green-600 text-white gap-1 text-[9px] h-5"><CheckCircle2 className="h-3 w-3" /> On-time</Badge>;
+      case 'Delayed': return <Badge className="bg-orange-500 text-white gap-1 text-[9px] h-5"><Timer className="h-3 w-3" /> Delayed</Badge>;
+      case 'Departed': return <Badge className="bg-blue-600 text-white gap-1 text-[9px] h-5"><PlayCircle className="h-3 w-3" /> Departed</Badge>;
+      case 'Arrived': return <Badge className="bg-indigo-600 text-white gap-1 text-[9px] h-5"><Anchor className="h-3 w-3" /> Arrived</Badge>;
+      case 'Cancelled': return <Badge className="bg-destructive text-white gap-1 text-[9px] h-5"><XCircle className="h-3 w-3" /> Cancelled</Badge>;
+      default: return null;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background font-body">
@@ -303,9 +325,12 @@ function TripsContent() {
                 key={trip.id} 
                 className={cn(
                   "group relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 bg-white cursor-pointer",
-                  trip.isFull && "opacity-60 cursor-not-allowed"
+                  (trip.isFull || trip.voyageInfo?.status === 'Cancelled' || trip.voyageInfo?.status === 'Arrived') && "opacity-60 cursor-not-allowed"
                 )}
-                onClick={() => !trip.isFull && handleBookNow(trip)}
+                onClick={() => {
+                   if (trip.isFull || trip.voyageInfo?.status === 'Cancelled' || trip.voyageInfo?.status === 'Arrived') return;
+                   handleBookNow(trip);
+                }}
               >
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -314,7 +339,7 @@ function TripsContent() {
                         <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
                           {trip.vessel?.type || "Standard"}
                         </Badge>
-                        <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">{trip.type} Service</span>
+                        {trip.voyageInfo?.status && getStatusBadge(trip.voyageInfo.status)}
                         <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-primary/50 uppercase ml-auto sm:ml-0">
                            <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {trip.tripCode}
                         </div>
@@ -342,25 +367,32 @@ function TripsContent() {
                         </div>
                       </div>
 
-                      <div className="pt-2 flex flex-wrap items-center gap-4 sm:gap-6 text-[11px] sm:text-sm text-muted-foreground border-t border-dashed">
-                        <div className="flex items-center gap-1.5">
-                          <Ship className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
-                          <span className="font-medium">{trip.vessel?.name || "TBA"}</span>
+                      <div className="pt-2 flex flex-wrap items-center justify-between gap-4 sm:gap-6 text-[11px] sm:text-sm text-muted-foreground border-t border-dashed">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <Ship className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
+                            <span className="font-medium">{trip.vessel?.name || "TBA"}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
+                            {trip.availability > 0 ? (
+                              <span className={cn("font-bold", trip.availability < 10 ? "text-orange-500" : "text-primary")}>
+                                {trip.availability} seats left
+                              </span>
+                            ) : trip.isWaitlistOnly ? (
+                              <span className="text-orange-600 font-bold flex items-center gap-1">
+                                <ListOrdered className="h-3 w-3 sm:h-4 sm:w-4" /> Waitlist Open
+                              </span>
+                            ) : (
+                              <span className="text-destructive font-black uppercase text-[10px]">Fully Booked</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
-                          {trip.availability > 0 ? (
-                            <span className={cn("font-bold", trip.availability < 10 ? "text-orange-500" : "text-primary")}>
-                              {trip.availability} seats left
-                            </span>
-                          ) : trip.isWaitlistOnly ? (
-                            <span className="text-orange-600 font-bold flex items-center gap-1">
-                              <ListOrdered className="h-3 w-3 sm:h-4 sm:w-4" /> Waitlist Open
-                            </span>
-                          ) : (
-                            <span className="text-destructive font-black uppercase text-[10px]">Fully Booked</span>
-                          )}
-                        </div>
+                        {trip.voyageInfo?.remarks && (
+                           <div className="flex items-center gap-1 text-[10px] text-orange-600 font-bold italic bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100">
+                             <Radio className="h-2.5 w-2.5" /> {trip.voyageInfo.remarks}
+                           </div>
+                        )}
                       </div>
                     </div>
 

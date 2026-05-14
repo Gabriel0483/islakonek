@@ -196,6 +196,23 @@
       },
       "required": ["id", "tripCode", "routeId", "departureTime", "type", "passengerCapacity"]
     },
+    "VoyageStatus": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "VoyageStatus",
+      "type": "object",
+      "description": "Real-time status tracking for a specific schedule on a specific date.",
+      "properties": {
+        "id": { "type": "string", "description": "Format: scheduleId_YYYY-MM-DD" },
+        "scheduleId": { "type": "string" },
+        "travelDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Scheduled", "On-time", "Delayed", "Departed", "Arrived", "Cancelled"] },
+        "remarks": { "type": "string" },
+        "actualDeparture": { "type": "string", "format": "date-time" },
+        "actualArrival": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "scheduleId", "travelDate", "status"]
+    },
     "Booking": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Booking",
@@ -203,6 +220,7 @@
       "description": "Represents a ticket booking made at the desk or online.",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string" },
         "scheduleId": { "type": "string" },
         "routeId": { "type": "string" },
         "fareId": { "type": "string" },
@@ -216,6 +234,7 @@
         "finalFare": { "type": "number" },
         "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled", "Refunded"] },
         "bookingSource": { "type": "string", "enum": ["Desk", "Public"] },
+        "boardingSequenceNumber": { "type": "number" },
         "rebookedFromId": { "type": "string", "description": "Original booking ID if this is a rebooked ticket." },
         "penaltyFees": { "type": "number", "default": 0 },
         "isFeeWaived": { "type": "boolean", "default": false },
@@ -237,12 +256,13 @@
         "familyMembers": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "fullName": { "type": "string" },
-              "birthDate": { "type": "string", "format": "date" },
-              "emergencyContact": { "type": "string" }
+            "object": {
+              "properties": {
+                "id": { "type": "string" },
+                "fullName": { "type": "string" },
+                "birthDate": { "type": "string", "format": "date" },
+                "emergencyContact": { "type": "string" }
+              }
             }
           }
         },
@@ -317,6 +337,16 @@
             "$ref": "#/backend/entities/TripSchedule"
           },
           "description": "Daily and special trip schedules for maritime routes."
+        }
+      },
+      {
+        "path": "/voyages/{voyageId}",
+        "definition": {
+          "entityName": "VoyageStatus",
+          "schema": {
+            "$ref": "#/backend/entities/VoyageStatus"
+          },
+          "description": "Date-specific status tracking for voyages."
         }
       },
       {

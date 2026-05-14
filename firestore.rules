@@ -1,8 +1,8 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 3.2
- * Update: Refined User Profile management permissions for SuperAdmin and Owners.
+ * Version: 3.8
+ * Update: Added VoyageStatus management for real-time voyage instance control.
  */
 
 rules_version = '2';
@@ -15,22 +15,23 @@ service cloud.firestore {
              request.auth.token.email == 'rielmagpantay@gmail.com';
     }
 
-    // Ports, Routes, Fares, Vessels, Maintenance, Schedules: Public read, Admin write
+    // Ports, Routes, Fares, Vessels, Maintenance, Schedules, Voyages: Public read, Admin write
     match /ports/{portId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /routes/{routeId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /fares/{fareId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /vessels/{vesselId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /maintenance/{recordId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /schedules/{scheduleId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /voyages/{voyageId} { allow read: if true; allow write: if isSuperAdmin(); }
 
-    // Bookings: Owners can read/write their own, Admin can read/write all
+    // Bookings: Open for MVP desk/public operations (in production should be restricted)
     match /bookings/{bookingId} {
       allow read, write: if true;
     }
 
     // User Profiles:
-    // - Authenticated users can read profiles to support manifest lookups and dashboard logic.
-    // - Users can manage (write) their own profile document if their UID matches the document ID.
+    // - Authenticated users can read profiles for manifest lookups.
+    // - Users can manage (write) their own profile document.
     // - SuperAdmin has explicit management authority over all profile documents.
     match /users/{userId} {
       allow read: if request.auth != null;

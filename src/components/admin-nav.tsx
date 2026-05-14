@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -18,7 +19,8 @@ import {
   Activity,
   LogOut,
   User,
-  TrendingUp
+  TrendingUp,
+  Radio
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -36,11 +38,15 @@ import { signOut } from "firebase/auth";
 
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
-  { label: "Sales", icon: TrendingUp, href: "/admin/sales-overview" },
-  { label: "Ops", icon: Activity, href: "/admin/operational-overview" },
+  { label: "Voyages", icon: Radio, href: "/admin/voyages" },
   { label: "Boarding", icon: Scan, href: "/admin/boarding" },
   { label: "Desk", icon: Ticket, href: "/admin/bookings" },
   { label: "Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },
+];
+
+const analyticItems = [
+  { label: "Sales", icon: TrendingUp, href: "/admin/sales-overview" },
+  { label: "Ops", icon: Activity, href: "/admin/operational-overview" },
 ];
 
 const configItems = [
@@ -76,6 +82,20 @@ export function AdminNav() {
           
           <div className="hidden lg:flex items-center gap-1">
             {menuItems.map((item) => (
+              <Link 
+                key={item.href} 
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-colors",
+                  pathname === item.href ? "bg-accent text-primary" : "hover:bg-white/10"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            ))}
+            <div className="h-4 w-px bg-white/20 mx-2" />
+            {analyticItems.map((item) => (
               <Link 
                 key={item.href} 
                 href={item.href}
@@ -127,6 +147,15 @@ export function AdminNav() {
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Operations</DropdownMenuLabel>
                   {menuItems.map(item => (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link href={item.href} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" /> {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Analytics</DropdownMenuLabel>
+                  {analyticItems.map(item => (
                     <DropdownMenuItem key={item.href} asChild>
                       <Link href={item.href} className="flex items-center gap-2">
                         <item.icon className="h-4 w-4" /> {item.label}
