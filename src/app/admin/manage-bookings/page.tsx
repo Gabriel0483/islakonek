@@ -94,7 +94,7 @@ export default function ManageBookingsPage() {
 
   const bookingsRef = useMemoFirebase(() => {
     if (!db) return null;
-    // Limit to 300 to keep the snapshot listener manageable
+    // Limit to 300 recent records for operational efficiency
     return query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(300));
   }, [db]);
 
@@ -179,7 +179,6 @@ export default function ManageBookingsPage() {
   const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
-  // Actions
   const handleOpenViewDetails = (booking: any) => {
     setSelectedBooking(booking);
     setIsViewDetailsOpen(true);
@@ -276,7 +275,7 @@ export default function ManageBookingsPage() {
       setTimeout(() => {
         setSelectedBooking((prev: any) => ({ ...prev, ...updateData }));
         setIsBoardingPassOpen(true);
-      }, 100);
+      }, 150);
     }
   };
 
@@ -335,10 +334,9 @@ export default function ManageBookingsPage() {
     if (!db || !selectedBooking) return;
     
     const idToDelete = selectedBooking.id;
-    // Close the dialog first to ensure Radix UI cleans up the modal overlay before re-render
+    // Safe transition: Close dialog first
     setIsDeleteConfirmOpen(false);
     
-    // Slight delay to allow the dialog animation to complete before database sync triggers a list update
     setTimeout(() => {
       const bookingRef = doc(db, "bookings", idToDelete);
       deleteDocumentNonBlocking(bookingRef);

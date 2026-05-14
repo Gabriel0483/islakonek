@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore'
+import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -33,12 +33,21 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  // Safe initialization of Firestore to avoid "already initialized" errors
+  let firestore: Firestore;
+  try {
+    firestore = initializeFirestore(firebaseApp, {
+      experimentalForceLongPolling: true,
+    });
+  } catch (e) {
+    // If already initialized, just get the existing instance
+    firestore = getFirestore(firebaseApp);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: initializeFirestore(firebaseApp, {
-      experimentalForceLongPolling: true,
-    })
+    firestore
   };
 }
 
