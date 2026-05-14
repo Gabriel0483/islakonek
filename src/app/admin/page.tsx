@@ -76,7 +76,7 @@ export default function AdminDashboard() {
       icon: Activity,
       link: "/admin/operational-overview",
       color: "text-blue-500",
-      count: "System Stats"
+      count: "Operational Stats"
     },
     {
       title: "Boarding Mode",

@@ -118,7 +118,7 @@ export default function OperationalOverviewPage() {
       <main className="p-6 space-y-8 container mx-auto">
         <section>
           <div className="mb-6">
-            <h2 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">System Statistics</h2>
+            <h2 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Operational Statistics</h2>
             <p className="text-sm text-muted-foreground">High-level overview of maritime infrastructure and operations.</p>
           </div>
 
