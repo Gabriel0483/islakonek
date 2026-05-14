@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Ship, LayoutDashboard, Menu, User, LogOut, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +18,13 @@ import { signOut } from "firebase/auth";
 export function Navbar() {
   const { user } = useUser();
   const auth = useAuth();
+  const router = useRouter();
 
-  const handleLogout = () => {
-    if (auth) signOut(auth);
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push("/login");
+    }
   };
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';

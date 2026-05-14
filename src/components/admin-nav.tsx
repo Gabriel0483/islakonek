@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   Ship, 
   LayoutDashboard, 
@@ -51,9 +51,13 @@ const configItems = [
 export function AdminNav() {
   const pathname = usePathname();
   const auth = useAuth();
+  const router = useRouter();
 
-  const handleLogout = () => {
-    if (auth) signOut(auth);
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push("/login/admin");
+    }
   };
   
   return (
