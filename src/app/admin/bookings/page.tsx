@@ -314,9 +314,6 @@ export default function DeskBookingsPage() {
                 <CardTitle>Counter Sales</CardTitle>
                 <CardDescription className="text-primary-foreground/70">Process tickets for walk-in passengers.</CardDescription>
               </div>
-              <Button onClick={() => setIsNewBookingOpen(true)} className="bg-accent text-primary font-bold hover:bg-accent/90">
-                <Plus className="h-4 w-4 mr-2" /> New Ticket Group
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
