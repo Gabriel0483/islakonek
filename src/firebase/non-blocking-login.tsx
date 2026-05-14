@@ -1,29 +1,44 @@
 'use client';
 import {
-  Auth, // Import Auth type for type hinting
+  Auth,
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  // Assume getAuth and app are initialized elsewhere
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  updateProfile
 } from 'firebase/auth';
 
 /** Initiate anonymous sign-in (non-blocking). */
 export function initiateAnonymousSignIn(authInstance: Auth): void {
-  // CRITICAL: Call signInAnonymously directly. Do NOT use 'await signInAnonymously(...)'.
   signInAnonymously(authInstance);
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
 }
 
-/** Initiate email/password sign-up (non-blocking). */
-export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): void {
-  // CRITICAL: Call createUserWithEmailAndPassword directly. Do NOT use 'await createUserWithEmailAndPassword(...)'.
-  createUserWithEmailAndPassword(authInstance, email, password);
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
+/** Initiate email/password sign-up (non-blocking) with verification. */
+export function initiateEmailSignUp(authInstance: Auth, email: string, password: string, displayName: string): void {
+  createUserWithEmailAndPassword(authInstance, email, password)
+    .then((userCredential) => {
+      // Send verification email immediately
+      sendEmailVerification(userCredential.user);
+      
+      // Set the display name in Auth
+      if (displayName) {
+        updateProfile(userCredential.user, { displayName });
+      }
+    })
+    .catch((error) => {
+      console.error("Sign-up error:", error);
+    });
 }
 
 /** Initiate email/password sign-in (non-blocking). */
 export function initiateEmailSignIn(authInstance: Auth, email: string, password: string): void {
-  // CRITICAL: Call signInWithEmailAndPassword directly. Do NOT use 'await signInWithEmailAndPassword(...)'.
   signInWithEmailAndPassword(authInstance, email, password);
-  // Code continues immediately. Auth state change is handled by onAuthStateChanged listener.
+}
+
+/** Initiate password reset email (non-blocking). */
+export function initiatePasswordReset(authInstance: Auth, email: string): void {
+  sendPasswordResetEmail(authInstance, email).catch((error) => {
+    console.error("Password reset error:", error);
+  });
 }
