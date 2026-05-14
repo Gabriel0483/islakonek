@@ -1,24 +1,22 @@
-
 "use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { 
-  Ship, 
-  MapPin, 
-  Waypoints, 
-  Banknote, 
-  Wrench, 
-  CalendarDays, 
   ArrowRight,
   LayoutGrid,
-  Ticket,
-  ClipboardList,
   Lock,
   Loader2,
   Scan,
-  Activity
+  Activity,
+  MapPin,
+  Waypoints,
+  Banknote,
+  Wrench,
+  CalendarDays,
+  Ticket,
+  ClipboardList
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser } from "@/firebase";
@@ -33,7 +31,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push("/admin/login");
+      router.push("/login/admin");
     }
   }, [user, isUserLoading, router]);
 
@@ -61,7 +59,7 @@ export default function AdminDashboard() {
             <Link href="/" className="block">
               <Button variant="outline" className="w-full">Return to Public Site</Button>
             </Link>
-            <Link href="/admin/login" className="block">
+            <Link href="/login/admin" className="block">
               <Button variant="link" className="text-xs text-muted-foreground">Sign in with a staff account</Button>
             </Link>
           </div>
