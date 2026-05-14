@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useAuth, useUser } from "@/firebase";
 import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -107,14 +106,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          <div className="mt-8 text-center">
-            <div className="pt-4 border-t border-dashed">
-              <Link href="/login/admin" className="text-[10px] font-black uppercase text-accent hover:underline tracking-widest">
-                Internal Staff Access
-              </Link>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
