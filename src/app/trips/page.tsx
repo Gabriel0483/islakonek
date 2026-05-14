@@ -35,10 +35,11 @@ import {
   PlayCircle,
   XCircle,
   Radio,
-  BarChart
+  BarChart,
+  UserPlus
 } from "lucide-react";
 import { collection, doc, query, where } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { 
   Dialog, 
@@ -102,6 +103,13 @@ function TripsContent() {
 
   const searchDate = searchParams.get("date");
   const targetDate = useMemo(() => searchDate || phtState?.date, [searchDate, phtState?.date]);
+
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile } = useDoc(profileRef);
 
   const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
   const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
@@ -235,6 +243,42 @@ function TripsContent() {
     const updated = [...passengers];
     updated[index] = { ...updated[index], [field]: value };
     setPassengers(updated);
+  };
+
+  const handleApplyMe = (index: number) => {
+    if (!profile) return;
+    const updated = [...passengers];
+    updated[index] = {
+      ...updated[index],
+      passengerName: profile.displayName || "",
+      passengerEmail: profile.email || "",
+      passengerContact: profile.phoneNumber || ""
+    };
+    setPassengers(updated);
+  };
+
+  const handleApplyFamily = (familyMember: any) => {
+    // Look for first empty slot or append
+    const emptyIndex = passengers.findIndex(p => !p.passengerName);
+    if (emptyIndex !== -1) {
+      const updated = [...passengers];
+      updated[emptyIndex] = {
+        ...updated[emptyIndex],
+        passengerName: familyMember.fullName,
+        passengerDob: familyMember.birthDate,
+        emergencyContact: familyMember.emergencyContact
+      };
+      setPassengers(updated);
+    } else {
+      setPassengers([...passengers, {
+        passengerName: familyMember.fullName,
+        passengerDob: familyMember.birthDate,
+        passengerEmail: "",
+        passengerContact: "",
+        emergencyContact: familyMember.emergencyContact,
+        fareId: ""
+      }]);
+    }
   };
 
   const handleProcessBooking = () => {
@@ -486,6 +530,33 @@ function TripsContent() {
                         <p className="text-[10px] sm:text-xs text-orange-700 leading-relaxed">
                           Primary capacity has been reached. You are joining the queue for <span className="font-bold">{selectedSchedule.waitlistSpotsRemaining} remaining</span> waitlist slots.
                         </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {profile && (
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase text-accent tracking-[0.2em]">Profile Shortcuts</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-9 gap-2 border-accent/20 bg-accent/5 text-primary font-bold text-xs"
+                          onClick={() => handleApplyMe(0)}
+                        >
+                          <User className="h-3.5 w-3.5" /> Just Me
+                        </Button>
+                        {profile.familyMembers?.map((member: any) => (
+                          <Button 
+                            key={member.id}
+                            variant="outline" 
+                            size="sm" 
+                            className="h-9 gap-2 border-primary/20 bg-primary/5 text-primary font-bold text-xs"
+                            onClick={() => handleApplyFamily(member)}
+                          >
+                            <UserPlus className="h-3.5 w-3.5" /> {member.fullName.split(' ')[0]}
+                          </Button>
+                        ))}
                       </div>
                     </div>
                   )}
