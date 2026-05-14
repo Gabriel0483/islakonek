@@ -111,11 +111,11 @@ export default function DeskBookingsPage() {
     return collection(db, "users");
   }, [db]);
 
-  const { data: routes } = useCollection(routesRef);
-  const { data: schedules } = useCollection(schedulesRef);
-  const { data: fares } = useCollection(faresRef);
-  const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
-  const { data: vessels } = useCollection(vesselsRef);
+  const { data: routes } = useCollection(usersRef ? routesRef : null);
+  const { data: schedules } = useCollection(usersRef ? schedulesRef : null);
+  const { data: fares } = useCollection(usersRef ? faresRef : null);
+  const { data: bookings, isLoading: isBookingsLoading } = useCollection(usersRef ? bookingsRef : null);
+  const { data: vessels } = useCollection(usersRef ? vesselsRef : null);
   const { data: registeredUsers } = useCollection(usersRef);
 
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
@@ -470,7 +470,6 @@ export default function DeskBookingsPage() {
             <DialogTitle className="flex items-center gap-2">
               <Ticket className="h-5 w-5 text-accent" /> Desk Issuance (Multi-Passenger)
             </DialogTitle>
-            <DialogDescription>Process tickets for walks-in groups on active trips.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[80vh] pr-4">
             <div className="grid gap-6 py-4">
@@ -568,7 +567,6 @@ export default function DeskBookingsPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                         <CardContent className="p-4 space-y-4">
-                          {/* Profile Lookup moved to top of each passenger card */}
                           <div className="space-y-2 relative">
                             <Label className="text-xs font-bold uppercase text-primary flex items-center gap-1.5">
                               <Search className="h-3 w-3" /> Rapid Profile Lookup
