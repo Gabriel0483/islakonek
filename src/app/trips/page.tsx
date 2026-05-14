@@ -357,10 +357,6 @@ function TripsContent() {
                             <span className="text-destructive font-black uppercase text-[10px]">Fully Booked</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Timer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
-                          <span className="font-bold text-primary/70">{trip.estimatedDurationMinutes} mins voyage</span>
-                        </div>
                       </div>
                     </div>
 
