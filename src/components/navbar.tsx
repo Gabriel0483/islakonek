@@ -64,6 +64,9 @@ export function Navbar() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
                   <DropdownMenuItem asChild>
+                    <Link href="/profile">Manage Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/profile">My Bookings</Link>
                   </DropdownMenuItem>
                   {isSuperAdmin && (
@@ -107,7 +110,10 @@ export function Navbar() {
               {user ? (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">My Account</Link>
+                    <Link href="/profile">Manage Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">My Bookings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     Log Out
