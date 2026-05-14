@@ -282,7 +282,7 @@ function TripsContent() {
           </div>
 
           <div className="flex items-center justify-between text-[10px] sm:text-sm text-muted-foreground py-2 border-b">
-            <p>Showing <span className="text-foreground font-bold">{filteredTrips.length}</span> voyages</p>
+            <p>Showing <span className="text-foreground font-bold">{filteredTrips.length}</span> trips</p>
           </div>
 
           <div className="space-y-4">
