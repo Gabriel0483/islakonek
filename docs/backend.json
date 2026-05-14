@@ -211,7 +211,7 @@
         "passengerDob": { "type": "string", "format": "date" },
         "passengerEmail": { "type": "string", "format": "email" },
         "passengerContact": { "type": "string", "description": "Mobile number of the passenger." },
-        "emergencyContact": { "type": "string", "description": "Name and number for emergency cases." },
+        "emergencyContact": { "type": "string", "description": "Emergency mobile number." },
         "segmentLabel": { "type": "string" },
         "finalFare": { "type": "number" },
         "status": { "type": "string", "enum": ["Reserved", "Waitlisted", "Confirmed", "Used", "Suspended", "Auto-cancelled", "Refunded"] },
