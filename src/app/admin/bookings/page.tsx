@@ -108,10 +108,11 @@ export default function DeskBookingsPage() {
   useEffect(() => {
     setIsMounted(true);
     const today = new Date();
-    const sixtyDaysFromNow = addDays(today, 59);
+    // Rolling 10-day window: Today + 9 days
+    const tenDaysFromNow = addDays(today, 9);
     setDateRange({ 
         min: format(today, "yyyy-MM-dd"), 
-        max: format(sixtyDaysFromNow, "yyyy-MM-dd") 
+        max: format(tenDaysFromNow, "yyyy-MM-dd") 
     });
   }, []);
 
@@ -525,7 +526,7 @@ export default function DeskBookingsPage() {
                                 <Label className="text-[10px] font-black uppercase text-accent flex items-center gap-1.5 tracking-wider">
                                   <Search className="h-3 w-3" /> Rapid Profile Lookup
                                 </Label>
-                                <Input 
+                                <input 
                                   placeholder="Search by name or mobile..." 
                                   value={activeLookupIndex === index ? lookupSearch : ''}
                                   onChange={(e) => {
@@ -533,7 +534,7 @@ export default function DeskBookingsPage() {
                                     setActiveLookupIndex(index);
                                   }}
                                   onFocus={() => setActiveLookupIndex(index)}
-                                  className="bg-white border-accent/20 h-11 text-sm focus-visible:ring-accent"
+                                  className="flex h-11 w-full rounded-md border border-accent/20 bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                                 {activeLookupIndex === index && lookupSearch.length > 1 && (
                                   <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
