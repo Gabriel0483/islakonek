@@ -11,14 +11,15 @@ import {
   Waypoints, 
   Banknote, 
   Wrench, 
-  CalendarDays,
+  CalendarDays, 
   ArrowRight,
   LayoutGrid,
   Ticket,
   ClipboardList,
   Lock,
   Loader2,
-  Scan
+  Scan,
+  Activity
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -103,17 +104,17 @@ export default function AdminDashboard() {
     );
   }
 
-  const stats = [
-    { label: "Active Ports", value: ports?.length || 0, icon: MapPin, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "Routes Defined", value: routes?.length || 0, icon: Waypoints, color: "text-accent", bg: "bg-accent/10" },
-    { label: "Bookings Total", value: bookings?.length || 0, icon: Ticket, color: "text-green-500", bg: "bg-green-500/10" },
-    { label: "Fleet Size", value: vessels?.length || 0, icon: Ship, color: "text-primary", bg: "bg-primary/10" }
+  const statusTiles = [
+    { label: "Active Ports", value: ports?.length || 0, icon: MapPin, color: "text-blue-500", bg: "bg-blue-500/10", description: "Configured maritime terminals." },
+    { label: "Routes Defined", value: routes?.length || 0, icon: Waypoints, color: "text-accent", bg: "bg-accent/10", description: "Active island connections." },
+    { label: "Total Bookings", value: bookings?.length || 0, icon: Ticket, color: "text-green-500", bg: "bg-green-500/10", description: "Confirmed passenger records." },
+    { label: "Fleet Size", value: vessels?.length || 0, icon: Ship, color: "text-primary", bg: "bg-primary/10", description: "Operational maritime vessels." }
   ];
 
   const managementModules = [
     {
       title: "Boarding Mode",
-      description: "Real-time passenger check-in and manifest boarding for active trips.",
+      description: "Real-time passenger check-in and manifest boarding.",
       icon: Scan,
       link: "/admin/boarding",
       color: "text-accent",
@@ -121,7 +122,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Desk Bookings",
-      description: "Counter ticket sales and instant passenger check-in.",
+      description: "Counter ticket sales and rapid profile lookup.",
       icon: Ticket,
       link: "/admin/bookings",
       color: "text-green-600",
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Manage Bookings",
-      description: "Full manifest review, reservation confirmation, and cancellations.",
+      description: "Full manifest review, rebooking, and cancellations.",
       icon: ClipboardList,
       link: "/admin/manage-bookings",
       color: "text-indigo-600",
@@ -137,7 +138,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Port Registry",
-      description: "Manage maritime terminals and port facilities across the islands.",
+      description: "Terminal and port facility management.",
       icon: MapPin,
       link: "/admin/ports",
       color: "text-blue-500",
@@ -145,7 +146,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Route Management",
-      description: "Establish shipping routes connecting ports with specific demographics.",
+      description: "Establish shipping routes and demographics.",
       icon: Waypoints,
       link: "/admin/routes",
       color: "text-accent",
@@ -153,7 +154,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Fare Management",
-      description: "Configure pricing rules, VAT status, and discount tiers for segments.",
+      description: "Pricing rules, VAT, and discount tiers.",
       icon: Banknote,
       link: "/admin/fares",
       color: "text-green-500",
@@ -161,7 +162,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Fleet & Maintenance",
-      description: "Registry for your maritime vessels and maintenance scheduling logs.",
+      description: "Vessel registry and maintenance logs.",
       icon: Wrench,
       link: "/admin/fleet",
       color: "text-orange-500",
@@ -169,7 +170,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Trip Schedules",
-      description: "Coordinate daily and special peak-season trips for active routes.",
+      description: "Daily and special peak-season timetables.",
       icon: CalendarDays,
       link: "/admin/schedules",
       color: "text-primary",
@@ -184,38 +185,41 @@ export default function AdminDashboard() {
       <AdminNav />
       <main className="flex-1 flex flex-col gap-8 p-6 container mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Operational Overview</h1>
+          <h1 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Admin Dashboard</h1>
           <div className="flex items-center gap-2">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase mr-2 hidden sm:block">Logged in as: <span className="text-primary">{user?.email}</span></div>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase mr-2 hidden sm:block">SuperAdmin: <span className="text-primary">{user?.email}</span></div>
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="System Online" />
           </div>
         </div>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, i) => (
-            <Card key={i} className="border-none shadow-sm bg-white group transition-all hover:shadow-md">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className={`${stat.bg} ${stat.color} p-3 rounded-xl transition-transform group-hover:scale-110`}>
-                  <stat.icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-black text-primary">{stat.value}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
+        <section className="space-y-6">
+          <div className="flex items-center gap-2 mb-2">
             <LayoutGrid className="h-5 w-5 text-accent" />
-            <h2 className="text-xl font-bold font-headline">Operations Hub</h2>
+            <h2 className="text-xl font-bold font-headline">Operational Overview</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Status Tiles */}
+            {statusTiles.map((tile, i) => (
+              <Card key={`stat-${i}`} className="border-none shadow-sm bg-white overflow-hidden group">
+                <CardHeader className="pb-2">
+                  <div className={`${tile.bg} ${tile.color} p-2 w-fit rounded-lg mb-2 group-hover:scale-110 transition-transform`}>
+                    <tile.icon className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="text-2xl font-black text-primary">{tile.value}</CardTitle>
+                  <p className="text-xs font-bold uppercase text-muted-foreground">{tile.label}</p>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                    {tile.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Management Modules */}
             {managementModules.map((module, i) => (
-              <Link href={module.link} key={i}>
+              <Link href={module.link} key={`module-${i}`}>
                 <Card className="h-full border-none shadow-sm bg-white hover:ring-2 hover:ring-accent/50 transition-all group relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-3 opacity-5">
                      <module.icon className="h-24 w-24 -rotate-12 translate-x-8 translate-y-8" />
@@ -234,7 +238,7 @@ export default function AdminDashboard() {
                       {typeof module.count === 'number' ? `${module.count} records` : module.count}
                     </span>
                     <div className="flex items-center gap-1 text-xs font-bold text-accent group-hover:gap-2 transition-all">
-                      Configure <ArrowRight className="h-3 w-3" />
+                      Open <ArrowRight className="h-3 w-3" />
                     </div>
                   </CardContent>
                 </Card>
@@ -244,14 +248,14 @@ export default function AdminDashboard() {
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-12">
-          <Card className="md:col-span-2 border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden p-8">
+          <Card className="md:col-span-2 border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden p-8 flex items-center">
             <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Ship className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
+              <Activity className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
             </div>
             <div className="relative z-10 space-y-4 max-w-2xl">
-              <h2 className="text-3xl font-black font-headline tracking-tight">SuperAdmin Operations</h2>
+              <h2 className="text-3xl font-black font-headline tracking-tight uppercase">Maritime Command</h2>
               <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                Welcome back, <span className="font-bold underline">rielmagpantay@gmail.com</span>. Your maritime dashboard is active with full configuration privileges.
+                Your command center is fully operational. Manage your fleet, terminals, and manifests in real-time.
               </p>
             </div>
           </Card>
@@ -260,7 +264,7 @@ export default function AdminDashboard() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-destructive" />
-                Fleet Status
+                Quick Alerts
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -282,9 +286,9 @@ export default function AdminDashboard() {
               
               <div className="pt-4 border-t space-y-2">
                  <div className="flex justify-between text-xs font-medium">
-                    <span className="text-muted-foreground">Sync State:</span>
-                    <span className="text-green-600 flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Real-time Active
+                    <span className="text-muted-foreground">Gateway Status:</span>
+                    <span className="text-green-600 flex items-center gap-1 font-black">
+                      <CheckCircle2 className="h-3 w-3" /> ONLINE
                     </span>
                  </div>
               </div>
