@@ -406,8 +406,8 @@ function TripsContent() {
             </div>
           </DialogHeader>
 
-          <ScrollArea className="flex-1">
-            <div className="p-4 sm:p-6">
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="p-4 sm:p-6 pb-20">
               {bookingStep === 1 && (
                 <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
                   {selectedSchedule?.isWaitlistOnly && (
@@ -524,7 +524,7 @@ function TripsContent() {
               )}
 
               {bookingStep === 2 && (
-                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-12">
                   <div className="bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
                     <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-3 sm:mb-4">Voyage Review</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">

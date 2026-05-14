@@ -504,8 +504,8 @@ export default function DeskBookingsPage() {
             </div>
           </DialogHeader>
 
-          <ScrollArea className="flex-1">
-            <div className="p-4 sm:p-6 space-y-6 sm:space-y-8">
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 pb-20">
               {bookingStep === 1 && (
                 <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
                   <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 bg-secondary/5 p-3 sm:p-4 rounded-xl border">
@@ -711,7 +711,7 @@ export default function DeskBookingsPage() {
               )}
 
               {bookingStep === 2 && (
-                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-12">
                   <div className="bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
                     <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-3 sm:mb-4">Voyage Summary</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
