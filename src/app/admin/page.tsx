@@ -84,7 +84,7 @@ export default function AdminDashboard() {
       icon: Scan,
       link: "/admin/boarding",
       color: "text-accent",
-      count: "Live Ops"
+      count: "Boarding"
     },
     {
       title: "Desk Bookings",
