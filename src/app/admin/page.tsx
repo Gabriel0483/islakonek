@@ -80,7 +80,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Boarding Mode",
-      description: "Real-time passenger check-in and manifest boarding.",
+      description: "Real-time passenger boarding and final manifest.",
       icon: Scan,
       link: "/admin/boarding",
       color: "text-accent",
