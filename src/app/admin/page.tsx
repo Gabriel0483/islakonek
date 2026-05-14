@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -32,7 +33,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push("/login");
+      router.push("/admin/login");
     }
   }, [user, isUserLoading, router]);
 
@@ -60,8 +61,8 @@ export default function AdminDashboard() {
             <Link href="/" className="block">
               <Button variant="outline" className="w-full">Return to Public Site</Button>
             </Link>
-            <Link href="/login" className="block">
-              <Button variant="link" className="text-xs text-muted-foreground">Sign in with a different account</Button>
+            <Link href="/admin/login" className="block">
+              <Button variant="link" className="text-xs text-muted-foreground">Sign in with a staff account</Button>
             </Link>
           </div>
         </Card>
