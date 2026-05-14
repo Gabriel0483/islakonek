@@ -44,9 +44,6 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-6">
-          <Link href="/trips" className="text-sm font-medium hover:text-accent transition-colors">
-            Find Trips
-          </Link>
           {isSuperAdmin && (
             <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5">
               <LayoutDashboard className="h-4 w-4" />
@@ -110,9 +107,6 @@ export function Navbar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href="/trips">Find Trips</Link>
-              </DropdownMenuItem>
               {isSuperAdmin && (
                 <DropdownMenuItem asChild>
                   <Link href="/admin">Admin Portal</Link>
