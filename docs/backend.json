@@ -234,6 +234,18 @@
         "displayName": { "type": "string" },
         "email": { "type": "string" },
         "phoneNumber": { "type": "string" },
+        "familyMembers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "fullName": { "type": "string" },
+              "birthDate": { "type": "string", "format": "date" },
+              "emergencyContact": { "type": "string" }
+            }
+          }
+        },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid"]
