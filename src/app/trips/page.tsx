@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -25,7 +24,9 @@ import {
   CheckCircle2,
   Calendar,
   Mail,
-  Heart
+  Heart,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -47,6 +48,14 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface PassengerForm {
+  passengerName: string;
+  passengerDob: string;
+  passengerEmail: string;
+  passengerContact: string;
+  fareId: string;
+}
 
 function TripsContent() {
   const searchParams = useSearchParams();
@@ -97,14 +106,15 @@ function TripsContent() {
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
-  const [bookingFormData, setBookingFormData] = useState({
+  
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [passengers, setPassengers] = useState<PassengerForm[]>([{
     passengerName: "",
     passengerDob: "",
     passengerEmail: "",
     passengerContact: "",
-    emergencyContact: "",
     fareId: ""
-  });
+  }]);
 
   const filteredTrips = useMemo(() => {
     if (!schedules || !routes || !isMounted || !phtState) return [];
@@ -169,55 +179,71 @@ function TripsContent() {
     setIsBookingOpen(true);
   };
 
+  const addPassenger = () => {
+    setPassengers([...passengers, {
+      passengerName: "",
+      passengerDob: "",
+      passengerEmail: "",
+      passengerContact: "",
+      fareId: ""
+    }]);
+  };
+
+  const removePassenger = (index: number) => {
+    if (passengers.length === 1) return;
+    setPassengers(passengers.filter((_, i) => i !== index));
+  };
+
+  const updatePassenger = (index: number, field: keyof PassengerForm, value: string) => {
+    const updated = [...passengers];
+    updated[index] = { ...updated[index], [field]: value };
+    setPassengers(updated);
+  };
+
   const handleProcessBooking = () => {
-    if (!db || !selectedSchedule || !bookingFormData.fareId || !bookingFormData.passengerName || !phtState) return;
+    if (!db || !selectedSchedule || !phtState || !emergencyContact) return;
 
-    const selectedFare = fares?.find(f => f.id === bookingFormData.fareId);
-    const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const timestamp = new Date().toISOString();
-    const bookingRef = doc(db, "bookings", newId);
     const targetDate = searchDate || phtState.date;
-
     const status = selectedSchedule.isWaitlistOnly ? 'Waitlisted' : 'Reserved';
 
-    setDocumentNonBlocking(bookingRef, {
-      id: newId,
-      scheduleId: selectedSchedule.id,
-      routeId: selectedSchedule.routeId,
-      travelDate: targetDate,
-      passengerName: bookingFormData.passengerName,
-      passengerDob: bookingFormData.passengerDob,
-      passengerEmail: bookingFormData.passengerEmail,
-      passengerContact: bookingFormData.passengerContact,
-      emergencyContact: bookingFormData.emergencyContact,
-      fareId: bookingFormData.fareId,
-      segmentLabel: selectedFare?.segmentLabel || "",
-      finalFare: selectedFare?.finalFare || 0,
-      status: status,
-      bookingSource: "Public",
-      createdAt: timestamp,
-      updatedAt: timestamp
-    }, { merge: true });
+    passengers.forEach(p => {
+      const selectedFare = fares?.find(f => f.id === p.fareId);
+      const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const timestamp = new Date().toISOString();
+      const bookingRef = doc(db, "bookings", newId);
+
+      setDocumentNonBlocking(bookingRef, {
+        id: newId,
+        scheduleId: selectedSchedule.id,
+        routeId: selectedSchedule.routeId,
+        travelDate: targetDate,
+        passengerName: p.passengerName,
+        passengerDob: p.passengerDob,
+        passengerEmail: p.passengerEmail,
+        passengerContact: p.passengerContact,
+        emergencyContact: emergencyContact,
+        fareId: p.fareId,
+        segmentLabel: selectedFare?.segmentLabel || "",
+        finalFare: selectedFare?.finalFare || 0,
+        status: status,
+        bookingSource: "Public",
+        createdAt: timestamp,
+        updatedAt: timestamp
+      }, { merge: true });
+    });
 
     setIsBookingOpen(false);
-    setBookingFormData({ 
-      passengerName: "", 
-      passengerDob: "", 
-      passengerEmail: "", 
-      passengerContact: "", 
-      emergencyContact: "", 
-      fareId: "" 
-    });
+    setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: "", passengerContact: "", fareId: "" }]);
+    setEmergencyContact("");
     
-    if (status === 'Waitlisted') {
-      alert(`You have been placed on the WAITLIST! Reservation ID: ${newId}.`);
-    } else {
-      alert(`Booking requested successfully! Your Reservation ID is ${newId}.`);
-    }
+    alert(`Successfully processed ${passengers.length} booking request(s)!`);
   };
 
   const availableFares = fares?.filter(f => f.routeId === selectedSchedule?.routeId);
-  const selectedFareDetails = fares?.find(f => f.id === bookingFormData.fareId);
+  const totalGroupFare = passengers.reduce((sum, p) => {
+    const fare = fares?.find(f => f.id === p.fareId);
+    return sum + (fare?.finalFare || 0);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-background font-body">
@@ -342,10 +368,10 @@ function TripsContent() {
       </div>
 
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[750px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Ticket className="h-5 w-5 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Secure Your Seat'}
+              <Ticket className="h-5 w-5 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Passenger Information'}
             </DialogTitle>
             <DialogDescription>
               Trip: <span className="font-bold text-primary">{selectedSchedule?.tripCode}</span> ({selectedSchedule?.route?.name})
@@ -358,101 +384,118 @@ function TripsContent() {
                   <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
                   <div>
                     <p className="text-sm font-bold text-orange-800">Trip is Full</p>
-                    <p className="text-xs text-orange-700">You are joining the waitlist. Your status will be 'Waitlisted'.</p>
+                    <p className="text-xs text-orange-700">You are joining the waitlist. Status will be 'Waitlisted'.</p>
                   </div>
                 </div>
               )}
 
               <section className="space-y-4">
-                <Label className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-accent" /> Passenger Information
+                <Label htmlFor="emergencyContact" className="flex items-center gap-1.5 font-bold">
+                  <Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number (Group)
                 </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="passengerName">Full Name</Label>
-                    <Input 
-                      id="passengerName" 
-                      value={bookingFormData.passengerName} 
-                      onChange={(e) => setBookingFormData({...bookingFormData, passengerName: e.target.value})}
-                      placeholder="Juan Dela Cruz"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="passengerDob">Date of Birth</Label>
-                    <Input 
-                      id="passengerDob" 
-                      type="date"
-                      value={bookingFormData.passengerDob} 
-                      onChange={(e) => setBookingFormData({...bookingFormData, passengerDob: e.target.value})}
-                    />
-                  </div>
-                </div>
+                <Input 
+                  id="emergencyContact" 
+                  value={emergencyContact} 
+                  onChange={(e) => setEmergencyContact(e.target.value)}
+                  placeholder="Maria Dela Cruz - 0917 123 4567"
+                />
+              </section>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="passengerEmail" className="flex items-center gap-1.5">
-                      <Mail className="h-3 w-3 text-muted-foreground" /> Email Address <span className="text-[10px] text-muted-foreground uppercase">(Optional)</span>
-                    </Label>
-                    <Input 
-                      id="passengerEmail" 
-                      type="email"
-                      value={bookingFormData.passengerEmail} 
-                      onChange={(e) => setBookingFormData({...bookingFormData, passengerEmail: e.target.value})}
-                      placeholder="juan@example.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="contact">Mobile Number</Label>
-                    <Input 
-                      id="contact" 
-                      value={bookingFormData.passengerContact} 
-                      onChange={(e) => setBookingFormData({...bookingFormData, passengerContact: e.target.value})}
-                      placeholder="0912 345 6789"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContact" className="flex items-center gap-1.5">
-                    <Heart className="h-3 w-3 text-destructive" /> Emergency Contact Number
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center justify-between">
+                   <Label className="flex items-center gap-2 font-bold">
+                    <Users className="h-4 w-4 text-accent" /> Passengers ({passengers.length})
                   </Label>
-                  <Input 
-                    id="emergencyContact" 
-                    value={bookingFormData.emergencyContact} 
-                    onChange={(e) => setBookingFormData({...bookingFormData, emergencyContact: e.target.value})}
-                    placeholder="Maria Dela Cruz - 0917 123 4567"
-                  />
+                  <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-2">
+                    <Plus className="h-4 w-4" /> Add Another Passenger
+                  </Button>
                 </div>
-              </section>
 
-              <section className="space-y-4 border-t pt-4">
-                <Label className="flex items-center gap-2">
-                  <Banknote className="h-4 w-4 text-accent" /> Select Passenger Type
-                </Label>
-                <div className="space-y-2">
-                  <Select value={bookingFormData.fareId} onValueChange={(val) => setBookingFormData({...bookingFormData, fareId: val})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose demographics for pricing" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableFares?.map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-6">
+                  {passengers.map((p, index) => (
+                    <Card key={index} className="relative bg-secondary/10 border-none shadow-none">
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute -top-3 -right-3 h-7 w-7 bg-white shadow-sm border rounded-full text-destructive hover:bg-white"
+                        onClick={() => removePassenger(index)}
+                        disabled={passengers.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <CardContent className="p-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Passenger #{index + 1} Name</Label>
+                            <Input 
+                              value={p.passengerName} 
+                              onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
+                              placeholder="Juan Dela Cruz"
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Date of Birth</Label>
+                            <Input 
+                              type="date"
+                              value={p.passengerDob} 
+                              onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
+                              className="bg-white"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email (Optional)</Label>
+                            <Input 
+                              type="email"
+                              value={p.passengerEmail} 
+                              onChange={(e) => updatePassenger(index, 'passengerEmail', e.target.value)}
+                              placeholder="juan@example.com"
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Mobile Number</Label>
+                            <Input 
+                              value={p.passengerContact} 
+                              onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
+                              placeholder="0912 345 6789"
+                              className="bg-white"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold uppercase text-muted-foreground">Passenger Type</Label>
+                          <Select value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
+                            <SelectTrigger className="bg-white">
+                              <SelectValue placeholder="Select demographic" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableFares?.map(f => (
+                                <SelectItem key={f.id} value={f.id}>{f.segmentLabel} - ₱{f.finalFare}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </section>
+              </div>
 
-              {selectedFareDetails && (
-                <div className="mt-4 p-6 bg-primary rounded-xl text-primary-foreground">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs opacity-70 uppercase font-bold">Ticket Price</p>
-                      <p className="text-4xl font-black">₱{isMounted ? selectedFareDetails.finalFare?.toLocaleString() : "---"}</p>
-                    </div>
+              <div className="mt-4 p-6 bg-primary rounded-xl text-primary-foreground">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xs opacity-70 uppercase font-bold">Total Fare Amount</p>
+                    <p className="text-4xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
                   </div>
+                  <Badge variant="outline" className="bg-white/10 text-white border-white/20 uppercase text-[10px]">
+                    {passengers.length} Tickets
+                  </Badge>
                 </div>
-              )}
+              </div>
             </div>
           </ScrollArea>
           <DialogFooter className="pt-4 border-t">
@@ -460,7 +503,7 @@ function TripsContent() {
             <Button 
               onClick={handleProcessBooking} 
               className={selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-primary text-white'}
-              disabled={!bookingFormData.fareId || !bookingFormData.passengerName || !bookingFormData.passengerDob || !bookingFormData.passengerContact || !bookingFormData.emergencyContact}
+              disabled={!emergencyContact || passengers.some(p => !p.passengerName || !p.fareId || !p.passengerDob)}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" /> {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'}
             </Button>
