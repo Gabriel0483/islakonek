@@ -34,9 +34,10 @@ import {
   Anchor,
   PlayCircle,
   XCircle,
-  Radio
+  Radio,
+  BarChart
 } from "lucide-react";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { 
@@ -57,6 +58,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 interface PassengerForm {
@@ -98,28 +100,34 @@ function TripsContent() {
     setPhtState(getPHT());
   }, []);
 
+  const searchDate = searchParams.get("date");
+  const targetDate = useMemo(() => searchDate || phtState?.date, [searchDate, phtState?.date]);
+
   const routesRef = useMemoFirebase(() => collection(db!, "routes"), [db]);
   const schedulesRef = useMemoFirebase(() => collection(db!, "schedules"), [db]);
   const faresRef = useMemoFirebase(() => collection(db!, "fares"), [db]);
-  const bookingsRef = useMemoFirebase(() => collection(db!, "bookings"), [db]);
   const vesselsRef = useMemoFirebase(() => collection(db!, "vessels"), [db]);
   const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
   const voyagesRef = useMemoFirebase(() => collection(db!, "voyages"), [db]);
 
+  const bookingsQuery = useMemoFirebase(() => {
+    if (!db || !targetDate) return null;
+    return query(collection(db, "bookings"), where("travelDate", "==", targetDate));
+  }, [db, targetDate]);
+
   const { data: routes } = useCollection(routesRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: fares } = useCollection(faresRef);
-  const { data: bookings } = useCollection(bookingsRef);
+  const { data: bookings } = useCollection(bookingsQuery);
   const { data: vessels } = useCollection(vesselsRef);
   const { data: ports } = useCollection(portsRef);
   const { data: voyageStatuses } = useCollection(voyagesRef);
 
   const [searchQuery, setSearchQuery] = useState("");
   const selectedOriginPort = searchParams.get("originPortId") || "all";
-  const searchDate = searchParams.get("date");
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [bookingStep, setBookingStep] = useState(1); // 1: Details, 2: Summary
+  const [bookingStep, setBookingStep] = useState(1); 
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   
   const [passengers, setPassengers] = useState<PassengerForm[]>([{
@@ -138,9 +146,7 @@ function TripsContent() {
   }, [user, passengers.length]);
 
   const filteredTrips = useMemo(() => {
-    if (!schedules || !routes || !isMounted || !phtState) return [];
-
-    const targetDate = searchDate || phtState.date;
+    if (!schedules || !routes || !isMounted || !phtState || !targetDate) return [];
 
     return schedules.filter(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
@@ -172,32 +178,36 @@ function TripsContent() {
       const voyageId = `${schedule.id}_${targetDate}`;
       const voyageInfo = voyageStatuses?.find(v => v.id === voyageId);
       
-      // Prioritize Date-specific vessel from VoyageStatus, then fallback to schedule default
-      const vesselId = voyageInfo?.vesselId || schedule.vesselId;
-      const vessel = vessels?.find(v => v.id === vesselId);
+      const assignedVesselId = voyageInfo?.vesselId || schedule.vesselId;
+      const vessel = vessels?.find(v => v.id === assignedVesselId);
       
-      const usedSeats = bookings?.filter(b => 
+      const tripBookings = bookings?.filter(b => 
         b.scheduleId === schedule.id && 
-        b.travelDate === targetDate && 
         !['Cancelled', 'Auto-cancelled', 'Suspended', 'Refunded'].includes(b.status)
-      ).length || 0;
-      
+      ) || [];
+
+      const usedSeats = tripBookings.length;
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
       const waitlistLimit = schedule.waitlistLimit || 0;
+      const waitlistedCount = tripBookings.filter(b => b.status === 'Waitlisted').length;
 
       return {
         ...schedule,
         route,
         vessel,
         voyageInfo,
-        availability: capacity - usedSeats,
-        waitlistCapacity: (capacity + waitlistLimit) - usedSeats,
+        capacity,
+        usedSeats,
+        availability: Math.max(0, capacity - usedSeats),
+        waitlistUsed: waitlistedCount,
+        waitlistLimit,
+        waitlistSpotsRemaining: Math.max(0, waitlistLimit - waitlistedCount),
         isWaitlistOnly: usedSeats >= capacity && usedSeats < (capacity + waitlistLimit),
         isFull: usedSeats >= (capacity + waitlistLimit),
-        estimatedDurationMinutes: route?.estimatedDurationMinutes || 0
+        fillPercentage: capacity > 0 ? Math.min(100, (usedSeats / capacity) * 100) : 0
       };
     });
-  }, [schedules, routes, vessels, ports, bookings, voyageStatuses, searchQuery, selectedOriginPort, searchDate, isMounted, phtState]);
+  }, [schedules, routes, vessels, ports, bookings, voyageStatuses, searchQuery, selectedOriginPort, searchDate, isMounted, phtState, targetDate]);
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -228,9 +238,8 @@ function TripsContent() {
   };
 
   const handleProcessBooking = () => {
-    if (!db || !selectedSchedule || !phtState) return;
+    if (!db || !selectedSchedule || !targetDate) return;
 
-    const targetDate = searchDate || phtState.date;
     const status = selectedSchedule.isWaitlistOnly ? 'Waitlisted' : 'Reserved';
 
     passengers.forEach(p => {
@@ -292,9 +301,9 @@ function TripsContent() {
       
       <div className="container mx-auto px-4 py-6 sm:py-8 max-w-5xl">
         <header className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary mb-1 sm:mb-2">Available Trips</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary mb-1 sm:mb-2 uppercase tracking-tight">Available Trips</h1>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Voyages for <span className="text-primary font-bold">{searchDate || phtState?.date}</span> 
+            Voyages for <span className="text-primary font-bold">{targetDate}</span> 
             {selectedOriginPort !== 'all' && <> from <span className="text-primary font-bold truncate inline-block max-w-[150px] align-bottom">{ports?.find(p => p.id === selectedOriginPort)?.name}</span></>}
           </p>
         </header>
@@ -312,15 +321,15 @@ function TripsContent() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-[10px] sm:text-sm text-muted-foreground py-2 border-b">
-            <p>Showing <span className="text-foreground font-bold">{filteredTrips.length}</span> trips</p>
+          <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground py-2 border-b uppercase font-bold tracking-wider">
+            <p>Displaying <span className="text-primary font-black">{filteredTrips.length}</span> Active Connections</p>
           </div>
 
           <div className="space-y-4">
             {isSchedulesLoading || !phtState ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-accent" />
-                <p className="text-sm">Searching for active voyages...</p>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Scanning Horizons...</p>
               </div>
             ) : filteredTrips.length > 0 ? filteredTrips.map((trip) => (
               <Card 
@@ -337,57 +346,77 @@ function TripsContent() {
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="flex-1 space-y-4 w-full">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
-                          {trip.vessel?.type || "Standard"}
-                        </Badge>
-                        {trip.voyageInfo?.status && getStatusBadge(trip.voyageInfo.status)}
-                        <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-primary/50 uppercase ml-auto sm:ml-0">
-                           <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {trip.tripCode}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
+                            {trip.vessel?.type || "Standard"}
+                          </Badge>
+                          {trip.voyageInfo?.status && getStatusBadge(trip.voyageInfo.status)}
+                          <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-primary/50 uppercase">
+                             <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {trip.tripCode}
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                           {trip.isFull ? (
+                             <Badge variant="destructive" className="text-[9px] font-black uppercase">Voyage Full</Badge>
+                           ) : trip.isWaitlistOnly ? (
+                             <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase">Waitlist Active</Badge>
+                           ) : (
+                             <Badge className="bg-green-600 text-white text-[9px] font-black uppercase">Seats Available</Badge>
+                           )}
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-4 sm:gap-8">
                         <div className="space-y-0.5 sm:space-y-1">
+                          <div className="text-sm sm:text-xs font-bold text-muted-foreground uppercase tracking-widest">Departure</div>
                           <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
                             {trip.route?.name?.split(' - ')[0]}
                           </div>
-                          <div className="text-sm sm:text-base font-bold flex items-center gap-1.5 text-accent">
+                          <div className="text-sm sm:text-lg font-bold flex items-center gap-1.5 text-accent">
                             <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {trip.departureTime}
                           </div>
                         </div>
                         
                         <div className="space-y-0.5 sm:space-y-1 md:text-right">
+                          <div className="text-sm sm:text-xs font-bold text-muted-foreground uppercase tracking-widest">Arrival</div>
                           <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
                             {trip.route?.name?.split(' - ')[1]}
                           </div>
                           {trip.arrivalTime && (
-                            <div className="text-sm sm:text-base font-bold flex items-center gap-1.5 text-accent md:justify-end">
+                            <div className="text-sm sm:text-lg font-bold flex items-center gap-1.5 text-accent md:justify-end">
                               <span className="text-[10px] font-black uppercase mr-1">ETA</span> {trip.arrivalTime}
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="pt-2 flex flex-wrap items-center justify-between gap-4 sm:gap-6 text-[11px] sm:text-sm text-muted-foreground border-t border-dashed">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-end">
+                           <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
+                              <BarChart className="h-3 w-3" /> Live Seat Inventory
+                           </div>
+                           <div className="text-[10px] sm:text-xs font-black text-primary">
+                             {trip.isWaitlistOnly 
+                               ? `${trip.waitlistSpotsRemaining} Waitlist spots left` 
+                               : `${trip.availability} / ${trip.capacity} Seats remaining`}
+                           </div>
+                        </div>
+                        <Progress value={trip.fillPercentage} className="h-1.5 bg-secondary" />
+                      </div>
+
+                      <div className="pt-2 flex flex-wrap items-center justify-between gap-4 sm:gap-6 text-[11px] sm:text-xs text-muted-foreground border-t border-dashed">
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1.5">
                             <Ship className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
-                            <span className="font-medium">{trip.vessel?.name || "TBA"}</span>
+                            <span className="font-bold text-primary/70">{trip.vessel?.name || "TBA"}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
-                            {trip.availability > 0 ? (
-                              <span className={cn("font-bold", trip.availability < 10 ? "text-orange-500" : "text-primary")}>
-                                {trip.availability} seats left
-                              </span>
-                            ) : trip.isWaitlistOnly ? (
-                              <span className="text-orange-600 font-bold flex items-center gap-1">
-                                <ListOrdered className="h-3 w-3 sm:h-4 sm:w-4" /> Waitlist Open
-                              </span>
-                            ) : (
-                              <span className="text-destructive font-black uppercase text-[10px]">Fully Booked</span>
-                            )}
+                            <span className="font-bold uppercase tracking-tight">
+                              {trip.capacity} Capacity
+                            </span>
                           </div>
                         </div>
                         {trip.voyageInfo?.remarks && (
@@ -399,7 +428,7 @@ function TripsContent() {
                     </div>
 
                     <div className="hidden md:flex flex-col justify-center">
-                       <div className="bg-primary/5 p-3 rounded-full group-hover:bg-accent transition-colors">
+                       <div className="bg-primary/5 p-4 rounded-full group-hover:bg-accent transition-colors shadow-sm">
                           <ChevronRight className="h-6 w-6 text-primary" />
                        </div>
                     </div>
@@ -409,8 +438,8 @@ function TripsContent() {
             )) : (
               <div className="py-20 text-center border-2 border-dashed rounded-xl opacity-50 bg-secondary/10">
                 <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-bold">No trips found</h3>
-                <p className="text-sm text-muted-foreground">Try selecting a different date or origin port.</p>
+                <h3 className="text-lg font-bold">No voyages matching criteria</h3>
+                <p className="text-sm text-muted-foreground">Adjust your route or date filters to see more results.</p>
               </div>
             )}
           </div>
@@ -421,8 +450,8 @@ function TripsContent() {
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[750px] p-0 overflow-hidden h-[95vh] flex flex-col">
           <DialogHeader className="p-4 sm:p-6 border-b bg-white shrink-0">
             <div className="flex items-center justify-between mb-4">
-              <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold text-primary">
-                <Ticket className="h-5 w-5 sm:h-6 sm:w-6 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Trip Booking'}
+              <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-black font-headline text-primary uppercase tracking-tight">
+                <Ticket className="h-5 w-5 sm:h-6 sm:w-6 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Waitlist Registration' : 'Voyage Reservation'}
               </DialogTitle>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 no-scrollbar">
@@ -440,7 +469,7 @@ function TripsContent() {
               <Separator className="w-6 sm:w-12 h-px bg-border shrink-0" />
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 opacity-50">
                 <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold bg-secondary text-muted-foreground">3</div>
-                <span className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">Confirm</span>
+                <span className="text-[10px] sm:text-xs font-bold uppercase text-muted-foreground">Done</span>
               </div>
             </div>
           </DialogHeader>
@@ -450,11 +479,13 @@ function TripsContent() {
               {bookingStep === 1 && (
                 <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-left-4 duration-300">
                   {selectedSchedule?.isWaitlistOnly && (
-                    <div className="bg-orange-50 border border-orange-200 p-3 sm:p-4 rounded-xl flex items-start gap-3">
+                    <div className="bg-orange-50 border-2 border-orange-200 p-4 rounded-2xl flex items-start gap-3">
                       <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-xs sm:text-sm font-bold text-orange-800">Trip is Full</p>
-                        <p className="text-[10px] sm:text-xs text-orange-700 leading-tight">You are joining the waitlist for this voyage. Confirmations are subject to seat availability.</p>
+                        <p className="text-xs sm:text-sm font-black text-orange-800 uppercase">Waitlist Active</p>
+                        <p className="text-[10px] sm:text-xs text-orange-700 leading-relaxed">
+                          Primary capacity has been reached. You are joining the queue for <span className="font-bold">{selectedSchedule.waitlistSpotsRemaining} remaining</span> waitlist slots.
+                        </p>
                       </div>
                     </div>
                   )}
@@ -462,26 +493,26 @@ function TripsContent() {
                   <div className="space-y-4 sm:space-y-6">
                     <div className="flex items-center justify-between border-b pb-2">
                        <Label className="flex items-center gap-2 font-black text-primary uppercase text-base sm:text-lg tracking-tight">
-                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> Passengers ({passengers.length})
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> Passenger Details ({passengers.length})
                       </Label>
                     </div>
 
                     <div className="space-y-6 sm:space-y-8">
                       {passengers.map((p, index) => (
-                        <div key={index} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-4 sm:p-6 pt-8 group hover:border-accent/40 transition-colors">
-                          <div className="absolute -top-4 left-4 sm:left-6 bg-white border-2 px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase text-primary tracking-widest z-10">
+                        <div key={index} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-4 sm:p-6 pt-10 group hover:border-accent/40 transition-colors">
+                          <div className="absolute -top-4 left-4 sm:left-6 bg-white border-2 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase text-primary tracking-widest z-10 shadow-sm">
                             Passenger #{index + 1}
                           </div>
                           
                           <div className="space-y-4 sm:space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                               <div className="space-y-1.5">
-                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Full Name</Label>
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Full Legal Name</Label>
                                 <Input 
                                   value={p.passengerName} 
                                   onChange={(e) => updatePassenger(index, 'passengerName', e.target.value)}
                                   placeholder="As shown in ID"
-                                  className="bg-white h-10 sm:h-11 text-sm"
+                                  className="bg-white h-11 text-sm shadow-sm"
                                 />
                               </div>
                               <div className="space-y-1.5">
@@ -490,7 +521,7 @@ function TripsContent() {
                                   type="date"
                                   value={p.passengerDob} 
                                   onChange={(e) => updatePassenger(index, 'passengerDob', e.target.value)}
-                                  className="bg-white h-10 sm:h-11 text-sm"
+                                  className="bg-white h-11 text-sm shadow-sm"
                                 />
                               </div>
                             </div>
@@ -500,19 +531,19 @@ function TripsContent() {
                                 <Input 
                                   value={p.passengerContact} 
                                   onChange={(e) => updatePassenger(index, 'passengerContact', e.target.value)}
-                                  placeholder="09XX XXX XXXX"
-                                  className="bg-white h-10 sm:h-11 text-sm"
+                                  placeholder="09XXXXXXXXX"
+                                  className="bg-white h-11 text-sm shadow-sm"
                                 />
                               </div>
                               <div className="space-y-1.5">
                                 <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1">
-                                  <Heart className="h-2.5 w-2.5 text-destructive" /> Emergency Contact
+                                  <Heart className="h-2.5 w-2.5 text-destructive" /> Emergency Mobile
                                 </Label>
                                 <Input 
                                   value={p.emergencyContact} 
                                   onChange={(e) => updatePassenger(index, 'emergencyContact', e.target.value)}
-                                  placeholder="Emergency mobile number"
-                                  className="bg-white h-10 sm:h-11 text-sm"
+                                  placeholder="Contact for emergency"
+                                  className="bg-white h-11 text-sm shadow-sm"
                                 />
                               </div>
                             </div>
@@ -523,15 +554,15 @@ function TripsContent() {
                                   type="email"
                                   value={p.passengerEmail} 
                                   onChange={(e) => updatePassenger(index, 'passengerEmail', e.target.value)}
-                                  placeholder="your@email.com"
-                                  className="bg-white h-10 sm:h-11 text-sm"
+                                  placeholder="itinerary@example.com"
+                                  className="bg-white h-11 text-sm shadow-sm"
                                 />
                               </div>
                               <div className="space-y-1.5">
-                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Passenger Type</Label>
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Fare Tier</Label>
                                 <Select value={p.fareId} onValueChange={(val) => updatePassenger(index, 'fareId', val)}>
-                                  <SelectTrigger className="bg-white h-10 sm:h-11 border-2 text-sm">
-                                    <SelectValue placeholder="Select type" />
+                                  <SelectTrigger className="bg-white h-11 border-2 text-sm shadow-sm">
+                                    <SelectValue placeholder="Choose Demographic" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {availableFares?.map(f => (
@@ -552,13 +583,13 @@ function TripsContent() {
                                 className="text-destructive hover:bg-red-50 font-bold text-[10px] uppercase"
                                 onClick={() => removePassenger(index)}
                               >
-                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Remove Passenger
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Remove
                               </Button>
                             </div>
                           )}
                         </div>
                       ))}
-                      <Button type="button" variant="outline" onClick={addPassenger} className="w-full gap-2 h-11 font-bold text-xs sm:text-sm border-2 border-dashed">
+                      <Button type="button" variant="outline" onClick={addPassenger} className="w-full gap-2 h-12 font-bold text-xs sm:text-sm border-2 border-dashed">
                         <Plus className="h-4 w-4" /> Add Another Passenger
                       </Button>
                     </div>
@@ -568,30 +599,33 @@ function TripsContent() {
 
               {bookingStep === 2 && (
                 <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 pb-32">
-                  <div className="bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
-                    <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-3 sm:mb-4">Voyage Review</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-6">
+                  <div className="bg-primary/5 p-4 sm:p-8 rounded-3xl border-2 border-primary/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12 translate-x-12 translate-y-12">
+                       <Ship className="h-48 w-48" />
+                    </div>
+                    <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] mb-4 sm:mb-6">Voyage Summary</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
                       <div>
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Trip ID</Label>
-                        <p className="font-black text-accent text-sm sm:lg">{selectedSchedule?.tripCode}</p>
+                        <p className="font-black text-accent text-lg sm:text-xl">{selectedSchedule?.tripCode}</p>
                       </div>
                       <div>
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Departure</Label>
-                        <p className="font-bold text-primary text-sm">{selectedSchedule?.departureTime}</p>
-                      </div>
-                      <div>
-                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Arrival</Label>
-                        <p className="font-bold text-primary text-sm">{selectedSchedule?.arrivalTime || '--:--'}</p>
+                        <p className="font-bold text-primary text-sm sm:text-base">{selectedSchedule?.departureTime}</p>
                       </div>
                       <div>
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Travel Date</Label>
-                        <p className="font-bold text-sm">{searchDate || phtState?.date}</p>
+                        <p className="font-bold text-sm sm:text-base">{targetDate}</p>
                       </div>
                       <div>
-                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Vessel</Label>
-                        <p className="font-bold text-sm truncate">{selectedSchedule?.vessel?.name || 'TBA'}</p>
+                        <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Status</Label>
+                        <div className="mt-1">
+                           {selectedSchedule?.isWaitlistOnly 
+                             ? <Badge className="bg-orange-500 text-white uppercase text-[8px] font-black">Waitlist Only</Badge>
+                             : <Badge className="bg-green-600 text-white uppercase text-[8px] font-black">Seat Reserved</Badge>}
+                        </div>
                       </div>
-                      <div className="col-span-2 sm:col-span-5">
+                      <div className="col-span-2 md:col-span-4 border-t pt-4 mt-2">
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
                         <p className="font-bold text-xs sm:text-sm">{selectedSchedule?.route?.name}</p>
                       </div>
@@ -599,25 +633,25 @@ function TripsContent() {
                   </div>
 
                   <div className="space-y-3 sm:space-y-4">
-                    <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] border-b pb-2">Passenger Roster</h3>
+                    <h3 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] border-b pb-2">Passenger Breakdown</h3>
                     <div className="space-y-2 sm:space-y-3">
                       {passengers.map((p, i) => {
                         const fare = fares?.find(f => f.id === p.fareId);
                         return (
-                          <div key={i} className="flex items-center justify-between bg-white p-3 sm:p-4 rounded-xl border-2">
-                            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 mr-2">
-                              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-secondary flex items-center justify-center font-black text-primary text-[10px] sm:text-xs shrink-0">
+                          <div key={i} className="flex items-center justify-between bg-white p-3 sm:p-5 rounded-2xl border-2 shadow-sm">
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 mr-4">
+                              <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-full bg-secondary flex items-center justify-center font-black text-primary text-[10px] sm:text-sm shrink-0">
                                 {i + 1}
                               </div>
                               <div className="min-w-0">
-                                <p className="font-bold text-primary uppercase text-xs sm:text-sm truncate">{p.passengerName}</p>
-                                <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium truncate">
-                                  {fare?.segmentLabel} • {p.passengerContact || 'No mobile'}
+                                <p className="font-black text-primary uppercase text-xs sm:text-base truncate">{p.passengerName || 'Unnamed'}</p>
+                                <p className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase tracking-wider truncate">
+                                  {fare?.segmentLabel} • {p.passengerContact || 'No contact set'}
                                 </p>
                               </div>
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="font-black text-primary text-xs sm:text-base">₱{fare?.finalFare?.toLocaleString()}</p>
+                              <p className="font-black text-primary text-sm sm:text-xl">₱{fare?.finalFare?.toLocaleString()}</p>
                             </div>
                           </div>
                         );
@@ -625,19 +659,23 @@ function TripsContent() {
                     </div>
                   </div>
 
-                  <div className="pt-4 sm:pt-8 bg-primary rounded-2xl text-primary-foreground p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+                  <div className="pt-4 sm:pt-8 bg-primary rounded-3xl text-primary-foreground p-6 sm:p-10 relative overflow-hidden shadow-2xl">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Banknote className="h-24 w-24 sm:h-32 sm:w-32 -rotate-12 translate-x-8 translate-y-8" />
+                      <Banknote className="h-32 w-32 sm:h-48 sm:w-48 -rotate-12 translate-x-12 translate-y-12" />
                     </div>
-                    <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+                    <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
                       <div>
-                        <p className="text-[10px] opacity-70 uppercase font-black tracking-widest mb-1">Estimated Total Fare</p>
-                        <p className="text-3xl sm:text-5xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
-                        <p className="text-[9px] sm:text-[10px] mt-3 sm:mt-4 opacity-60 font-medium italic leading-tight">* Final payment collected during issuance.</p>
+                        <p className="text-[10px] opacity-70 uppercase font-black tracking-[0.3em] mb-2">Total Payable Amount</p>
+                        <p className="text-4xl sm:text-6xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
+                        <p className="text-[9px] sm:text-[11px] mt-6 opacity-60 font-medium italic leading-tight max-w-sm">
+                          * Reservations are held until 30 minutes before departure. Final payment collection occurs at the terminal issuance desk.
+                        </p>
                       </div>
-                      <Badge variant="outline" className="bg-white/10 text-white border-white/30 uppercase text-[9px] px-3 py-1 sm:px-4 sm:py-1.5 font-black shrink-0">
-                        {selectedSchedule?.isWaitlistOnly ? 'Waitlist' : 'Reserved'}
-                      </Badge>
+                      <div className="shrink-0 flex flex-col items-center gap-2">
+                        <Badge variant="outline" className="bg-white/10 text-white border-white/30 uppercase text-[9px] sm:text-[10px] px-4 py-2 font-black">
+                          {selectedSchedule?.isWaitlistOnly ? 'Waitlist Confirmation' : 'Pre-Arrival Reserved'}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -647,12 +685,12 @@ function TripsContent() {
 
           <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-row items-center justify-between shrink-0">
             {bookingStep === 1 ? (
-              <Button variant="outline" onClick={() => setIsBookingOpen(false)} className="h-10 sm:h-12 font-bold px-4 sm:px-8 text-xs sm:text-sm">
+              <Button variant="outline" onClick={() => setIsBookingOpen(false)} className="h-11 sm:h-14 font-bold px-4 sm:px-10 text-xs sm:text-base rounded-xl">
                 Cancel
               </Button>
             ) : (
-              <Button variant="ghost" onClick={() => setBookingStep(1)} className="h-10 sm:h-12 font-bold px-2 sm:px-8 text-xs sm:text-sm">
-                <ChevronLeft className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Back to Details</span><span className="sm:hidden">Back</span>
+              <Button variant="ghost" onClick={() => setBookingStep(1)} className="h-11 sm:h-14 font-bold px-2 sm:px-10 text-xs sm:text-base rounded-xl">
+                <ChevronLeft className="h-5 w-5 sm:mr-2" /> <span className="hidden sm:inline">Modify Details</span><span className="sm:hidden">Back</span>
               </Button>
             )}
 
@@ -660,17 +698,17 @@ function TripsContent() {
               <Button 
                 onClick={() => setBookingStep(2)} 
                 disabled={!isDetailsValid}
-                className="bg-primary text-white h-10 sm:h-12 px-6 sm:px-10 font-bold group text-xs sm:text-sm"
+                className="bg-primary text-white h-11 sm:h-14 px-6 sm:px-12 font-black uppercase tracking-widest group text-xs sm:text-base rounded-xl shadow-lg"
               >
-                Review <span className="hidden sm:inline">Summary</span> <ChevronRight className="h-4 w-4 ml-1 sm:ml-2 group-hover:translate-x-1 transition-transform" />
+                Review Summary <ChevronRight className="h-5 w-5 ml-1 sm:ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             ) : (
               <Button 
                 onClick={handleProcessBooking} 
-                className={cn("h-10 sm:h-12 px-6 sm:px-10 font-black uppercase tracking-wider text-[10px] sm:text-xs", 
+                className={cn("h-11 sm:h-14 px-6 sm:px-12 font-black uppercase tracking-widest text-[10px] sm:text-base rounded-xl shadow-lg", 
                   selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-accent text-primary hover:bg-accent/90')}
               >
-                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Reservation'} <Check className="h-4 w-4 ml-1 sm:ml-2" />
+                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Booking'} <Check className="h-5 w-5 ml-1 sm:ml-2" />
               </Button>
             )}
           </DialogFooter>
@@ -683,8 +721,11 @@ function TripsContent() {
 export default function TripsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-accent" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+           <Loader2 className="h-12 w-12 animate-spin text-accent" />
+           <p className="font-black uppercase tracking-widest text-primary/50 text-xs">Syncing Terminal Data...</p>
+        </div>
       </div>
     }>
       <TripsContent />

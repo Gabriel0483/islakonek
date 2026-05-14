@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -19,7 +20,8 @@ import {
   Phone,
   Banknote,
   AlertCircle,
-  ListOrdered
+  ListOrdered,
+  BarChart
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -115,13 +117,11 @@ export default function DeskBookingsPage() {
   const schedulesRef = useMemoFirebase(() => firestore ? collection(firestore, 'schedules') : null, [firestore]);
   const routesRef = useMemoFirebase(() => firestore ? collection(firestore, 'routes') : null, [firestore]);
   const faresRef = useMemoFirebase(() => firestore ? collection(firestore, 'fares') : null, [firestore]);
-  const bookingsRef = useMemoFirebase(() => firestore ? collection(firestore, 'bookings') : null, [firestore]);
   const usersRef = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
 
   const { data: allSchedules, isLoading: isLoadingSchedules } = useCollection(schedulesRef);
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesRef);
   const { data: allFares, isLoading: isLoadingFares } = useCollection(faresRef);
-  const { data: recentBookings, isLoading: isLoadingBookings } = useCollection(bookingsRef);
   const { data: registeredUsers } = useCollection(usersRef);
 
   const [availableFares, setAvailableFares] = useState<any[]>([]);
@@ -147,7 +147,6 @@ export default function DeskBookingsPage() {
   const watchRouteId = form.watch('routeId');
   const watchTravelDate = form.watch('travelDate');
   const watchScheduleId = form.watch('scheduleId');
-  const watchPassengers = form.watch('passengers');
 
   const filteredSchedules = useMemo(() => {
     if (!watchRouteId || !watchTravelDate || !allSchedules) return [];
@@ -165,6 +164,39 @@ export default function DeskBookingsPage() {
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
 
   }, [watchRouteId, watchTravelDate, allSchedules]);
+
+  // Real-time seat tracking for the selected schedule and date
+  const bookingsQuery = useMemoFirebase(() => {
+    if (!firestore || !watchScheduleId || !watchTravelDate) return null;
+    return query(
+      collection(firestore, 'bookings'), 
+      where('scheduleId', '==', watchScheduleId),
+      where('travelDate', '==', watchTravelDate)
+    );
+  }, [firestore, watchScheduleId, watchTravelDate]);
+
+  const { data: currentTripBookings } = useCollection(bookingsQuery);
+
+  const inventoryStats = useMemo(() => {
+    const schedule = allSchedules?.find(s => s.id === watchScheduleId);
+    if (!schedule) return null;
+
+    const activeBookings = currentTripBookings?.filter(b => 
+      !['Cancelled', 'Auto-cancelled', 'Suspended', 'Refunded'].includes(b.status)
+    ) || [];
+
+    const used = activeBookings.length;
+    const capacity = schedule.passengerCapacity || 0;
+    const waitlistLimit = schedule.waitlistLimit || 0;
+    
+    return {
+      remaining: Math.max(0, capacity - used),
+      capacity,
+      waitlistSpots: Math.max(0, (capacity + waitlistLimit) - used),
+      isWaitlistOnly: used >= capacity,
+      isFull: used >= (capacity + waitlistLimit)
+    };
+  }, [allSchedules, watchScheduleId, currentTripBookings]);
 
   useEffect(() => {
     if (watchRouteId) {
@@ -306,18 +338,6 @@ export default function DeskBookingsPage() {
     }
   }
 
-  const sortedRecentBookings = useMemo(() => {
-    if (!recentBookings) return [];
-    return recentBookings
-      .filter(b => b.bookingSource === 'Desk')
-      .sort((a: any, b: any) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      })
-      .slice(0, 10);
-  }, [recentBookings]);
-
   const isLoading = isLoadingSchedules || isLoadingRoutes || isLoadingFares || !isMounted;
 
   if (isLoading) {
@@ -348,58 +368,17 @@ export default function DeskBookingsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <CardTitle className="text-xl">Counter Sales</CardTitle>
-                <CardDescription className="text-primary-foreground/70">Record manifest details for walk-in passengers.</CardDescription>
+                <CardDescription className="text-primary-foreground/70">Issue valid boarding passes for walk-in passengers.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-10 sm:p-20 text-center">
              <Ticket className="h-16 w-16 text-accent/20 mx-auto mb-6" />
              <h2 className="text-2xl font-black text-primary mb-2">Ready to Issue?</h2>
-             <p className="text-muted-foreground mb-8 max-w-md mx-auto">Select a voyage and record passenger details to generate valid boarding passes.</p>
+             <p className="text-muted-foreground mb-8 max-w-md mx-auto">Verify trip availability and capture manifest details to generate passenger itineraries.</p>
              <Button onClick={() => { setIsBookingDialogOpen(true); setStep('form'); }} size="lg" className="bg-primary px-12 h-14 text-lg">
-               Start Ticket Booking
+               New Ticket Booking
              </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm overflow-hidden">
-          <CardHeader className="bg-white border-b p-4">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Recent Desk Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
-            {!isLoadingBookings && sortedRecentBookings.length > 0 ? (
-              <div className="w-full min-w-[700px]">
-                <table className="w-full text-sm">
-                  <thead className="bg-secondary/30">
-                    <tr className="border-b">
-                      <th className="h-12 px-4 text-left font-bold text-muted-foreground uppercase text-[10px]">ID</th>
-                      <th className="h-12 px-4 text-left font-bold text-muted-foreground uppercase text-[10px]">Passenger</th>
-                      <th className="h-12 px-4 text-left font-bold text-muted-foreground uppercase text-[10px]">Voyage</th>
-                      <th className="h-12 px-4 text-left font-bold text-muted-foreground uppercase text-[10px]">Status</th>
-                      <th className="h-12 px-4 text-right font-bold text-muted-foreground uppercase text-[10px]">Fare</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedRecentBookings.map((booking) => (
-                      <tr key={booking.id} className="border-b hover:bg-muted/50">
-                        <td className="p-4 align-middle font-mono text-[10px] font-bold">#{booking.id}</td>
-                        <td className="p-4 align-middle font-bold">{booking.passengerName}</td>
-                        <td className="p-4 align-middle">
-                          <div className="text-[10px] text-muted-foreground">{booking.travelDate}</div>
-                          <div className="text-xs font-bold truncate max-w-[150px]">{routes?.find(r => r.id === booking.routeId)?.name}</div>
-                        </td>
-                        <td className="p-4 align-middle">
-                          <Badge variant="outline" className="text-[9px] uppercase font-black">{booking.status}</Badge>
-                        </td>
-                        <td className="p-4 align-middle text-right font-black text-primary">₱{booking.finalFare?.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-10 opacity-30 text-xs font-bold uppercase">No recent activity</div>
-            )}
           </CardContent>
         </Card>
       </main>
@@ -499,6 +478,28 @@ export default function DeskBookingsPage() {
                         )}
                       />
                     </section>
+
+                    {inventoryStats && (
+                       <div className={cn("p-4 rounded-xl flex items-center justify-between border-2 shadow-sm", 
+                         inventoryStats.isFull ? "bg-red-50 border-red-200" : inventoryStats.isWaitlistOnly ? "bg-orange-50 border-orange-200" : "bg-green-50 border-green-200")}>
+                         <div className="flex items-center gap-3">
+                           <div className={cn("p-2 rounded-lg", inventoryStats.isFull ? "bg-red-500/10 text-red-600" : inventoryStats.isWaitlistOnly ? "bg-orange-500/10 text-orange-600" : "bg-green-500/10 text-green-600")}>
+                             <BarChart className="h-5 w-5" />
+                           </div>
+                           <div>
+                              <p className="text-[10px] font-black uppercase text-muted-foreground">Live Seat Inventory</p>
+                              <p className={cn("text-lg font-black", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-600")}>
+                                {inventoryStats.isFull ? "VOYAGE FULL" : inventoryStats.isWaitlistOnly ? "WAITLIST ONLY" : `${inventoryStats.remaining} Seats Remaining`}
+                              </p>
+                           </div>
+                         </div>
+                         <div className="text-right">
+                           <Badge variant="outline" className="text-[9px] font-bold uppercase">
+                             {inventoryStats.isWaitlistOnly ? `${inventoryStats.waitlistSpots} spots left` : `${inventoryStats.capacity} Capacity`}
+                           </Badge>
+                         </div>
+                       </div>
+                    )}
 
                     <section className="space-y-6">
                       <div className="flex items-center justify-between border-b pb-2">
@@ -613,7 +614,7 @@ export default function DeskBookingsPage() {
                           type="button" 
                           variant="outline" 
                           onClick={() => append({ id: nanoid(), fullName: "", birthDate: "", fareType: "", emergencyContact: "" })} 
-                          disabled={!watchScheduleId} 
+                          disabled={!watchScheduleId || inventoryStats?.isFull} 
                           className="w-full gap-2 h-11 font-bold text-xs sm:text-sm border-2 border-dashed"
                         >
                           <PlusCircle className="h-4 w-4" /> Add Another Passenger
@@ -682,6 +683,10 @@ export default function DeskBookingsPage() {
                         <Label className="text-[10px] text-muted-foreground font-bold uppercase">Travel Date</Label>
                         <p className="font-bold">{watchTravelDate}</p>
                       </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground font-bold uppercase">Booking Mode</Label>
+                        <p className="font-bold">{inventoryStats?.isWaitlistOnly ? 'Waitlist' : 'Confirmed'}</p>
+                      </div>
                       <div className="col-span-2 md:col-span-4">
                         <Label className="text-[10px] text-muted-foreground font-bold uppercase">Routing</Label>
                         <p className="font-bold text-sm">{routes?.find(r => r.id === watchRouteId)?.name}</p>
@@ -715,7 +720,7 @@ export default function DeskBookingsPage() {
                         <p className="text-4xl sm:text-6xl font-black">₱{bookingSummary.totalPrice.toLocaleString()}</p>
                       </div>
                       <Badge variant="outline" className="bg-white/10 text-white border-white/30 uppercase text-[10px] px-4 py-1.5 font-black">
-                        {form.getValues('isPaid') ? 'Immediate Issuance' : 'Reservation Only'}
+                        {inventoryStats?.isWaitlistOnly ? 'Join Waitlist' : form.getValues('isPaid') ? 'Immediate Issuance' : 'Reservation Only'}
                       </Badge>
                     </div>
                   </div>
@@ -741,7 +746,7 @@ export default function DeskBookingsPage() {
                   type="button"
                   onClick={form.handleSubmit(handleFormSubmit)} 
                   className="bg-primary h-12 px-10 font-black uppercase tracking-wider"
-                  disabled={!watchScheduleId || fields.length === 0}
+                  disabled={!watchScheduleId || fields.length === 0 || inventoryStats?.isFull}
                 >
                   Review Summary <ChevronRight className="h-5 w-5 ml-2" />
                 </Button>
