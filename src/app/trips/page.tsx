@@ -292,72 +292,88 @@ function TripsContent() {
                 <p className="text-sm">Searching for active voyages...</p>
               </div>
             ) : filteredTrips.length > 0 ? filteredTrips.map((trip) => (
-              <Card key={trip.id} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 bg-white">
-                <CardContent className="p-0">
-                  <div className="flex flex-col md:flex-row">
-                    <div className="p-4 sm:p-6 flex-1">
-                      <div className="flex items-center gap-2 sm:gap-3 mb-4">
+              <Card 
+                key={trip.id} 
+                className={cn(
+                  "group relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 bg-white cursor-pointer",
+                  trip.isFull && "opacity-60 cursor-not-allowed"
+                )}
+                onClick={() => !trip.isFull && handleBookNow(trip)}
+              >
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                    <div className="flex-1 space-y-4 w-full">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
                           {trip.vessel?.type || "Standard"}
                         </Badge>
-                        <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">{trip.type}</span>
-                        <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-primary/50 uppercase ml-auto">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">{trip.type} Service</span>
+                        <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-primary/50 uppercase ml-auto sm:ml-0">
                            <Tag className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {trip.tripCode}
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-7 items-center gap-4">
                         <div className="md:col-span-2 space-y-0.5 sm:space-y-1">
-                          <div className="text-base sm:text-lg font-bold text-primary truncate">{trip.route?.name?.split(' - ')[0]}</div>
-                          <div className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
-                            <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-accent" /> {trip.departureTime}
+                          <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
+                            {trip.route?.name?.split(' - ')[0]}
+                          </div>
+                          <div className="text-sm sm:text-base font-bold flex items-center gap-1.5 text-accent">
+                            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {trip.departureTime}
                           </div>
                         </div>
                         
-                        <div className="md:col-span-3 flex flex-col items-center justify-center px-4">
+                        <div className="md:col-span-3 hidden md:flex flex-col items-center justify-center px-4">
                           <div className="w-full h-px bg-border relative">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2">
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 group-hover:scale-110 transition-transform">
                               <Ship className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
                             </div>
                           </div>
-                          <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground mt-2 uppercase tracking-tighter">
-                            {trip.route?.estimatedDurationMinutes} mins travel
+                          <span className="text-[9px] sm:text-[10px] font-black text-muted-foreground mt-2 uppercase tracking-widest">
+                            {trip.route?.estimatedDurationMinutes} MINS VOYAGE
                           </span>
                         </div>
 
-                        <div className="md:col-span-2 space-y-0.5 sm:space-y-1 text-right">
-                          <div className="text-base sm:text-lg font-bold text-primary truncate">{trip.route?.name?.split(' - ')[1]}</div>
+                        <div className="md:col-span-2 space-y-0.5 sm:space-y-1 sm:text-right">
+                          <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
+                            {trip.route?.name?.split(' - ')[1]}
+                          </div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase sm:hidden">Arrival Destination</p>
                         </div>
                       </div>
 
-                      <div className="mt-6 flex flex-wrap items-center gap-4 sm:gap-6 text-[11px] sm:text-sm text-muted-foreground">
+                      <div className="pt-2 flex flex-wrap items-center gap-4 sm:gap-6 text-[11px] sm:text-sm text-muted-foreground border-t border-dashed">
                         <div className="flex items-center gap-1.5">
-                          <Ship className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          <span className="truncate max-w-[100px] sm:max-w-none">{trip.vessel?.name || "TBA"}</span>
+                          <Ship className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
+                          <span className="font-medium">{trip.vessel?.name || "TBA"}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
                           {trip.availability > 0 ? (
-                            <span className={trip.availability < 10 ? "text-orange-500 font-bold" : ""}>
+                            <span className={cn("font-bold", trip.availability < 10 ? "text-orange-500" : "text-primary")}>
                               {trip.availability} seats left
                             </span>
                           ) : trip.isWaitlistOnly ? (
                             <span className="text-orange-600 font-bold flex items-center gap-1">
-                              <ListOrdered className="h-3 w-3 sm:h-3 sm:w-3" /> Waitlist Open
+                              <ListOrdered className="h-3 w-3 sm:h-4 sm:w-4" /> Waitlist Open
                             </span>
                           ) : (
-                            <span className="text-destructive font-bold">Fully Booked</span>
+                            <span className="text-destructive font-black uppercase text-[10px]">Fully Booked</span>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-secondary/30 p-4 sm:p-6 md:w-64 border-t md:border-t-0 md:border-l flex flex-col justify-center items-center text-center gap-4">
+                    <div className="w-full sm:w-auto">
                       <Button 
-                        onClick={() => handleBookNow(trip)}
                         disabled={trip.isFull}
                         variant={trip.isWaitlistOnly ? "outline" : "default"}
-                        className={`w-full font-bold h-10 sm:h-12 gap-2 text-xs sm:text-sm ${trip.isWaitlistOnly ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : 'bg-accent text-primary hover:bg-accent/90'}`}
+                        className={cn(
+                          "w-full sm:w-40 font-black h-11 sm:h-14 gap-2 text-xs sm:text-sm uppercase tracking-wider shadow-lg",
+                          trip.isWaitlistOnly 
+                            ? 'border-orange-500 text-orange-600 hover:bg-orange-50' 
+                            : 'bg-accent text-primary hover:bg-accent/90 border-none'
+                        )}
                       >
                         {trip.isWaitlistOnly ? "Join Waitlist" : "Select & Book"} <ChevronRight className="h-4 w-4" />
                       </Button>
