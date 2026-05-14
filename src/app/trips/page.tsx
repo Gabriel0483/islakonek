@@ -32,7 +32,7 @@ import {
   Timer
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { 
   Dialog, 
@@ -66,6 +66,7 @@ interface PassengerForm {
 function TripsContent() {
   const searchParams = useSearchParams();
   const db = useFirestore();
+  const { user } = useUser();
   const [isMounted, setIsMounted] = useState(false);
   const [phtState, setPhtState] = useState<{ date: string; time: string } | null>(null);
 
@@ -117,11 +118,17 @@ function TripsContent() {
   const [passengers, setPassengers] = useState<PassengerForm[]>([{
     passengerName: "",
     passengerDob: "",
-    passengerEmail: "",
+    passengerEmail: user?.email || "",
     passengerContact: "",
     emergencyContact: "",
     fareId: ""
   }]);
+
+  useEffect(() => {
+    if (user?.email && passengers.length === 1 && !passengers[0].passengerEmail) {
+      setPassengers([{ ...passengers[0], passengerEmail: user.email }]);
+    }
+  }, [user, passengers.length]);
 
   const filteredTrips = useMemo(() => {
     if (!schedules || !routes || !isMounted || !phtState) return [];
@@ -160,7 +167,7 @@ function TripsContent() {
       const usedSeats = bookings?.filter(b => 
         b.scheduleId === schedule.id && 
         b.travelDate === targetDate && 
-        !['Cancelled', 'Auto-cancelled', 'Suspended'].includes(b.status)
+        !['Cancelled', 'Auto-cancelled', 'Suspended', 'Refunded'].includes(b.status)
       ).length || 0;
       
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
@@ -221,6 +228,7 @@ function TripsContent() {
 
       setDocumentNonBlocking(bookingRef, {
         id: newId,
+        userId: user?.uid || null, // Associate with logged-in user if available
         scheduleId: selectedSchedule.id,
         routeId: selectedSchedule.routeId,
         travelDate: targetDate,
@@ -241,7 +249,7 @@ function TripsContent() {
 
     setIsBookingOpen(false);
     setBookingStep(1);
-    setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: "", passengerContact: "", emergencyContact: "", fareId: "" }]);
+    setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: user?.email || "", passengerContact: "", emergencyContact: "", fareId: "" }]);
     
     alert(`Successfully processed ${passengers.length} booking request(s)!`);
   };

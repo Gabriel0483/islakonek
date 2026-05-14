@@ -1,8 +1,7 @@
-
 "use client";
 
 import Link from "next/link";
-import { Ship, LayoutDashboard, Menu, User, LogOut } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -64,18 +63,18 @@ export function Navbar() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">Manage Profile</Link>
+                    <Link href="/profile" className="cursor-pointer">Manage Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">My Bookings</Link>
+                    <Link href="/my-bookings" className="cursor-pointer">My Bookings</Link>
                   </DropdownMenuItem>
                   {isSuperAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">SuperAdmin Hub</Link>
+                      <Link href="/admin" className="cursor-pointer">SuperAdmin Hub</Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                     <LogOut className="h-4 w-4 mr-2" /> Log Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -113,7 +112,7 @@ export function Navbar() {
                     <Link href="/profile">Manage Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">My Bookings</Link>
+                    <Link href="/my-bookings">My Bookings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     Log Out
