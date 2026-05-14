@@ -43,6 +43,7 @@
     "firebase": "^11.10.0",
     "genkit": "1.34.0",
     "lucide-react": "^0.475.0",
+    "nanoid": "^5.1.2",
     "next": "^15.1.7",
     "patch-package": "^8.0.0",
     "react": "^19.0.0",
