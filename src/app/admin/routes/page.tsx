@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -21,8 +20,7 @@ import {
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from "@/firebase/non-blocking-updates";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { AdminNav } from "@/components/admin-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -175,265 +173,262 @@ export default function RoutesPage() {
   const isLoading = isPortsLoading || isRoutesLoading;
 
   return (
-    <SidebarProvider>
-      <AdminSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
-            <Waypoints className="h-5 w-5 text-accent" />
-            Route Management
-          </h1>
-        </header>
+    <div className="min-h-screen bg-background flex flex-col">
+      <AdminNav />
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+        <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
+          <Waypoints className="h-5 w-5 text-accent" />
+          Route Management
+        </h1>
+      </header>
 
-        <main className="p-6 space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="relative flex-1 w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search routes by name..." 
-                className="pl-10 h-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90">
-              <Plus className="h-4 w-4 mr-2" /> Create New Route
-            </Button>
+      <main className="p-6 space-y-6 container mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="relative flex-1 w-full md:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search routes by name..." 
+              className="pl-10 h-12 bg-white border-none shadow-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
+          <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90 h-12 px-6">
+            <Plus className="h-4 w-4 mr-2" /> Create New Route
+          </Button>
+        </div>
 
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-accent" />
-              <p className="text-sm text-muted-foreground">Synchronizing maritime routes...</p>
-            </div>
-          ) : filteredRoutes && filteredRoutes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredRoutes.map((route) => (
-                <Card key={route.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg font-bold text-primary">{route.name}</CardTitle>
-                        <CardDescription className="flex items-center gap-2 text-sm font-medium">
-                          {getPortName(route.originPortId)} 
-                          <ArrowRight className="h-3 w-3 text-accent" /> 
-                          {getPortName(route.destinationPortId)}
-                        </CardDescription>
-                      </div>
-                      <div className="bg-secondary px-3 py-1 rounded-full text-xs font-bold text-primary">
-                        ₱{isMounted ? route.basePrice?.toLocaleString() : "---"}
-                      </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            <p className="text-sm text-muted-foreground">Synchronizing maritime routes...</p>
+          </div>
+        ) : filteredRoutes && filteredRoutes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredRoutes.map((route) => (
+              <Card key={route.id} className="border-none shadow-sm hover:shadow-md transition-shadow bg-white">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg font-bold text-primary">{route.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-2 text-sm font-medium">
+                        {getPortName(route.originPortId)} 
+                        <ArrowRight className="h-3 w-3 text-accent" /> 
+                        {getPortName(route.destinationPortId)}
+                      </CardDescription>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-2 py-2">
-                       <div className="p-2 rounded bg-red-50 border border-red-100 text-center">
-                          <p className="text-[9px] uppercase font-bold text-red-600">Rebook</p>
-                          <p className="text-xs font-black">₱{route.rebookingFee || 0}</p>
-                       </div>
-                       <div className="p-2 rounded bg-orange-50 border border-orange-100 text-center">
-                          <p className="text-[9px] uppercase font-bold text-orange-600">Cancel</p>
-                          <p className="text-xs font-black">₱{route.cancellationFee || 0}</p>
-                       </div>
-                       <div className="p-2 rounded bg-slate-50 border border-slate-200 text-center">
-                          <p className="text-[9px] uppercase font-bold text-slate-600">No-Show</p>
-                          <p className="text-xs font-black">₱{route.noShowFee || 0}</p>
-                       </div>
+                    <div className="bg-secondary px-3 py-1 rounded-full text-xs font-bold text-primary">
+                      ₱{isMounted ? route.basePrice?.toLocaleString() : "---"}
                     </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-2 py-2">
+                     <div className="p-2 rounded bg-red-50 border border-red-100 text-center">
+                        <p className="text-[9px] uppercase font-bold text-red-600">Rebook</p>
+                        <p className="text-xs font-black">₱{route.rebookingFee || 0}</p>
+                     </div>
+                     <div className="p-2 rounded bg-orange-50 border border-orange-100 text-center">
+                        <p className="text-[9px] uppercase font-bold text-orange-600">Cancel</p>
+                        <p className="text-xs font-black">₱{route.cancellationFee || 0}</p>
+                     </div>
+                     <div className="p-2 rounded bg-slate-50 border border-slate-200 text-center">
+                        <p className="text-[9px] uppercase font-bold text-slate-600">No-Show</p>
+                        <p className="text-xs font-black">₱{route.noShowFee || 0}</p>
+                     </div>
+                  </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {route.passengerSegments?.map((seg: any) => (
-                        <Badge key={seg.id} variant="outline" className="text-[10px] bg-accent/5 border-accent/20">
-                          {seg.label}
-                        </Badge>
-                      ))}
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    {route.passengerSegments?.map((seg: any) => (
+                      <Badge key={seg.id} variant="outline" className="text-[10px] bg-accent/5 border-accent/20">
+                        {seg.label}
+                      </Badge>
+                    ))}
+                  </div>
 
-                    <div className="flex justify-between items-center pt-2 border-t">
-                       <span className="text-xs text-muted-foreground">
-                         Duration: {Math.floor(route.estimatedDurationMinutes / 60)}h {route.estimatedDurationMinutes % 60}m
-                       </span>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(route)} className="h-8 w-8 p-0">
-                          <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(route.id)} className="h-8 w-8 p-0 text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                     <span className="text-xs text-muted-foreground">
+                       Duration: {Math.floor(route.estimatedDurationMinutes / 60)}h {route.estimatedDurationMinutes % 60}m
+                     </span>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(route)} className="h-8 w-8 p-0">
+                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(route.id)} className="h-8 w-8 p-0 text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50">
-              <Waypoints className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-bold">No routes defined</h3>
-              <p className="text-muted-foreground">Establish your first shipping route connecting two ports.</p>
-            </div>
-          )}
-        </main>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50 bg-secondary/10">
+            <Waypoints className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-bold">No routes defined</h3>
+            <p className="text-muted-foreground">Establish your first shipping route connecting two ports.</p>
+          </div>
+        )}
+      </main>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>{editingRoute ? "Edit Route" : "Create New Route"}</DialogTitle>
-              <DialogDescription>
-                Define journey details, passenger demographics, and penalty fees.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] pr-4">
-              <div className="grid gap-6 py-4">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{editingRoute ? "Edit Route" : "Create New Route"}</DialogTitle>
+            <DialogDescription>
+              Define journey details, passenger demographics, and penalty fees.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh] pr-4">
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Route Name</Label>
+                <Input 
+                  id="name" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                  placeholder="e.g. Manila - Cebu Express"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Route Name</Label>
+                  <Label>Origin Port</Label>
+                  <Select 
+                    value={formData.originPortId} 
+                    onValueChange={(val) => setFormData({...formData, originPortId: val})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Origin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ports?.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Destination Port</Label>
+                  <Select 
+                    value={formData.destinationPortId} 
+                    onValueChange={(val) => setFormData({...formData, destinationPortId: val})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Destination" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ports?.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="basePrice">Base Fare (₱)</Label>
                   <Input 
-                    id="name" 
-                    value={formData.name} 
-                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                    placeholder="e.g. Manila - Cebu Express"
+                    id="basePrice" 
+                    type="number"
+                    value={formData.basePrice} 
+                    onChange={(e) => setFormData({...formData, basePrice: e.target.value})} 
                   />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Origin Port</Label>
-                    <Select 
-                      value={formData.originPortId} 
-                      onValueChange={(val) => setFormData({...formData, originPortId: val})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Origin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ports?.map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Destination Port</Label>
-                    <Select 
-                      value={formData.destinationPortId} 
-                      onValueChange={(val) => setFormData({...formData, destinationPortId: val})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Destination" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ports?.map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duration (Minutes)</Label>
+                  <Input 
+                    id="duration" 
+                    type="number"
+                    value={formData.estimatedDurationMinutes} 
+                    onChange={(e) => setFormData({...formData, estimatedDurationMinutes: e.target.value})} 
+                  />
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4 border pt-4 p-4 rounded-lg bg-red-50/30">
+                <div className="flex items-center gap-2 text-destructive mb-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <Label className="font-bold">Penalty Configurations (₱)</Label>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="basePrice">Base Fare (₱)</Label>
+                    <Label htmlFor="rebook" className="text-[10px] uppercase text-muted-foreground font-bold">Rebooking Fee</Label>
                     <Input 
-                      id="basePrice" 
+                      id="rebook" 
                       type="number"
-                      value={formData.basePrice} 
-                      onChange={(e) => setFormData({...formData, basePrice: e.target.value})} 
+                      value={formData.rebookingFee} 
+                      onChange={(e) => setFormData({...formData, rebookingFee: e.target.value})} 
+                      className="bg-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (Minutes)</Label>
+                    <Label htmlFor="cancel" className="text-[10px] uppercase text-muted-foreground font-bold">Cancellation Fee</Label>
                     <Input 
-                      id="duration" 
+                      id="cancel" 
                       type="number"
-                      value={formData.estimatedDurationMinutes} 
-                      onChange={(e) => setFormData({...formData, estimatedDurationMinutes: e.target.value})} 
+                      value={formData.cancellationFee} 
+                      onChange={(e) => setFormData({...formData, cancellationFee: e.target.value})} 
+                      className="bg-white"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-4 border pt-4 p-4 rounded-lg bg-red-50/30">
-                  <div className="flex items-center gap-2 text-destructive mb-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <Label className="font-bold">Penalty Configurations (₱)</Label>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="rebook" className="text-[10px] uppercase text-muted-foreground font-bold">Rebooking Fee</Label>
-                      <Input 
-                        id="rebook" 
-                        type="number"
-                        value={formData.rebookingFee} 
-                        onChange={(e) => setFormData({...formData, rebookingFee: e.target.value})} 
-                        className="bg-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cancel" className="text-[10px] uppercase text-muted-foreground font-bold">Cancellation Fee</Label>
-                      <Input 
-                        id="cancel" 
-                        type="number"
-                        value={formData.cancellationFee} 
-                        onChange={(e) => setFormData({...formData, cancellationFee: e.target.value})} 
-                        className="bg-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="noshow" className="text-[10px] uppercase text-muted-foreground font-bold">No-Show Fee</Label>
-                      <Input 
-                        id="noshow" 
-                        type="number"
-                        value={formData.noShowFee} 
-                        onChange={(e) => setFormData({...formData, noShowFee: e.target.value})} 
-                        className="bg-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 border-t pt-4">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 text-accent" />
-                    <Label className="font-bold">Passenger Demographics</Label>
-                  </div>
-                  
-                  <div className="bg-secondary/30 p-4 rounded-lg space-y-4">
-                    <div className="grid grid-cols-3 gap-3 items-end">
-                      <div className="col-span-2 space-y-1">
-                        <Label className="text-[10px] uppercase text-muted-foreground">Demographic Label</Label>
-                        <Input 
-                          placeholder="e.g. Student" 
-                          value={newSegment.label}
-                          onChange={(e) => setNewSegment({...newSegment, label: e.target.value})}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <Button onClick={handleAddSegment} className="h-8 bg-primary text-white">Add</Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {formData.passengerSegments.map((seg: any) => (
-                        <div key={seg.id} className="flex items-center justify-between bg-white p-2 rounded border text-sm">
-                          <span>{seg.label}</span>
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveSegment(seg.id)} className="h-6 w-6 p-0 text-destructive">
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="noshow" className="text-[10px] uppercase text-muted-foreground font-bold">No-Show Fee</Label>
+                    <Input 
+                      id="noshow" 
+                      type="number"
+                      value={formData.noShowFee} 
+                      onChange={(e) => setFormData({...formData, noShowFee: e.target.value})} 
+                      className="bg-white"
+                    />
                   </div>
                 </div>
               </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave} className="bg-primary text-white">
-                {editingRoute ? "Save Changes" : "Create Route"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </SidebarInset>
-    </SidebarProvider>
+
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-accent" />
+                  <Label className="font-bold">Passenger Demographics</Label>
+                </div>
+                
+                <div className="bg-secondary/30 p-4 rounded-lg space-y-4">
+                  <div className="grid grid-cols-3 gap-3 items-end">
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">Demographic Label</Label>
+                      <Input 
+                        placeholder="e.g. Student" 
+                        value={newSegment.label}
+                        onChange={(e) => setNewSegment({...newSegment, label: e.target.value})}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <Button onClick={handleAddSegment} className="h-8 bg-primary text-white">Add</Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {formData.passengerSegments.map((seg: any) => (
+                      <div key={seg.id} className="flex items-center justify-between bg-white p-2 rounded border text-sm">
+                        <span>{seg.label}</span>
+                        <Button variant="ghost" size="sm" onClick={() => handleRemoveSegment(seg.id)} className="h-6 w-6 p-0 text-destructive">
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} className="bg-primary text-white">
+              {editingRoute ? "Save Changes" : "Create Route"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

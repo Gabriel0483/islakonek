@@ -1,0 +1,136 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { 
+  Ship, 
+  LayoutDashboard, 
+  Scan, 
+  Ticket, 
+  ClipboardList, 
+  MapPin, 
+  Waypoints, 
+  Banknote, 
+  Wrench, 
+  CalendarDays, 
+  Home,
+  Menu,
+  X
+} from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+
+const menuItems = [
+  { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
+  { label: "Boarding", icon: Scan, href: "/admin/boarding" },
+  { label: "Desk", icon: Ticket, href: "/admin/bookings" },
+  { label: "Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },
+];
+
+const configItems = [
+  { label: "Ports", icon: MapPin, href: "/admin/ports" },
+  { label: "Routes", icon: Waypoints, href: "/admin/routes" },
+  { label: "Fares", icon: Banknote, href: "/admin/fares" },
+  { label: "Fleet", icon: Wrench, href: "/admin/fleet" },
+  { label: "Schedules", icon: CalendarDays, href: "/admin/schedules" },
+];
+
+export function AdminNav() {
+  const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  return (
+    <nav className="bg-primary text-white border-b sticky top-0 z-50">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <Link href="/admin" className="flex items-center gap-2 mr-4">
+             <div className="bg-accent p-1 rounded-md">
+               <Ship className="h-5 w-5 text-primary" />
+             </div>
+             <span className="font-headline font-bold text-lg hidden lg:inline">Isla Konek Admin</span>
+          </Link>
+          
+          <div className="hidden lg:flex items-center gap-1">
+            {menuItems.map((item) => (
+              <Link 
+                key={item.href} 
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-colors",
+                  pathname === item.href ? "bg-accent text-primary" : "hover:bg-white/10"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            ))}
+            <div className="h-4 w-px bg-white/20 mx-2" />
+            {configItems.map((item) => (
+              <Link 
+                key={item.href} 
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-colors",
+                  pathname === item.href ? "bg-accent text-primary" : "hover:bg-white/10"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+           <Link href="/" className="text-xs font-bold flex items-center gap-1.5 hover:text-accent transition-colors hidden sm:flex">
+             <Home className="h-4 w-4" /> Public Site
+           </Link>
+
+           <div className="lg:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Operations</DropdownMenuLabel>
+                  {menuItems.map(item => (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link href={item.href} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" /> {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Infrastructure</DropdownMenuLabel>
+                  {configItems.map(item => (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link href={item.href} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" /> {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/" className="flex items-center gap-2">
+                      <Home className="h-4 w-4" /> Return to Site
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+           </div>
+        </div>
+      </div>
+    </nav>
+  );
+}

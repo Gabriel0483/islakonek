@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -18,8 +17,7 @@ import {
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from "@/firebase/non-blocking-updates";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { AdminNav } from "@/components/admin-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,149 +117,146 @@ export default function PortsPage() {
   const isLoading = isPortsLoading;
 
   return (
-    <SidebarProvider>
-      <AdminSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
-            <Anchor className="h-5 w-5 text-accent" />
-            Port Registry
-          </h1>
-        </header>
+    <div className="min-h-screen bg-background flex flex-col">
+      <AdminNav />
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+        <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
+          <Anchor className="h-5 w-5 text-accent" />
+          Port Registry
+        </h1>
+      </header>
 
-        <main className="p-6 space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="relative flex-1 w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search ports by name, province, or city..." 
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90">
-              <Plus className="h-4 w-4 mr-2" /> Add New Port
-            </Button>
+      <main className="p-6 space-y-6 container mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="relative flex-1 w-full md:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search ports by name, province, or city..." 
+              className="pl-10 h-12 bg-white border-none shadow-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
+          <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90 h-12 px-6">
+            <Plus className="h-4 w-4 mr-2" /> Add New Port
+          </Button>
+        </div>
 
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-accent" />
-              <p className="text-sm text-muted-foreground">Synchronizing with maritime registry...</p>
-            </div>
-          ) : filteredPorts && filteredPorts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPorts.map((port) => (
-                <Card key={port.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg font-bold text-primary">{port.name}</CardTitle>
-                        <CardDescription className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" /> {port.cityMunicipality}, {port.province}
-                        </CardDescription>
-                      </div>
-                      <div className="bg-secondary px-2 py-1 rounded text-[10px] font-bold text-primary uppercase">
-                        {port.country}
-                      </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            <p className="text-sm text-muted-foreground">Synchronizing with maritime registry...</p>
+          </div>
+        ) : filteredPorts && filteredPorts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPorts.map((port) => (
+              <Card key={port.id} className="border-none shadow-sm hover:shadow-md transition-shadow bg-white">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg font-bold text-primary">{port.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {port.cityMunicipality}, {port.province}
+                      </CardDescription>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
-                      {port.description || "No description provided."}
-                    </p>
-                    <div className="flex justify-end gap-2 pt-2 border-t">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(port)} className="h-8 w-8 p-0">
-                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(port.id)} className="h-8 w-8 p-0">
-                        <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                      </Button>
+                    <div className="bg-secondary px-2 py-1 rounded text-[10px] font-bold text-primary uppercase">
+                      {port.country}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50">
-              <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-bold">No ports found</h3>
-              <p className="text-muted-foreground">Start by adding your first maritime port entry.</p>
-            </div>
-          )}
-        </main>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
+                    {port.description || "No description provided."}
+                  </p>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(port)} className="h-8 w-8 p-0">
+                      <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(port.id)} className="h-8 w-8 p-0">
+                      <Trash2 className="h-4 w-4 text-destructive hover:text-destructive/80" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50 bg-secondary/10">
+            <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-bold">No ports found</h3>
+            <p className="text-muted-foreground">Start by adding your first maritime port entry.</p>
+          </div>
+        )}
+      </main>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{editingPort ? "Edit Port" : "Add New Port"}</DialogTitle>
-              <DialogDescription>
-                Fill in the details below to define a maritime port.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="grid gap-4 py-4">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingPort ? "Edit Port" : "Add New Port"}</DialogTitle>
+            <DialogDescription>
+              Fill in the details below to define a maritime port.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Port Name</Label>
+                <Input 
+                  id="name" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                  placeholder="e.g. Port of Manila"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Port Name</Label>
+                  <Label htmlFor="cityMunicipality">City/Municipality</Label>
                   <Input 
-                    id="name" 
-                    value={formData.name} 
-                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                    placeholder="e.g. Port of Manila"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cityMunicipality">City/Municipality</Label>
-                    <Input 
-                      id="cityMunicipality" 
-                      value={formData.cityMunicipality} 
-                      onChange={(e) => setFormData({...formData, cityMunicipality: e.target.value})} 
-                      placeholder="e.g. Manila"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="province">Province</Label>
-                    <Input 
-                      id="province" 
-                      value={formData.province} 
-                      onChange={(e) => setFormData({...formData, province: e.target.value})} 
-                      placeholder="e.g. Metro Manila"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input 
-                    id="country" 
-                    value={formData.country} 
-                    onChange={(e) => setFormData({...formData, country: e.target.value})} 
-                    placeholder="e.g. Philippines"
+                    id="cityMunicipality" 
+                    value={formData.cityMunicipality} 
+                    onChange={(e) => setFormData({...formData, cityMunicipality: e.target.value})} 
+                    placeholder="e.g. Manila"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description" 
-                    value={formData.description} 
-                    onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                    placeholder="Brief details about port facilities..."
-                    className="min-h-[100px]"
+                  <Label htmlFor="province">Province</Label>
+                  <Input 
+                    id="province" 
+                    value={formData.province} 
+                    onChange={(e) => setFormData({...formData, province: e.target.value})} 
+                    placeholder="e.g. Metro Manila"
                   />
                 </div>
               </div>
-            </ScrollArea>
-            <DialogFooter className="pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave} className="bg-primary text-white">
-                {editingPort ? "Save Changes" : "Create Port"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </SidebarInset>
-    </SidebarProvider>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Input 
+                  id="country" 
+                  value={formData.country} 
+                  onChange={(e) => setFormData({...formData, country: e.target.value})} 
+                  placeholder="e.g. Philippines"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description" 
+                  value={formData.description} 
+                  onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                  placeholder="Brief details about port facilities..."
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} className="bg-primary text-white">
+              {editingPort ? "Save Changes" : "Create Port"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
