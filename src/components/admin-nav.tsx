@@ -16,7 +16,8 @@ import {
   Home,
   Menu,
   Activity,
-  LogOut
+  LogOut,
+  User
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -115,6 +116,13 @@ export function AdminNav() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 max-h-[85vh] overflow-y-auto">
+                  <DropdownMenuLabel>Personal</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2">
+                      <User className="h-4 w-4" /> My Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuLabel>Operations</DropdownMenuLabel>
                   {menuItems.map(item => (
                     <DropdownMenuItem key={item.href} asChild>
@@ -145,7 +153,12 @@ export function AdminNav() {
               </DropdownMenu>
            </div>
            
-           <div className="hidden lg:block border-l border-white/20 pl-4 ml-2">
+           <div className="hidden lg:flex items-center border-l border-white/20 pl-4 ml-2 gap-2">
+             <Link href="/profile">
+               <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider">
+                 <User className="h-3 w-3 mr-1.5" /> My Profile
+               </Button>
+             </Link>
              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider">
                <LogOut className="h-3 w-3 mr-1.5" /> Out
              </Button>

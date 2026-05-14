@@ -16,7 +16,8 @@ import {
   Wrench,
   CalendarDays,
   Ticket,
-  ClipboardList
+  ClipboardList,
+  UserCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser } from "@/firebase";
@@ -100,6 +101,14 @@ export default function AdminDashboard() {
       link: "/admin/manage-bookings",
       color: "text-indigo-600",
       count: "Manifest"
+    },
+    {
+      title: "Admin Profile",
+      description: "Manage your personal account and administrative roster.",
+      icon: UserCircle,
+      link: "/profile",
+      color: "text-primary",
+      count: "Personal"
     },
     {
       title: "Port Registry",

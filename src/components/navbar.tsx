@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ship, LayoutDashboard, Menu, User, LogOut, Ticket } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -67,17 +67,25 @@ export function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="cursor-pointer">Manage Profile</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/my-bookings" className="cursor-pointer">My Bookings</Link>
-                  </DropdownMenuItem>
+                  
+                  {/* Public-only links */}
+                  {!isSuperAdmin && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="cursor-pointer">Manage Profile</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/my-bookings" className="cursor-pointer">My Bookings</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
                   {isSuperAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin" className="cursor-pointer">SuperAdmin Hub</Link>
+                      <Link href="/admin" className="cursor-pointer font-bold text-accent">Go to Admin Hub</Link>
                     </DropdownMenuItem>
                   )}
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                     <LogOut className="h-4 w-4 mr-2" /> Log Out
@@ -113,12 +121,16 @@ export function Navbar() {
               <DropdownMenuSeparator />
               {user ? (
                 <>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">Manage Profile</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/my-bookings">My Bookings</Link>
-                  </DropdownMenuItem>
+                  {!isSuperAdmin && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile">Manage Profile</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/my-bookings">My Bookings</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     Log Out
                   </DropdownMenuItem>
