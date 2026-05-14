@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { 
   MapPin, 
   Waypoints, 
-  Ticket, 
   Ship, 
   ArrowLeft, 
   Loader2,
@@ -12,8 +11,7 @@ import {
   Calendar,
   AlertCircle,
   Wrench,
-  CheckCircle2,
-  Clock
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
@@ -46,17 +44,11 @@ export default function OperationalOverviewPage() {
     return collection(db, "vessels");
   }, [db]);
 
-  const bookingsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "bookings");
-  }, [db]);
-
   const { data: ports, isLoading: isPortsLoading } = useCollection(portsRef);
   const { data: routes, isLoading: isRoutesLoading } = useCollection(routesRef);
   const { data: vessels, isLoading: isVesselsLoading } = useCollection(vesselsRef);
-  const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
 
-  const isLoading = isPortsLoading || isRoutesLoading || isVesselsLoading || isBookingsLoading;
+  const isLoading = isPortsLoading || isRoutesLoading || isVesselsLoading;
 
   const maintenanceNeeded = useMemo(() => {
     return vessels?.filter(v => v.status === "Maintenance").length || 0;
@@ -78,14 +70,6 @@ export default function OperationalOverviewPage() {
       color: "text-accent", 
       bg: "bg-accent/10", 
       description: "Inter-island shipping connections." 
-    },
-    { 
-      label: "Total Bookings", 
-      value: bookings?.length || 0, 
-      icon: Ticket, 
-      color: "text-green-500", 
-      bg: "bg-green-500/10", 
-      description: "Validated passenger records." 
     },
     { 
       label: "Fleet Size", 
@@ -128,7 +112,7 @@ export default function OperationalOverviewPage() {
               <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Aggregating Data...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {statusTiles.map((tile, i) => (
                 <Card key={i} className="border-none shadow-sm bg-white overflow-hidden group hover:ring-2 hover:ring-primary/10 transition-all">
                   <CardHeader className="pb-2 p-4 sm:p-6">
@@ -155,7 +139,7 @@ export default function OperationalOverviewPage() {
           <Card className="lg:col-span-1 border-none shadow-sm bg-primary text-primary-foreground p-6 sm:p-8 flex flex-col justify-center gap-4">
             <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight">Live Sync</h3>
             <p className="text-xs sm:text-sm opacity-80 leading-relaxed">
-              Operational data is fetched in real-time from the cloud. Fleet statuses and manifest counts reflect current terminal activity.
+              Operational data is fetched in real-time from the cloud. Fleet statuses reflect current terminal activity.
             </p>
             <div className="flex items-center gap-2 mt-2 sm:mt-4 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest bg-white/10 w-fit px-3 py-1.5 rounded-full">
                <Calendar className="h-3 w-3" /> Sync: {isMounted ? new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--"}

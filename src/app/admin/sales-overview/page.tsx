@@ -10,10 +10,8 @@ import {
   Loader2,
   Calendar,
   BarChart3,
-  PieChart,
-  MapPin,
-  ArrowRight,
-  Filter
+  Ticket,
+  ArrowRight
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
@@ -32,16 +30,9 @@ import {
   YAxis, 
   Tooltip, 
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart as RePieChart
+  Cell
 } from "recharts";
-import { 
-  ChartContainer, 
-  ChartTooltip, 
-  ChartTooltipContent 
-} from "@/components/ui/chart";
-import { format, parseISO, startOfDay, subDays, isSameDay } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 
 export default function SalesOverviewPage() {
   const db = useFirestore();
@@ -65,9 +56,10 @@ export default function SalesOverviewPage() {
   const { data: routes, isLoading: isRoutesLoading } = useCollection(routesRef);
 
   const stats = useMemo(() => {
-    if (!bookings) return { totalRevenue: 0, totalPassengers: 0, waitlistCount: 0, confirmedCount: 0 };
+    if (!bookings) return { totalRevenue: 0, totalPassengers: 0, waitlistCount: 0, confirmedCount: 0, totalBookings: 0 };
     
     return bookings.reduce((acc, b) => {
+      acc.totalBookings += 1;
       if (['Confirmed', 'Used'].includes(b.status)) {
         acc.totalRevenue += (b.finalFare || 0);
         acc.totalPassengers += 1;
@@ -76,7 +68,7 @@ export default function SalesOverviewPage() {
         acc.waitlistCount += 1;
       }
       return acc;
-    }, { totalRevenue: 0, totalPassengers: 0, waitlistCount: 0, confirmedCount: 0 });
+    }, { totalRevenue: 0, totalPassengers: 0, waitlistCount: 0, confirmedCount: 0, totalBookings: 0 });
   }, [bookings]);
 
   const dailyRevenueData = useMemo(() => {
@@ -162,7 +154,7 @@ export default function SalesOverviewPage() {
         ) : (
           <div className="space-y-8">
             {/* Top Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card className="border-none shadow-sm bg-white overflow-hidden">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
                   <div className="space-y-1">
@@ -177,7 +169,7 @@ export default function SalesOverviewPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-green-500" /> +12% from last month
+                    <TrendingUp className="h-3 w-3 text-green-500" /> +12% growth
                   </p>
                 </CardContent>
               </Card>
@@ -185,8 +177,25 @@ export default function SalesOverviewPage() {
               <Card className="border-none shadow-sm bg-white overflow-hidden">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Total Passengers</p>
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Total Bookings</p>
                     <CardTitle className="text-2xl font-black text-primary">
+                      {isMounted ? stats.totalBookings.toLocaleString() : "---"}
+                    </CardTitle>
+                  </div>
+                  <div className="bg-accent/10 p-2 rounded-lg text-primary">
+                    <Ticket className="h-5 w-5" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-[10px] text-muted-foreground">Gross record count</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm bg-white overflow-hidden">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Paid Passengers</p>
+                    <CardTitle className="text-2xl font-black text-green-600">
                       {isMounted ? stats.totalPassengers.toLocaleString() : "---"}
                     </CardTitle>
                   </div>
@@ -195,7 +204,7 @@ export default function SalesOverviewPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-[10px] text-muted-foreground">Successful manifest entries</p>
+                  <p className="text-[10px] text-muted-foreground">Confirmed manifest entries</p>
                 </CardContent>
               </Card>
 
@@ -212,24 +221,24 @@ export default function SalesOverviewPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-[10px] text-muted-foreground">Passengers awaiting seats</p>
+                  <p className="text-[10px] text-muted-foreground">Unmet demand</p>
                 </CardContent>
               </Card>
 
               <Card className="border-none shadow-sm bg-white overflow-hidden">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Avg. Ticket Value</p>
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Avg. Yield</p>
                     <CardTitle className="text-2xl font-black text-primary">
                       ₱{isMounted && stats.confirmedCount > 0 ? Math.round(stats.totalRevenue / stats.confirmedCount).toLocaleString() : "0"}
                     </CardTitle>
                   </div>
-                  <div className="bg-accent/10 p-2 rounded-lg text-primary">
+                  <div className="bg-secondary p-2 rounded-lg text-muted-foreground">
                     <Calendar className="h-5 w-5" />
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-[10px] text-muted-foreground">Yield per confirmed booking</p>
+                  <p className="text-[10px] text-muted-foreground">Per confirmed booking</p>
                 </CardContent>
               </Card>
             </div>
