@@ -61,6 +61,7 @@ export default function VoyageManagementPage() {
   const [selectedVoyage, setSelectedVoyage] = useState<any>(null);
   const [statusForm, setStatusForm] = useState({
     status: "On-time" as VoyageStatusValue,
+    vesselId: "",
     remarks: "",
     actualDeparture: "",
     actualArrival: ""
@@ -80,10 +81,12 @@ export default function VoyageManagementPage() {
   const schedulesRef = useMemoFirebase(() => db ? collection(db, "schedules") : null, [db]);
   const routesRef = useMemoFirebase(() => db ? collection(db, "routes") : null, [db]);
   const voyagesRef = useMemoFirebase(() => db ? collection(db, "voyages") : null, [db]);
+  const vesselsRef = useMemoFirebase(() => db ? collection(db, "vessels") : null, [db]);
 
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: routes } = useCollection(routesRef);
   const { data: voyageStatuses } = useCollection(voyagesRef);
+  const { data: vessels } = useCollection(vesselsRef);
 
   const activeVoyages = useMemo(() => {
     if (!schedules || !selectedDate) return [];
@@ -102,22 +105,28 @@ export default function VoyageManagementPage() {
       const statusData = voyageStatuses?.find(v => v.id === voyageId);
       const route = routes?.find(r => r.id === s.routeId);
       
+      const assignedVesselId = statusData?.vesselId || s.vesselId;
+      const assignedVessel = vessels?.find(v => v.id === assignedVesselId);
+      
       return {
         ...s,
         voyageId,
         route,
+        assignedVessel,
         status: statusData?.status || "Scheduled",
         remarks: statusData?.remarks || "",
         actualDeparture: statusData?.actualDeparture || "",
-        actualArrival: statusData?.actualArrival || ""
+        actualArrival: statusData?.actualArrival || "",
+        currentVesselId: statusData?.vesselId || ""
       };
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
-  }, [schedules, selectedDate, selectedRouteId, search, voyageStatuses, routes]);
+  }, [schedules, selectedDate, selectedRouteId, search, voyageStatuses, routes, vessels]);
 
   const handleOpenUpdate = (voyage: any) => {
     setSelectedVoyage(voyage);
     setStatusForm({
       status: (voyage.status as VoyageStatusValue) || "Scheduled",
+      vesselId: voyage.currentVesselId || voyage.vesselId || "",
       remarks: voyage.remarks || "",
       actualDeparture: voyage.actualDeparture || "",
       actualArrival: voyage.actualArrival || ""
@@ -217,9 +226,9 @@ export default function VoyageManagementPage() {
 
              <Card className="border-none shadow-sm bg-primary text-primary-foreground p-5">
                 <div className="space-y-2">
-                   <h3 className="font-black uppercase tracking-tight text-sm">Real-time Sync</h3>
+                   <h3 className="font-black uppercase tracking-tight text-sm">Deployment Sync</h3>
                    <p className="text-[10px] opacity-70 leading-relaxed">
-                     Changes made here are immediately visible to passengers on the public search page and mobile boarding passes.
+                     Assigned vessels and live status updates are broadcast to the terminal and public site in real-time.
                    </p>
                 </div>
              </Card>
@@ -246,10 +255,13 @@ export default function VoyageManagementPage() {
                                    <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground truncate">
                                       {voyage.route?.name}
                                    </div>
-                                   <div className="flex items-center gap-4 pt-1">
+                                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
                                       <Badge className={cn("gap-1.5 py-1 px-3 uppercase font-black text-[10px]", getStatusColor(voyage.status))}>
                                          {getStatusIcon(voyage.status)} {voyage.status}
                                       </Badge>
+                                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary/60 bg-secondary/50 px-2 py-0.5 rounded-md">
+                                         <Ship className="h-3 w-3" /> {voyage.assignedVessel?.name || "No vessel set"}
+                                      </div>
                                       {voyage.remarks && (
                                         <div className="flex items-center gap-1.5 text-[10px] font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 italic">
                                            <Info className="h-3 w-3" /> {voyage.remarks}
@@ -320,6 +332,26 @@ export default function VoyageManagementPage() {
                </div>
 
                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Vessel Assignment</Label>
+                  <Select 
+                    value={statusForm.vesselId} 
+                    onValueChange={(val) => setStatusForm({...statusForm, vesselId: val})}
+                  >
+                    <SelectTrigger className="bg-white border-2">
+                      <SelectValue placeholder="Assign a vessel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vessels?.filter(v => v.status === 'Operational' || v.id === selectedVoyage?.vesselId).map(v => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name} {v.id === selectedVoyage?.vesselId ? "(Default)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[9px] text-muted-foreground italic">Overwrites schedule default for this trip instance.</p>
+               </div>
+
+               <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Operator Remarks</Label>
                   <Textarea 
                     placeholder="e.g. Delayed due to vessel cleaning or high tide..." 
@@ -351,8 +383,8 @@ export default function VoyageManagementPage() {
           </ScrollArea>
 
           <DialogFooter className="p-4 sm:p-6 border-t gap-2 shrink-0 bg-secondary/5">
-             <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)} className="flex-1">Cancel</Button>
-             <Button onClick={handleSaveStatus} className="flex-1 bg-primary text-white font-bold uppercase text-xs tracking-wider">
+             <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)} className="flex-1 h-11">Cancel</Button>
+             <Button onClick={handleSaveStatus} className="flex-1 bg-primary text-white font-bold uppercase text-xs tracking-wider h-11">
                Broadcast Status
              </Button>
           </DialogFooter>

@@ -204,6 +204,7 @@
       "properties": {
         "id": { "type": "string", "description": "Format: scheduleId_YYYY-MM-DD" },
         "scheduleId": { "type": "string" },
+        "vesselId": { "type": "string", "description": "ID of the vessel assigned for this specific instance." },
         "travelDate": { "type": "string", "format": "date" },
         "status": { "type": "string", "enum": ["Scheduled", "On-time", "Delayed", "Departed", "Arrived", "Cancelled"] },
         "remarks": { "type": "string" },

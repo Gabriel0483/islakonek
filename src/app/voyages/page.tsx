@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -48,10 +49,12 @@ export default function PublicVoyageStatusPage() {
   const schedulesRef = useMemoFirebase(() => db ? collection(db, "schedules") : null, [db]);
   const routesRef = useMemoFirebase(() => db ? collection(db, "routes") : null, [db]);
   const voyagesRef = useMemoFirebase(() => db ? collection(db, "voyages") : null, [db]);
+  const vesselsRef = useMemoFirebase(() => db ? collection(db, "vessels") : null, [db]);
 
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: routes } = useCollection(routesRef);
   const { data: voyageStatuses } = useCollection(voyagesRef);
+  const { data: vessels } = useCollection(vesselsRef);
 
   const activeVoyages = useMemo(() => {
     if (!schedules || !todayPHT) return [];
@@ -66,9 +69,13 @@ export default function PublicVoyageStatusPage() {
       const statusData = voyageStatuses?.find(v => v.id === voyageId);
       const route = routes?.find(r => r.id === s.routeId);
       
+      const assignedVesselId = statusData?.vesselId || s.vesselId;
+      const assignedVessel = vessels?.find(v => v.id === assignedVesselId);
+      
       return {
         ...s,
         route,
+        assignedVessel,
         status: statusData?.status || "Scheduled",
         remarks: statusData?.remarks || "",
         actualDeparture: statusData?.actualDeparture || ""
@@ -78,7 +85,7 @@ export default function PublicVoyageStatusPage() {
       v.tripCode.toLowerCase().includes(search.toLowerCase()) ||
       v.route?.name?.toLowerCase().includes(search.toLowerCase())
     ).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
-  }, [schedules, todayPHT, voyageStatuses, routes, search]);
+  }, [schedules, todayPHT, voyageStatuses, routes, search, vessels]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -154,7 +161,7 @@ export default function PublicVoyageStatusPage() {
                               <span className="truncate">{voyage.route?.name?.split(' - ')[1]}</span>
                            </div>
                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Ship className="h-3 w-3" /> {voyage.vesselId ? "Vessel Assigned" : "TBA"}
+                              <Ship className="h-3 w-3" /> {voyage.assignedVessel?.name || "TBA"}
                            </div>
                         </div>
                         

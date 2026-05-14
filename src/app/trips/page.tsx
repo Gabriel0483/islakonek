@@ -169,7 +169,12 @@ function TripsContent() {
       return true;
     }).map(schedule => {
       const route = routes.find(r => r.id === schedule.routeId);
-      const vessel = vessels?.find(v => v.id === schedule.vesselId);
+      const voyageId = `${schedule.id}_${targetDate}`;
+      const voyageInfo = voyageStatuses?.find(v => v.id === voyageId);
+      
+      // Prioritize Date-specific vessel from VoyageStatus, then fallback to schedule default
+      const vesselId = voyageInfo?.vesselId || schedule.vesselId;
+      const vessel = vessels?.find(v => v.id === vesselId);
       
       const usedSeats = bookings?.filter(b => 
         b.scheduleId === schedule.id && 
@@ -179,9 +184,6 @@ function TripsContent() {
       
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
       const waitlistLimit = schedule.waitlistLimit || 0;
-      
-      const voyageId = `${schedule.id}_${targetDate}`;
-      const voyageInfo = voyageStatuses?.find(v => v.id === voyageId);
 
       return {
         ...schedule,
