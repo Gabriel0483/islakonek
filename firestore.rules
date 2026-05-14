@@ -1,7 +1,7 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 2.9
+ * Version: 3.0
  * SuperAdmin Designation: rielmagpantay@gmail.com
  */
 
@@ -29,7 +29,7 @@ service cloud.firestore {
     }
 
     // User Profiles:
-    // - Authenticated users can read all profiles (supports search/lookup features).
+    // - Authenticated users can read profiles (supports search/lookup features).
     // - A user can create or update their own profile document (matched by UID).
     // - SuperAdmin has unrestricted access to manage any profile.
     match /users/{userId} {
