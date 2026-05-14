@@ -71,7 +71,7 @@ const bookingFormSchema = z.object({
   travelDate: z.string().refine((val) => val && !isNaN(Date.parse(val)), { message: "A date of travel is required."}),
   scheduleId: z.string({ required_error: "Please select a schedule." }),
   passengers: z.array(passengerSchema).min(1, "At least one passenger is required."),
-  primaryEmail: z.string().email({ message: "Please enter a valid email address." }).optional().or(z.literal('')),
+  primaryEmail: z.string().min(1, { message: "Email is required." }).email({ message: "Please enter a valid email address." }),
   primaryPhone: z.string().min(1, { message: "Please enter a contact number." }),
   isPaid: z.boolean().default(true),
 });
@@ -638,7 +638,7 @@ export default function DeskBookingsPage() {
                         name="primaryEmail"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Email (Optional)</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Email Address</FormLabel>
                             <FormControl><Input placeholder="juan@example.com" {...field} className="bg-white h-11" /></FormControl>
                             <FormMessage className="text-[10px]" />
                           </FormItem>

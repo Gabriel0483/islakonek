@@ -255,7 +255,7 @@ function TripsContent() {
     return sum + (fare?.finalFare || 0);
   }, 0);
 
-  const isDetailsValid = passengers.every(p => p.passengerName && p.fareId && p.passengerDob && p.emergencyContact && p.passengerContact);
+  const isDetailsValid = passengers.every(p => p.passengerName && p.fareId && p.passengerDob && p.emergencyContact && p.passengerContact && p.passengerEmail);
 
   return (
     <div className="min-h-screen bg-background font-body">
@@ -489,7 +489,7 @@ function TripsContent() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                               <div className="space-y-1.5">
-                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email (Optional)</Label>
+                                <Label className="text-[9px] sm:text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email Address</Label>
                                 <Input 
                                   type="email"
                                   value={p.passengerEmail} 
