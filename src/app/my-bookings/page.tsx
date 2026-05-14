@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { 
   Ticket, 
   Search, 
@@ -48,7 +49,7 @@ export default function MyBookingsPage() {
   const schedulesRef = useMemoFirebase(() => db ? collection(db, "schedules") : null, [db]);
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
-    // We search by userId or by passengerEmail as a fallback for legacy records
+    // We search by userId
     return query(
       collection(db, "bookings"), 
       where("userId", "==", user.uid)
@@ -85,7 +86,7 @@ export default function MyBookingsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Confirmed': return <Badge className="bg-green-600">Confirmed</Badge>;
-      case 'Reserved': return <Badge className="bg-blue-600">Reserved</Badge>;
+      case 'Reserved': return <Badge className="bg-blue-500">Reserved</Badge>;
       case 'Waitlisted': return <Badge className="bg-orange-500">Waitlisted</Badge>;
       case 'Used': return <Badge className="bg-indigo-600">Used (Boarded)</Badge>;
       case 'Suspended': return <Badge variant="destructive">Suspended</Badge>;
