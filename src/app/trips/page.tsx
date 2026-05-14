@@ -176,7 +176,8 @@ function TripsContent() {
         availability: capacity - usedSeats,
         waitlistCapacity: (capacity + waitlistLimit) - usedSeats,
         isWaitlistOnly: usedSeats >= capacity && usedSeats < (capacity + waitlistLimit),
-        isFull: usedSeats >= (capacity + waitlistLimit)
+        isFull: usedSeats >= (capacity + waitlistLimit),
+        estimatedDurationMinutes: route?.estimatedDurationMinutes || 0
       };
     });
   }, [schedules, routes, vessels, ports, bookings, searchQuery, selectedOriginPort, searchDate, isMounted, phtState]);
@@ -353,7 +354,7 @@ function TripsContent() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Timer className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
-                          <span className="font-bold text-primary/70">{trip.route?.estimatedDurationMinutes} mins voyage</span>
+                          <span className="font-bold text-primary/70">{trip.estimatedDurationMinutes} mins voyage</span>
                         </div>
                       </div>
                     </div>
@@ -424,9 +425,6 @@ function TripsContent() {
                        <Label className="flex items-center gap-2 font-black text-primary uppercase text-base sm:text-lg tracking-tight">
                         <Users className="h-4 w-4 sm:h-5 sm:w-5 text-accent" /> Passengers ({passengers.length})
                       </Label>
-                      <Button type="button" variant="outline" size="sm" onClick={addPassenger} className="gap-1 sm:gap-2 h-8 sm:h-9 font-bold text-[10px] sm:text-xs">
-                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" /> Add
-                      </Button>
                     </div>
 
                     <div className="space-y-6 sm:space-y-8">
@@ -517,6 +515,9 @@ function TripsContent() {
                           </div>
                         </div>
                       ))}
+                      <Button type="button" variant="outline" onClick={addPassenger} className="w-full gap-2 h-11 font-bold text-xs sm:text-sm border-2 border-dashed">
+                        <Plus className="h-4 w-4" /> Add Another Passenger
+                      </Button>
                     </div>
                   </div>
                 </div>

@@ -505,9 +505,6 @@ export default function DeskBookingsPage() {
                         <h3 className="font-black text-primary uppercase text-lg flex items-center gap-2">
                           <Users className="h-5 w-5 text-accent" /> Passengers ({fields.length})
                         </h3>
-                        <Button type="button" variant="outline" size="sm" onClick={() => append({ id: nanoid(), fullName: "", birthDate: "", fareType: "", emergencyContact: "" })} disabled={!watchScheduleId} className="h-9 font-bold text-xs gap-2">
-                          <PlusCircle className="h-4 w-4" /> Add
-                        </Button>
                       </div>
 
                       <div className="space-y-10">
@@ -612,6 +609,15 @@ export default function DeskBookingsPage() {
                             </div>
                           </div>
                         ))}
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => append({ id: nanoid(), fullName: "", birthDate: "", fareType: "", emergencyContact: "" })} 
+                          disabled={!watchScheduleId} 
+                          className="w-full gap-2 h-11 font-bold text-xs sm:text-sm border-2 border-dashed"
+                        >
+                          <PlusCircle className="h-4 w-4" /> Add Another Passenger
+                        </Button>
                       </div>
                     </section>
 
