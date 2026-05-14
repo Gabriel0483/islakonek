@@ -6,12 +6,12 @@ import {
   Waypoints, 
   Ship, 
   ArrowLeft, 
-  Loader2,
-  Activity,
-  Calendar,
-  AlertCircle,
-  Wrench,
-  CheckCircle2
+  Loader2, 
+  Activity, 
+  Calendar, 
+  AlertCircle, 
+  Wrench, 
+  CheckCircle2 
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
@@ -24,9 +24,21 @@ import { AdminNav } from "@/components/admin-nav";
 export default function OperationalOverviewPage() {
   const db = useFirestore();
   const [isMounted, setIsMounted] = useState(false);
+  const [todayPHT, setTodayPHT] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
+    const updateTime = () => {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const pht = new Date(utc + (3600000 * 8));
+      
+      const y = pht.getFullYear();
+      const m = String(pht.getMonth() + 1).padStart(2, '0');
+      const d = String(pht.getDate()).padStart(2, '0');
+      setTodayPHT(`${y}-${m}-${d}`);
+    };
+    updateTime();
   }, []);
 
   const portsRef = useMemoFirebase(() => {
@@ -44,11 +56,27 @@ export default function OperationalOverviewPage() {
     return collection(db, "vessels");
   }, [db]);
 
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "schedules");
+  }, [db]);
+
   const { data: ports, isLoading: isPortsLoading } = useCollection(portsRef);
   const { data: routes, isLoading: isRoutesLoading } = useCollection(routesRef);
   const { data: vessels, isLoading: isVesselsLoading } = useCollection(vesselsRef);
+  const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
 
-  const isLoading = isPortsLoading || isRoutesLoading || isVesselsLoading;
+  const isLoading = isPortsLoading || isRoutesLoading || isVesselsLoading || isSchedulesLoading;
+
+  const activeTripsCount = useMemo(() => {
+    if (!schedules || !todayPHT) return 0;
+    return schedules.filter(s => {
+      if (!s.isActive) return false;
+      if (s.type === 'Daily') return true;
+      if (s.type === 'Special' && s.specialDates?.includes(todayPHT)) return true;
+      return false;
+    }).length;
+  }, [schedules, todayPHT]);
 
   const maintenanceNeeded = useMemo(() => {
     return vessels?.filter(v => v.status === "Maintenance").length || 0;
@@ -70,6 +98,14 @@ export default function OperationalOverviewPage() {
       color: "text-accent", 
       bg: "bg-accent/10", 
       description: "Inter-island shipping connections." 
+    },
+    { 
+      label: "Today's Trips", 
+      value: activeTripsCount, 
+      icon: Calendar, 
+      color: "text-green-600", 
+      bg: "bg-green-600/10", 
+      description: "Active voyages scheduled for today." 
     },
     { 
       label: "Fleet Size", 
@@ -112,7 +148,7 @@ export default function OperationalOverviewPage() {
               <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Aggregating Data...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {statusTiles.map((tile, i) => (
                 <Card key={i} className="border-none shadow-sm bg-white overflow-hidden group hover:ring-2 hover:ring-primary/10 transition-all">
                   <CardHeader className="pb-2 p-4 sm:p-6">
