@@ -76,10 +76,12 @@ import { cn } from "@/lib/utils";
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
 
 const ACTIVE_STATUSES = ["Reserved", "Waitlisted", "Confirmed", "Used"];
+const ITEMS_PER_PAGE = 50;
 
 export default function ManageBookingsPage() {
   const db = useFirestore();
   const [isMounted, setIsMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setIsMounted(true);
@@ -92,7 +94,7 @@ export default function ManageBookingsPage() {
 
   const bookingsRef = useMemoFirebase(() => {
     if (!db) return null;
-    // Limit to 300 most recent to prevent browser freeze on large datasets
+    // Limit to 300 to keep the snapshot listener manageable
     return query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(300));
   }, [db]);
 
@@ -164,11 +166,16 @@ export default function ManageBookingsPage() {
       
       return true;
     });
-    // Sorting is already handled by the query (orderBy createdAt desc)
   }, [bookings, search, activeTab]);
 
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredBookings.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredBookings, currentPage]);
+
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+
   const getRoute = (id: string) => routes?.find(r => r.id === id);
-  const getSchedule = (id: string) => schedules?.find(s => s.id === id);
   const getDeparture = (id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--";
   const getTripCode = (id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A";
 
@@ -266,7 +273,6 @@ export default function ManageBookingsPage() {
     setIsStatusDialogOpen(false);
 
     if (statusTarget.status === 'Confirmed') {
-      // Small delay to let the dialog close cleanly
       setTimeout(() => {
         setSelectedBooking((prev: any) => ({ ...prev, ...updateData }));
         setIsBoardingPassOpen(true);
@@ -327,9 +333,17 @@ export default function ManageBookingsPage() {
 
   const handleDeleteRecord = () => {
     if (!db || !selectedBooking) return;
-    const bookingRef = doc(db, "bookings", selectedBooking.id);
-    deleteDocumentNonBlocking(bookingRef);
+    
+    const idToDelete = selectedBooking.id;
+    // Close the dialog first to ensure Radix UI cleans up the modal overlay before re-render
     setIsDeleteConfirmOpen(false);
+    
+    // Slight delay to allow the dialog animation to complete before database sync triggers a list update
+    setTimeout(() => {
+      const bookingRef = doc(db, "bookings", idToDelete);
+      deleteDocumentNonBlocking(bookingRef);
+      setSelectedBooking(null);
+    }, 150);
   };
 
   const getStatusBadge = (status: string) => {
@@ -368,17 +382,20 @@ export default function ManageBookingsPage() {
               placeholder="Search passenger, ID, or Date..." 
               className="pl-10 h-10 sm:h-12 bg-white border-none shadow-sm text-sm"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
           <div className="flex items-center gap-2">
              <Badge variant="outline" className="bg-white px-3 py-1 font-bold text-[10px] sm:text-xs">
-               Showing {filteredBookings.length} of latest {bookings?.length || 0} records
+               Found {filteredBookings.length} results
              </Badge>
           </div>
         </div>
 
-        <Tabs defaultValue="all" onValueChange={setActiveTab} className="space-y-6">
+        <Tabs defaultValue="all" onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="space-y-6">
           <div className="overflow-x-auto no-scrollbar">
             <TabsList className="bg-white border p-1 h-auto flex flex-nowrap sm:flex-wrap w-fit sm:w-full">
               <TabsTrigger value="all" className="shrink-0 text-[10px] sm:text-sm">All</TabsTrigger>
@@ -397,7 +414,7 @@ export default function ManageBookingsPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-accent" />
                   <p className="text-sm text-muted-foreground">Loading manifest...</p>
                 </div>
-              ) : filteredBookings.length > 0 ? (
+              ) : paginatedBookings.length > 0 ? (
                 <div className="w-full min-w-[700px]">
                   <Table>
                     <TableHeader className="bg-secondary/30">
@@ -411,7 +428,7 @@ export default function ManageBookingsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredBookings.map((booking) => (
+                      {paginatedBookings.map((booking) => (
                         <TableRow key={booking.id} className="hover:bg-accent/5">
                           <TableCell className="font-mono text-[10px] font-bold">
                             #{booking.id}
@@ -492,6 +509,34 @@ export default function ManageBookingsPage() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {totalPages > 1 && (
+                    <div className="p-4 border-t flex items-center justify-between bg-secondary/10">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">
+                        Page {currentPage} of {totalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage(prev => prev - 1)}
+                          className="h-8 text-xs font-bold"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          disabled={currentPage === totalPages}
+                          onClick={() => setCurrentPage(prev => prev + 1)}
+                          className="h-8 text-xs font-bold"
+                        >
+                          Next <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-20 opacity-50">
