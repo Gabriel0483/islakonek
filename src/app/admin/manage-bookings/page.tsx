@@ -618,7 +618,7 @@ export default function ManageBookingsPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">Emergency Contact</Label>
-                  <Input value={editFormData.emergencyContact} onChange={(e) => setEditFormData({...editFormData, emergencyContact: e.target.value})} className="h-11 text-sm" />
+                  <Input value={editFormData.emergencyContact} onChange={(e) => setEditFormData({...editFormData, emergencyContact: e.target.value})} placeholder="Emergency mobile number" className="h-11 text-sm" />
                 </div>
               </div>
               <div className="space-y-1.5">

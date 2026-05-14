@@ -63,7 +63,7 @@ const passengerSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   birthDate: z.string().min(1, { message: "Birth date is required." }),
   fareType: z.string({ required_error: "Please select a fare type."}),
-  emergencyContact: z.string().min(1, { message: "Emergency contact is required." }),
+  emergencyContact: z.string().min(1, { message: "Emergency contact number is required." }),
 });
 
 const bookingFormSchema = z.object({
@@ -600,7 +600,7 @@ export default function DeskBookingsPage() {
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Emergency Contact</FormLabel>
-                                      <FormControl><Input placeholder="Name or Phone" {...field} className="bg-white h-11" /></FormControl>
+                                      <FormControl><Input placeholder="Emergency mobile number" {...field} className="bg-white h-11" /></FormControl>
                                       <FormMessage className="text-[10px]" />
                                     </FormItem>
                                   )}

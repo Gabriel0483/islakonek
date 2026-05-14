@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -470,7 +469,7 @@ function TripsContent() {
                                 <Input 
                                   value={p.emergencyContact} 
                                   onChange={(e) => updatePassenger(index, 'emergencyContact', e.target.value)}
-                                  placeholder="Contact person & number"
+                                  placeholder="Emergency mobile number"
                                   className="bg-white h-10 sm:h-11 text-sm"
                                 />
                               </div>
