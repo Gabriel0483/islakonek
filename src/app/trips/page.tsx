@@ -470,7 +470,7 @@ function TripsContent() {
                                 <Input 
                                   value={p.emergencyContact} 
                                   onChange={(e) => updatePassenger(index, 'emergencyContact', e.target.value)}
-                                  placeholder="ICE name or mobile"
+                                  placeholder="Contact person & number"
                                   className="bg-white h-10 sm:h-11 text-sm"
                                 />
                               </div>
