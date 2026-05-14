@@ -1,7 +1,7 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 2.7
+ * Version: 2.9
  * SuperAdmin Designation: rielmagpantay@gmail.com
  */
 
@@ -11,54 +11,27 @@ service cloud.firestore {
 
     // Helper function to check if the user is the designated SuperAdmin
     function isSuperAdmin() {
-      return request.auth != null && request.auth.token.email == 'rielmagpantay@gmail.com';
+      return request.auth != null && 
+             request.auth.token.email == 'rielmagpantay@gmail.com';
     }
 
-    // Ports: Publicly readable, writeable only by SuperAdmin
-    match /ports/{portId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
+    // Ports, Routes, Fares, Vessels, Maintenance, Schedules: Public read, Admin write
+    match /ports/{portId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /routes/{routeId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /fares/{fareId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /vessels/{vesselId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /maintenance/{recordId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /schedules/{scheduleId} { allow read: if true; allow write: if isSuperAdmin(); }
 
-    // Routes: Publicly readable, writeable only by SuperAdmin
-    match /routes/{routeId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    // Fares: Publicly readable, writeable only by SuperAdmin
-    match /fares/{fareId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    // Vessels: Publicly readable, writeable only by SuperAdmin
-    match /vessels/{vesselId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    // Maintenance: Publicly readable, writeable only by SuperAdmin
-    match /maintenance/{recordId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    // Schedules: Publicly readable, writeable only by SuperAdmin
-    match /schedules/{scheduleId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    // Bookings: Publicly readable and writeable (Public/Desk workflow)
+    // Bookings: Publicly readable and writeable
     match /bookings/{bookingId} {
       allow read, write: if true;
     }
 
-    // Users: 
-    // - Any authenticated user can read profiles (supports desk lookup and personal access).
-    // - Users can create and update their own profile document.
-    // - SuperAdmin can create, update, or delete any profile.
+    // User Profiles:
+    // - Authenticated users can read all profiles (supports search/lookup features).
+    // - A user can create or update their own profile document (matched by UID).
+    // - SuperAdmin has unrestricted access to manage any profile.
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
