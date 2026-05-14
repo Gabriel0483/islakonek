@@ -31,7 +31,7 @@ import {
   ChevronRight,
   ChevronLeft
 } from "lucide-react";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, orderBy, limit } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   updateDocumentNonBlocking, 
@@ -92,7 +92,8 @@ export default function ManageBookingsPage() {
 
   const bookingsRef = useMemoFirebase(() => {
     if (!db) return null;
-    return collection(db, "bookings");
+    // Limit to 300 most recent to prevent browser freeze on large datasets
+    return query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(300));
   }, [db]);
 
   const schedulesRef = useMemoFirebase(() => {
@@ -140,27 +141,30 @@ export default function ManageBookingsPage() {
 
   const filteredBookings = useMemo(() => {
     if (!bookings) return [];
+    
+    const searchLower = search.toLowerCase();
+    
     return bookings.filter(b => {
       const matchesSearch = 
-        b.passengerName?.toLowerCase().includes(search.toLowerCase()) ||
-        b.id?.toLowerCase().includes(search.toLowerCase()) ||
+        !search ||
+        b.passengerName?.toLowerCase().includes(searchLower) ||
+        b.id?.toLowerCase().includes(searchLower) ||
         b.travelDate?.includes(search);
       
-      if (activeTab === "all") return matchesSearch;
-      if (activeTab === "reserved") return matchesSearch && b.status === "Reserved";
-      if (activeTab === "waitlisted") return matchesSearch && b.status === "Waitlisted";
-      if (activeTab === "confirmed") return matchesSearch && b.status === "Confirmed";
-      if (activeTab === "used") return matchesSearch && b.status === "Used";
+      if (!matchesSearch) return false;
+      
+      if (activeTab === "all") return true;
+      if (activeTab === "reserved") return b.status === "Reserved";
+      if (activeTab === "waitlisted") return b.status === "Waitlisted";
+      if (activeTab === "confirmed") return b.status === "Confirmed";
+      if (activeTab === "used") return b.status === "Used";
       if (activeTab === "inactive") {
-        return matchesSearch && (["Suspended", "Auto-cancelled", "Refunded"].includes(b.status) || !ACTIVE_STATUSES.includes(b.status));
+        return ["Suspended", "Auto-cancelled", "Refunded"].includes(b.status) || !ACTIVE_STATUSES.includes(b.status);
       }
       
-      return matchesSearch;
-    }).sort((a: any, b: any) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
+      return true;
     });
+    // Sorting is already handled by the query (orderBy createdAt desc)
   }, [bookings, search, activeTab]);
 
   const getRoute = (id: string) => routes?.find(r => r.id === id);
@@ -262,11 +266,11 @@ export default function ManageBookingsPage() {
     setIsStatusDialogOpen(false);
 
     if (statusTarget.status === 'Confirmed') {
+      // Small delay to let the dialog close cleanly
       setTimeout(() => {
-        const updatedBooking = { ...statusTarget.booking, ...updateData };
-        setSelectedBooking(updatedBooking);
+        setSelectedBooking((prev: any) => ({ ...prev, ...updateData }));
         setIsBoardingPassOpen(true);
-      }, 300);
+      }, 100);
     }
   };
 
@@ -296,7 +300,7 @@ export default function ManageBookingsPage() {
       (b.status === 'Confirmed' || b.status === 'Used')
     ) || [];
 
-    updateDocumentNonBlocking(bookingRef, {
+    const updateData = {
       scheduleId: rebookingData.newScheduleId,
       travelDate: rebookingData.newTravelDate,
       status: "Confirmed",
@@ -305,8 +309,9 @@ export default function ManageBookingsPage() {
       waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
       boardingSequenceNumber: tripBookings.length + 1,
       updatedAt: new Date().toISOString()
-    });
+    };
 
+    updateDocumentNonBlocking(bookingRef, updateData);
     setIsRebookDialogOpen(false);
   };
 
@@ -367,7 +372,9 @@ export default function ManageBookingsPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-             <Badge variant="outline" className="bg-white px-3 py-1 font-bold text-[10px] sm:text-xs">Total: {bookings?.length || 0} records</Badge>
+             <Badge variant="outline" className="bg-white px-3 py-1 font-bold text-[10px] sm:text-xs">
+               Showing {filteredBookings.length} of latest {bookings?.length || 0} records
+             </Badge>
           </div>
         </div>
 
@@ -390,7 +397,7 @@ export default function ManageBookingsPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-accent" />
                   <p className="text-sm text-muted-foreground">Loading manifest...</p>
                 </div>
-              ) : filteredBookings && filteredBookings.length > 0 ? (
+              ) : filteredBookings.length > 0 ? (
                 <div className="w-full min-w-[700px]">
                   <Table>
                     <TableHeader className="bg-secondary/30">
