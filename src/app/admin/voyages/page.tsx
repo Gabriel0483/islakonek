@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -18,9 +17,11 @@ import {
   XCircle, 
   PlayCircle, 
   Anchor, 
-  Filter 
+  Filter,
+  RefreshCw,
+  Activity
 } from "lucide-react";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, where, getDocs, runTransaction } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { AdminNav } from "@/components/admin-nav";
@@ -47,15 +48,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type VoyageStatusValue = "Scheduled" | "On-time" | "Delayed" | "Departed" | "Arrived" | "Cancelled";
 
 export default function VoyageManagementPage() {
   const db = useFirestore();
+  const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [search, setSearch] = useState("");
   const [selectedRouteId, setSelectedRouteId] = useState<string>("all");
+  const [isSyncing, setIsSyncing] = useState<string | null>(null);
 
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [selectedVoyage, setSelectedVoyage] = useState<any>(null);
@@ -117,10 +121,64 @@ export default function VoyageManagementPage() {
         remarks: statusData?.remarks || "",
         actualDeparture: statusData?.actualDeparture || "",
         actualArrival: statusData?.actualArrival || "",
-        currentVesselId: statusData?.vesselId || ""
+        currentVesselId: statusData?.vesselId || "",
+        bookedCount: statusData?.bookedCount || 0,
+        waitlistCount: statusData?.waitlistCount || 0
       };
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [schedules, selectedDate, selectedRouteId, search, voyageStatuses, routes, vessels]);
+
+  const handleRecalibrateInventory = async (voyage: any) => {
+    if (!db || isSyncing) return;
+    setIsSyncing(voyage.voyageId);
+    
+    try {
+      const bookingsQuery = query(
+        collection(db, "bookings"),
+        where("scheduleId", "==", voyage.id),
+        where("travelDate", "==", selectedDate)
+      );
+      
+      const snap = await getDocs(bookingsQuery);
+      let realBooked = 0;
+      let realWaitlisted = 0;
+      
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        if (['Confirmed', 'Reserved', 'Used'].includes(data.status)) realBooked++;
+        if (data.status === 'Waitlisted') realWaitlisted++;
+      });
+
+      await runTransaction(db, async (transaction) => {
+        const vRef = doc(db, "voyages", voyage.voyageId);
+        const vSnap = await transaction.get(vRef);
+        
+        const payload = {
+          bookedCount: realBooked,
+          waitlistCount: realWaitlisted,
+          updatedAt: new Date().toISOString()
+        };
+
+        if (vSnap.exists()) {
+          transaction.update(vRef, payload);
+        } else {
+          transaction.set(vRef, {
+            ...payload,
+            id: voyage.voyageId,
+            scheduleId: voyage.id,
+            travelDate: selectedDate,
+            status: "Scheduled"
+          });
+        }
+      });
+
+      toast({ title: "Inventory Recalibrated", description: `Trip ${voyage.tripCode} now showing ${realBooked} confirmed seats.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Recalibration Failed", description: e.message });
+    } finally {
+      setIsSyncing(null);
+    }
+  };
 
   const handleOpenUpdate = (voyage: any) => {
     setSelectedVoyage(voyage);
@@ -225,10 +283,12 @@ export default function VoyageManagementPage() {
              </Card>
 
              <Card className="border-none shadow-sm bg-primary text-primary-foreground p-5">
-                <div className="space-y-2">
-                   <h3 className="font-black uppercase tracking-tight text-sm">Deployment Sync</h3>
+                <div className="space-y-3">
+                   <h3 className="font-black uppercase tracking-tight text-sm flex items-center gap-2">
+                     <Activity className="h-4 w-4" /> Integrity Tools
+                   </h3>
                    <p className="text-[10px] opacity-70 leading-relaxed">
-                     Assigned vessels and live status updates are broadcast to the terminal and public site in real-time.
+                     If atomic inventory counts seem inaccurate, use the recalibration tool on each voyage card to perform a manual audit.
                    </p>
                 </div>
              </Card>
@@ -245,7 +305,7 @@ export default function VoyageManagementPage() {
                   {activeVoyages.map((voyage) => (
                     <Card key={voyage.voyageId} className="border-none shadow-sm bg-white hover:ring-1 hover:ring-accent/30 transition-all group overflow-hidden">
                        <CardContent className="p-0">
-                          <div className="flex flex-col sm:flex-row">
+                          <div className="flex flex-col lg:flex-row">
                              <div className="p-4 sm:p-5 flex-1 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
                                 <div className="space-y-1 sm:w-24 shrink-0">
                                    <p className="text-[10px] font-black text-accent uppercase tracking-widest">{voyage.tripCode}</p>
@@ -262,20 +322,34 @@ export default function VoyageManagementPage() {
                                       <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary/60 bg-secondary/50 px-2 py-0.5 rounded-md">
                                          <Ship className="h-3 w-3" /> {voyage.assignedVessel?.name || "No vessel set"}
                                       </div>
-                                      {voyage.remarks && (
-                                        <div className="flex items-center gap-1.5 text-[10px] font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100 italic">
-                                           <Info className="h-3 w-3" /> {voyage.remarks}
-                                        </div>
-                                      )}
+                                      <div className="flex items-center gap-3 ml-2 border-l pl-3">
+                                         <div className="flex flex-col">
+                                            <span className="text-[8px] font-black uppercase text-muted-foreground">Booked</span>
+                                            <span className="text-xs font-black text-primary">{voyage.bookedCount}</span>
+                                         </div>
+                                         <div className="flex flex-col">
+                                            <span className="text-[8px] font-black uppercase text-muted-foreground">Wait</span>
+                                            <span className="text-xs font-black text-orange-600">{voyage.waitlistCount}</span>
+                                         </div>
+                                      </div>
                                    </div>
                                 </div>
                              </div>
-                             <div className="bg-secondary/10 px-4 py-3 sm:px-6 sm:py-0 flex items-center justify-end sm:border-l">
+                             <div className="bg-secondary/10 px-4 py-3 lg:px-6 lg:py-0 flex items-center justify-end gap-2 lg:border-l">
+                                <Button 
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRecalibrateInventory(voyage)}
+                                  className={cn("h-10 text-[10px] font-bold uppercase gap-2", isSyncing === voyage.voyageId && "animate-pulse")}
+                                >
+                                   {isSyncing === voyage.voyageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                                   <span className="hidden xl:inline">Recalibrate</span>
+                                </Button>
                                 <Button 
                                   onClick={() => handleOpenUpdate(voyage)}
                                   className="h-10 px-6 font-bold text-xs uppercase tracking-wider bg-white border border-primary/10 text-primary hover:bg-primary hover:text-white"
                                 >
-                                   Update Status <ChevronRight className="h-3.5 w-3.5 ml-2" />
+                                   Broadcast <ChevronRight className="h-3.5 w-3.5 ml-2" />
                                 </Button>
                              </div>
                           </div>

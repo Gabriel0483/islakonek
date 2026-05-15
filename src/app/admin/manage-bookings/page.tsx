@@ -421,19 +421,21 @@ export default function ManageBookingsPage() {
     setIsStatusDialogOpen(false);
 
     try {
-      const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(booking.status);
+      const activeStates = ['Confirmed', 'Reserved', 'Used'];
+      const wasActive = activeStates.includes(booking.status);
+      const wasWaitlisted = booking.status === 'Waitlisted';
+      const isNowActive = activeStates.includes(newStatus);
       const isNowInactive = ['Auto-cancelled', 'Refunded', 'Suspended'].includes(newStatus);
-      let candidateDoc = (wasConfirmed && isNowInactive) ? await findWaitlistedCandidate(booking.scheduleId, booking.travelDate) : null;
+
+      let candidateDoc = (wasActive && isNowInactive) ? await findWaitlistedCandidate(booking.scheduleId, booking.travelDate) : null;
 
       await runTransaction(db, async (transaction) => {
         const voyageId = `${booking.scheduleId}_${booking.travelDate}`;
         const voyageRef = doc(db, "voyages", voyageId);
         const bookingRef = doc(db, "bookings", booking.id);
 
-        // GET all documents first in the transaction
         const voyageSnap = await transaction.get(voyageRef);
         
-        // THEN do the writes
         transaction.update(bookingRef, { 
           status: newStatus, 
           penaltyFees: penaltyAmount,
@@ -442,18 +444,22 @@ export default function ManageBookingsPage() {
           updatedAt: new Date().toISOString() 
         });
 
-        if (wasConfirmed && isNowInactive) {
+        if (wasActive && isNowInactive) {
           transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
           if (candidateDoc) {
             const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
             transaction.update(candidateDoc.ref, {
               status: "Reserved",
-              boardingSequenceNumber: currentBooked,
+              boardingSequenceNumber: Math.max(1, currentBooked),
               remarks: "Auto-promoted from Waitlist (System)",
               updatedAt: new Date().toISOString()
             });
             transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
           }
+        } else if (wasWaitlisted && isNowInactive) {
+          transaction.update(voyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
+        } else if (wasWaitlisted && isNowActive) {
+          transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
         }
       });
       if (newStatus === 'Confirmed') setIsBoardingPassOpen(true);
@@ -471,25 +477,67 @@ export default function ManageBookingsPage() {
     return fees;
   }, [selectedBooking, routes, rebookingData.isFeeWaived]);
 
-  const handlePerformRebook = () => {
+  const handlePerformRebook = async () => {
     if (!db || !selectedBooking || !rebookingData.newScheduleId || isActionProcessing) return;
     setIsActionProcessing(true);
-    const fees = calculateRebookingFees;
-    const bookingRef = doc(db, "bookings", selectedBooking.id);
-    const tripBookings = bookings?.filter(b => b.scheduleId === rebookingData.newScheduleId && b.travelDate === rebookingData.newTravelDate && (b.status === 'Confirmed' || b.status === 'Used')) || [];
-
-    updateDocumentNonBlocking(bookingRef, {
-      scheduleId: rebookingData.newScheduleId,
-      travelDate: rebookingData.newTravelDate,
-      status: "Confirmed",
-      penaltyFees: fees,
-      isFeeWaived: rebookingData.isFeeWaived,
-      waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
-      boardingSequenceNumber: tripBookings.length + 1,
-      updatedAt: new Date().toISOString()
-    });
     
-    setTimeout(() => { setIsRebookDialogOpen(false); setIsActionProcessing(false); }, 200);
+    const fees = calculateRebookingFees;
+    const bookingId = selectedBooking.id;
+    const oldVoyageId = `${selectedBooking.scheduleId}_${selectedBooking.travelDate}`;
+    const newVoyageId = `${rebookingData.newScheduleId}_${rebookingData.newTravelDate}`;
+    const wasActive = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
+    const wasWaitlisted = selectedBooking.status === 'Waitlisted';
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const bookingRef = doc(db, "bookings", bookingId);
+        const oldVoyageRef = doc(db, "voyages", oldVoyageId);
+        const newVoyageRef = doc(db, "voyages", newVoyageId);
+
+        const newVoyageSnap = await transaction.get(newVoyageRef);
+        const currentNewBooked = newVoyageSnap.exists() ? (newVoyageSnap.data().bookedCount || 0) : 0;
+
+        // Update counters on old voyage
+        if (wasActive) {
+          transaction.update(oldVoyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
+        } else if (wasWaitlisted) {
+          transaction.update(oldVoyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
+        }
+
+        // Update counters on new voyage
+        if (!newVoyageSnap.exists()) {
+          transaction.set(newVoyageRef, {
+            id: newVoyageId,
+            scheduleId: rebookingData.newScheduleId,
+            travelDate: rebookingData.newTravelDate,
+            status: "Scheduled",
+            bookedCount: 1,
+            waitlistCount: 0,
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          transaction.update(newVoyageRef, { bookedCount: increment(1), updatedAt: new Date().toISOString() });
+        }
+
+        transaction.update(bookingRef, {
+          scheduleId: rebookingData.newScheduleId,
+          travelDate: rebookingData.newTravelDate,
+          status: "Confirmed",
+          penaltyFees: fees,
+          isFeeWaived: rebookingData.isFeeWaived,
+          waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
+          boardingSequenceNumber: currentNewBooked + 1,
+          updatedAt: new Date().toISOString()
+        });
+      });
+      
+      toast({ title: "Rebooked Successfully", description: `Ticket #${bookingId} moved to ${rebookingData.newTravelDate}` });
+      setIsRebookDialogOpen(false);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Rebooking Failed", description: e.message });
+    } finally {
+      setIsActionProcessing(false);
+    }
   };
 
   const handleSaveEdit = () => {
@@ -505,24 +553,23 @@ export default function ManageBookingsPage() {
     setIsActionProcessing(true);
     const bookingId = selectedBooking.id;
     const voyageId = `${selectedBooking.scheduleId}_${selectedBooking.travelDate}`;
-    const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
+    const wasActive = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
+    const wasWaitlisted = selectedBooking.status === 'Waitlisted';
 
     setIsDeleteConfirmOpen(false);
 
     try {
-      let candidateDoc = wasConfirmed ? await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate) : null;
+      let candidateDoc = wasActive ? await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate) : null;
 
       await runTransaction(db, async (transaction) => {
         const voyageRef = doc(db, "voyages", voyageId);
         const bookingRef = doc(db, "bookings", bookingId);
         
-        // GET first
         const voyageSnap = await transaction.get(voyageRef);
         
-        // THEN writes
         transaction.delete(bookingRef);
 
-        if (wasConfirmed) {
+        if (wasActive) {
           transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
           if (candidateDoc) {
             const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
@@ -534,6 +581,8 @@ export default function ManageBookingsPage() {
             });
             transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
           }
+        } else if (wasWaitlisted) {
+          transaction.update(voyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
         }
       });
     } catch (e: any) {
@@ -555,10 +604,8 @@ export default function ManageBookingsPage() {
           const voyageRef = doc(db, "voyages", voyageId);
           const bRef = doc(db, "bookings", b.id);
           
-          // READ first
           const voyageSnap = await transaction.get(voyageRef);
           
-          // WRITE after
           transaction.update(bRef, { status: "Auto-cancelled", updatedAt: new Date().toISOString(), remarks: "Purged: Unpaid ghost reservation released 1hr before departure." });
           transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
           
