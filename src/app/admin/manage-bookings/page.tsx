@@ -33,7 +33,7 @@ import {
   Ghost,
   Trash
 } from "lucide-react";
-import { collection, doc, query, orderBy, limit, runTransaction, getDocs, where, increment } from "firebase/firestore";
+import { collection, doc, query, orderBy, limit, runTransaction, getDocs, where, increment, getDoc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   updateDocumentNonBlocking, 
@@ -397,41 +397,92 @@ export default function ManageBookingsPage() {
     return penalty;
   };
 
-  const handleConfirmStatusUpdate = () => {
+  /**
+   * ATOMIC PROMOTION UTILITY
+   * Identifies next waitlisted party and promotes them.
+   * Internal helper for transactions.
+   */
+  const promoteWaitlistedParty = async (transaction: any, scheduleId: string, travelDate: string) => {
+    if (!db) return;
+    const waitlistQuery = query(
+      collection(db, "bookings"),
+      where("scheduleId", "==", scheduleId),
+      where("travelDate", "==", travelDate),
+      where("status", "==", "Waitlisted"),
+      orderBy("createdAt", "asc"),
+      limit(1)
+    );
+    const snap = await getDocs(waitlistQuery);
+    if (!snap.empty) {
+      const candidate = snap.docs[0];
+      const voyageId = `${scheduleId}_${travelDate}`;
+      const voyageRef = doc(db, "voyages", voyageId);
+      const voyageSnap = await transaction.get(voyageRef);
+      
+      if (voyageSnap.exists()) {
+        const currentBooked = voyageSnap.data().bookedCount || 0;
+        transaction.update(candidate.ref, {
+          status: "Reserved",
+          boardingSequenceNumber: currentBooked + 1,
+          remarks: "Auto-promoted from Waitlist (System)",
+          updatedAt: new Date().toISOString()
+        });
+        transaction.update(voyageRef, {
+          bookedCount: increment(1),
+          waitlistCount: increment(-1),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+  };
+
+  const handleConfirmStatusUpdate = async () => {
     if (!db || !statusTarget || isActionProcessing) return;
     setIsActionProcessing(true);
     
+    const { booking, status: newStatus } = statusTarget;
     const penaltyAmount = calculateStatusPenalties();
-    const bookingRef = doc(db, "bookings", statusTarget.booking.id);
-    
-    const updateData: any = { 
-      status: statusTarget.status, 
-      penaltyFees: penaltyAmount,
-      isFeeWaived: statusActionData.isFeeWaived,
-      waiveReason: statusActionData.isFeeWaived ? statusActionData.waiveReason : "",
-      updatedAt: new Date().toISOString() 
-    };
+    const bookingRef = doc(db, "bookings", booking.id);
+    const voyageId = `${booking.scheduleId}_${booking.travelDate}`;
+    const voyageRef = doc(db, "voyages", voyageId);
 
-    if (statusTarget.status === 'Confirmed' && !statusTarget.booking.boardingSequenceNumber) {
-      const tripBookings = bookings?.filter(b => 
-        b.scheduleId === statusTarget.booking.scheduleId && 
-        b.travelDate === statusTarget.booking.travelDate && 
-        (b.status === 'Confirmed' || b.status === 'Used')
-      ) || [];
-      updateData.boardingSequenceNumber = tripBookings.length + 1;
-    }
+    try {
+      await runTransaction(db, async (transaction) => {
+        const updateData: any = { 
+          status: newStatus, 
+          penaltyFees: penaltyAmount,
+          isFeeWaived: statusActionData.isFeeWaived,
+          waiveReason: statusActionData.isFeeWaived ? statusActionData.waiveReason : "",
+          updatedAt: new Date().toISOString() 
+        };
 
-    updateDocumentNonBlocking(bookingRef, updateData);
-    
-    // Batch UI updates and close dialog safely
-    setTimeout(() => {
+        const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(booking.status);
+        const isNowInactive = ['Auto-cancelled', 'Refunded', 'Suspended'].includes(newStatus);
+
+        // 1. Update Booking
+        transaction.update(bookingRef, updateData);
+
+        // 2. Adjust Inventory if seat vacated
+        if (wasConfirmed && isNowInactive) {
+          transaction.update(voyageRef, {
+            bookedCount: increment(-1),
+            updatedAt: new Date().toISOString()
+          });
+          // Attempt Promotion
+          await promoteWaitlistedParty(transaction, booking.scheduleId, booking.travelDate);
+        }
+      });
+      
       setIsStatusDialogOpen(false);
-      setIsActionProcessing(false);
-      if (statusTarget.status === 'Confirmed') {
-        setSelectedBooking((prev: any) => ({ ...prev, ...updateData }));
+      if (newStatus === 'Confirmed') {
+        setSelectedBooking((prev: any) => ({ ...prev, status: newStatus }));
         setIsBoardingPassOpen(true);
       }
-    }, 100);
+    } catch (e) {
+      console.error("Status update failed:", e);
+    } finally {
+      setIsActionProcessing(false);
+    }
   };
 
   const calculateRebookingFees = useMemo(() => {
@@ -493,20 +544,38 @@ export default function ManageBookingsPage() {
     }, 100);
   };
 
-  const handleDeleteRecord = () => {
+  const handleDeleteRecord = async () => {
     if (!db || !selectedBooking || isActionProcessing) return;
     setIsActionProcessing(true);
     
-    const idToDelete = selectedBooking.id;
-    // Explicitly close dialog first to prevent DOM conflicts during deletion
-    setIsDeleteConfirmOpen(false);
-    
-    setTimeout(() => {
-      const bookingRef = doc(db, "bookings", idToDelete);
-      deleteDocumentNonBlocking(bookingRef);
+    const bookingId = selectedBooking.id;
+    const voyageId = `${selectedBooking.scheduleId}_${selectedBooking.travelDate}`;
+    const voyageRef = doc(db, "voyages", voyageId);
+    const bookingRef = doc(db, "bookings", bookingId);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
+        
+        transaction.delete(bookingRef);
+
+        if (wasConfirmed) {
+          transaction.update(voyageRef, {
+            bookedCount: increment(-1),
+            updatedAt: new Date().toISOString()
+          });
+          // Attempt Promotion
+          await promoteWaitlistedParty(transaction, selectedBooking.scheduleId, selectedBooking.travelDate);
+        }
+      });
+      
+      setIsDeleteConfirmOpen(false);
       setSelectedBooking(null);
+    } catch (e) {
+      console.error("Delete failed:", e);
+    } finally {
       setIsActionProcessing(false);
-    }, 200);
+    }
   };
 
   const handlePurgeGhosts = async () => {
@@ -541,27 +610,15 @@ export default function ManageBookingsPage() {
               });
             });
 
-            // 2. Promotion Logic: Find waitlisted for this voyage
-            // Note: Since we can't do collection queries inside transaction easily without fetching all,
-            // we'll rely on inventory release. BUT we can check for waitlist count.
-            const currentWaitlisted = voyageSnap.data().waitlistCount || 0;
-            let promotedCount = 0;
+            // 2. Adjust counters
+            transaction.update(voyageRef, {
+              bookedCount: increment(-releasedCount),
+              updatedAt: new Date().toISOString()
+            });
 
-            if (currentWaitlisted > 0) {
-               // We release the seats first
-               const newBookedCount = Math.max(0, currentBooked - releasedCount);
-               transaction.update(voyageRef, {
-                  bookedCount: newBookedCount,
-                  updatedAt: new Date().toISOString()
-               });
-               
-               // Promotion occurs manually or via a separate batch after this if needed, 
-               // but for MVP atomic purge, we release inventory.
-            } else {
-               transaction.update(voyageRef, {
-                  bookedCount: increment(-releasedCount),
-                  updatedAt: new Date().toISOString()
-               });
+            // 3. Promote Waitlisted
+            for (let i = 0; i < releasedCount; i++) {
+              await promoteWaitlistedParty(transaction, ghosts[0].scheduleId, ghosts[0].travelDate);
             }
           }
         }
@@ -787,8 +844,6 @@ export default function ManageBookingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Existing Lazy Content Dialogs */}
-      
       <Dialog open={isRebookDialogOpen} onOpenChange={setIsRebookDialogOpen}>
          <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden">
            {isRebookDialogOpen && (
