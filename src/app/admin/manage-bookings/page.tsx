@@ -296,11 +296,10 @@ export default function ManageBookingsPage() {
     const searchLower = search.toLowerCase();
     
     return bookings.filter(b => {
+      // Search restricted to 6-digit alpha-numeric booking ID/reference only
       const matchesSearch = 
         !search ||
-        b.passengerName?.toLowerCase().includes(searchLower) ||
-        b.id?.toLowerCase().includes(searchLower) ||
-        b.travelDate?.includes(search);
+        b.id?.toLowerCase().includes(searchLower);
       
       if (!matchesSearch) return false;
       
@@ -594,7 +593,7 @@ export default function ManageBookingsPage() {
           <div className="relative flex-1 w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search passenger, ID, or Date..." 
+              placeholder="Search by 6-digit Booking ID..." 
               className="pl-10 h-10 sm:h-12 bg-white border-none shadow-sm text-sm"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
