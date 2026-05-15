@@ -29,9 +29,11 @@ import {
   Download, 
   Printer,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Ghost,
+  Trash
 } from "lucide-react";
-import { collection, doc, query, orderBy, limit } from "firebase/firestore";
+import { collection, doc, query, orderBy, limit, runTransaction, getDocs, where, increment } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   updateDocumentNonBlocking, 
@@ -193,9 +195,28 @@ export default function ManageBookingsPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isActionProcessing, setIsActionProcessing] = useState(false);
+  const [todayPHT, setTodayPHT] = useState("");
+  const [currentTimePHT, setCurrentTimePHT] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
+    const updateTime = () => {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const pht = new Date(utc + (3600000 * 8));
+      
+      const y = pht.getFullYear();
+      const m = String(pht.getMonth() + 1).padStart(2, '0');
+      const d = String(pht.getDate()).padStart(2, '0');
+      setTodayPHT(`${y}-${m}-${d}`);
+      
+      const hh = String(pht.getHours()).padStart(2, '0');
+      const mm = String(pht.getMinutes()).padStart(2, '0');
+      setCurrentTimePHT(`${hh}:${mm}`);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 60000);
+    return () => clearInterval(interval);
   }, []);
   
   const routesRef = useMemoFirebase(() => {
@@ -228,6 +249,7 @@ export default function ManageBookingsPage() {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
+  const [isPurgeDialogOpen, setIsPurgeDialogOpen] = useState(false);
 
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -276,6 +298,27 @@ export default function ManageBookingsPage() {
       return true;
     });
   }, [bookings, search, activeTab]);
+
+  const ghostBookings = useMemo(() => {
+    if (!bookings || !schedules || !todayPHT || !currentTimePHT) return [];
+    
+    return bookings.filter(b => {
+      if (b.status !== "Reserved" || b.travelDate !== todayPHT) return false;
+      
+      const schedule = schedules.find(s => s.id === b.scheduleId);
+      if (!schedule) return false;
+
+      // Check if departure is within 1 hour
+      const [depH, depM] = schedule.departureTime.split(':').map(Number);
+      const [curH, curM] = currentTimePHT.split(':').map(Number);
+      
+      const depTotal = depH * 60 + depM;
+      const curTotal = curH * 60 + curM;
+      
+      // If departure is less than 60 mins away or already past
+      return (depTotal - curTotal) <= 60;
+    });
+  }, [bookings, schedules, todayPHT, currentTimePHT]);
 
   const paginatedBookings = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -466,6 +509,72 @@ export default function ManageBookingsPage() {
     }, 200);
   };
 
+  const handlePurgeGhosts = async () => {
+    if (!db || ghostBookings.length === 0 || isActionProcessing) return;
+    setIsActionProcessing(true);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        // Group ghosts by voyageId for counter updates
+        const voyageGroups: Record<string, any[]> = {};
+        ghostBookings.forEach(b => {
+          const vId = `${b.scheduleId}_${b.travelDate}`;
+          if (!voyageGroups[vId]) voyageGroups[vId] = [];
+          voyageGroups[vId].push(b);
+        });
+
+        for (const [voyageId, ghosts] of Object.entries(voyageGroups)) {
+          const voyageRef = doc(db, "voyages", voyageId);
+          const voyageSnap = await transaction.get(voyageRef);
+          
+          if (voyageSnap.exists()) {
+            const currentBooked = voyageSnap.data().bookedCount || 0;
+            const releasedCount = ghosts.length;
+            
+            // 1. Cancel Ghosts
+            ghosts.forEach(ghost => {
+              const bRef = doc(db, "bookings", ghost.id);
+              transaction.update(bRef, {
+                status: "Auto-cancelled",
+                updatedAt: new Date().toISOString(),
+                remarks: "Purged: Unpaid ghost reservation released 1hr before departure."
+              });
+            });
+
+            // 2. Promotion Logic: Find waitlisted for this voyage
+            // Note: Since we can't do collection queries inside transaction easily without fetching all,
+            // we'll rely on inventory release. BUT we can check for waitlist count.
+            const currentWaitlisted = voyageSnap.data().waitlistCount || 0;
+            let promotedCount = 0;
+
+            if (currentWaitlisted > 0) {
+               // We release the seats first
+               const newBookedCount = Math.max(0, currentBooked - releasedCount);
+               transaction.update(voyageRef, {
+                  bookedCount: newBookedCount,
+                  updatedAt: new Date().toISOString()
+               });
+               
+               // Promotion occurs manually or via a separate batch after this if needed, 
+               // but for MVP atomic purge, we release inventory.
+            } else {
+               transaction.update(voyageRef, {
+                  bookedCount: increment(-releasedCount),
+                  updatedAt: new Date().toISOString()
+               });
+            }
+          }
+        }
+      });
+      
+      setIsPurgeDialogOpen(false);
+    } catch (e: any) {
+      console.error("Purge failed:", e);
+    } finally {
+      setIsActionProcessing(false);
+    }
+  };
+
   const availableRebookingSchedules = schedules?.filter(s => 
     s.routeId === selectedBooking?.routeId && s.isActive
   );
@@ -473,12 +582,29 @@ export default function ManageBookingsPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AdminNav />
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
-        <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
-          <ClipboardList className="h-5 w-5 text-accent" />
-          <span className="hidden sm:inline">Manage Bookings</span>
-          <span className="sm:hidden">Bookings</span>
-        </h1>
+      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-accent" />
+            <span className="hidden sm:inline">Manage Bookings</span>
+            <span className="sm:hidden">Bookings</span>
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+           <Button 
+            variant="outline" 
+            size="sm" 
+            className={cn("h-9 gap-2 font-bold transition-all", 
+              ghostBookings.length > 0 ? "border-orange-200 bg-orange-50 text-orange-600 animate-pulse" : "text-muted-foreground")}
+            onClick={() => setIsPurgeDialogOpen(true)}
+           >
+             <Ghost className="h-4 w-4" />
+             <span className="hidden sm:inline">Ghost Purge</span>
+             {ghostBookings.length > 0 && (
+               <Badge className="bg-orange-600 h-5 px-1.5 min-w-[20px]">{ghostBookings.length}</Badge>
+             )}
+           </Button>
+        </div>
       </header>
 
       <main className="p-4 sm:p-6 space-y-6 container mx-auto">
@@ -593,7 +719,75 @@ export default function ManageBookingsPage() {
         </Tabs>
       </main>
 
-      {/* Lazy Content Dialogs - Only render children when open */}
+      {/* Ghost Purge Dialog */}
+      <Dialog open={isPurgeDialogOpen} onOpenChange={setIsPurgeDialogOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[500px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-orange-600 text-white">
+            <div className="flex items-center gap-3">
+               <div className="bg-white/20 p-2 rounded-lg">
+                 <Ghost className="h-6 w-6" />
+               </div>
+               <div>
+                 <DialogTitle className="text-xl font-black uppercase tracking-tight">Ghost Reservation Purge</DialogTitle>
+                 <DialogDescription className="text-orange-100 text-xs font-medium">Identify and release unpaid bookings within 1hr of departure.</DialogDescription>
+               </div>
+            </div>
+          </DialogHeader>
+          <div className="p-6 space-y-6">
+            {ghostBookings.length > 0 ? (
+              <>
+                <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                     <p className="text-xs font-bold text-orange-800 uppercase tracking-wider">Identified Ghosts</p>
+                     <Badge className="bg-orange-600 font-black">{ghostBookings.length} Passengers</Badge>
+                  </div>
+                  <ScrollArea className="h-32 pr-4">
+                    <div className="space-y-2">
+                       {ghostBookings.map(b => (
+                         <div key={b.id} className="flex justify-between items-center text-xs p-2 bg-white rounded border border-orange-100">
+                           <span className="font-bold text-primary truncate max-w-[150px]">{b.passengerName}</span>
+                           <span className="text-[10px] font-mono text-muted-foreground">#{b.id} • {getTripCode(b.scheduleId)}</span>
+                         </div>
+                       ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-800">
+                  <RefreshCw className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-tight">Auto-Promotion Logic</p>
+                    <p className="text-xs leading-relaxed opacity-80">
+                      Purging these records will release inventory back to the voyages. This allows the system to admit waitlisted passengers or accept new paid walk-ins.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="py-12 text-center space-y-4 opacity-50">
+                <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto" />
+                <h3 className="font-bold text-primary">No ghost reservations detected</h3>
+                <p className="text-xs max-w-xs mx-auto">All unpaid reservations today are still within the valid holding window.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-6 border-t bg-secondary/5 flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsPurgeDialogOpen(false)}>Close Utility</Button>
+            {ghostBookings.length > 0 && (
+              <Button 
+                className="w-full sm:flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-widest gap-2"
+                onClick={handlePurgeGhosts}
+                disabled={isActionProcessing}
+              >
+                {isActionProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash className="h-4 w-4" />}
+                Purge & Release Seats
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing Lazy Content Dialogs */}
       
       <Dialog open={isRebookDialogOpen} onOpenChange={setIsRebookDialogOpen}>
          <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden">
