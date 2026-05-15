@@ -73,13 +73,16 @@ export default function VoyageManagementPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const pht = new Date(utc + (3600000 * 8));
-    const y = pht.getFullYear();
-    const m = String(pht.getMonth() + 1).padStart(2, '0');
-    const d = String(pht.getDate()).padStart(2, '0');
-    setSelectedDate(`${y}-${m}-${d}`);
+    const updateTime = () => {
+      const now = new Date();
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const pht = new Date(utc + (3600000 * 8));
+      const y = pht.getFullYear();
+      const m = String(pht.getMonth() + 1).padStart(2, '0');
+      const d = String(pht.getDate()).padStart(2, '0');
+      setSelectedDate(`${y}-${m}-${d}`);
+    };
+    updateTime();
   }, []);
 
   const schedulesRef = useMemoFirebase(() => db ? collection(db, "schedules") : null, [db]);
@@ -288,7 +291,7 @@ export default function VoyageManagementPage() {
                      <Activity className="h-4 w-4" /> Integrity Tools
                    </h3>
                    <p className="text-[10px] opacity-70 leading-relaxed">
-                     If atomic inventory counts seem inaccurate, use the recalibration tool on each voyage card to perform a manual audit.
+                     If atomic inventory counts seem inaccurate, use the recalibration tool on each voyage card to perform a manual audit against the manifest.
                    </p>
                 </div>
              </Card>
