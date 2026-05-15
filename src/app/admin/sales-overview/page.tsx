@@ -11,7 +11,10 @@ import {
   Calendar,
   BarChart3,
   Ticket,
-  ArrowRight
+  ArrowRight,
+  Ship,
+  Search,
+  Filter
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
@@ -33,13 +36,31 @@ import {
   Cell
 } from "recharts";
 import { format, parseISO, subDays } from "date-fns";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function SalesOverviewPage() {
   const db = useFirestore();
   const [isMounted, setIsMounted] = useState(false);
+  const [occupancySearch, setOccupancySearch] = useState("");
+  const [occupancyDateFilter, setOccupancyDateFilter] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
+    // Set default filter to today
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const pht = new Date(utc + (3600000 * 8));
+    setOccupancyDateFilter(format(pht, "yyyy-MM-dd"));
   }, []);
 
   const bookingsRef = useMemoFirebase(() => {
@@ -52,8 +73,14 @@ export default function SalesOverviewPage() {
     return collection(db, "routes");
   }, [db]);
 
+  const schedulesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "schedules");
+  }, [db]);
+
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
   const { data: routes, isLoading: isRoutesLoading } = useCollection(routesRef);
+  const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
 
   const stats = useMemo(() => {
     if (!bookings) return { totalRevenue: 0, totalPassengers: 0, waitlistCount: 0, confirmedCount: 0, totalBookings: 0 };
@@ -113,7 +140,59 @@ export default function SalesOverviewPage() {
     }).sort((a, b) => b.passengers - a.passengers).slice(0, 5);
   }, [bookings, routes]);
 
-  const isLoading = isBookingsLoading || isRoutesLoading;
+  const tripOccupancyData = useMemo(() => {
+    if (!bookings || !schedules || !routes) return [];
+
+    const groups: Record<string, {
+      scheduleId: string;
+      travelDate: string;
+      reserved: number;
+      confirmed: number;
+      used: number;
+      waitlisted: number;
+    }> = {};
+
+    bookings.forEach(b => {
+      const key = `${b.scheduleId}_${b.travelDate}`;
+      if (!groups[key]) {
+        groups[key] = { 
+          scheduleId: b.scheduleId, 
+          travelDate: b.travelDate, 
+          reserved: 0, 
+          confirmed: 0, 
+          used: 0,
+          waitlisted: 0 
+        };
+      }
+      if (b.status === 'Reserved') groups[key].reserved++;
+      else if (b.status === 'Confirmed') groups[key].confirmed++;
+      else if (b.status === 'Used') groups[key].used++;
+      else if (b.status === 'Waitlisted') groups[key].waitlisted++;
+    });
+
+    return Object.values(groups).map(g => {
+      const schedule = schedules.find(s => s.id === g.scheduleId);
+      const route = routes.find(r => r.id === schedule?.routeId);
+      const capacity = schedule?.passengerCapacity || 0;
+      const activeTotal = g.confirmed + g.reserved + g.used;
+      
+      return {
+        ...g,
+        tripCode: schedule?.tripCode || 'N/A',
+        departureTime: schedule?.departureTime || '--:--',
+        routeName: route?.name || 'Unknown',
+        capacity,
+        activeTotal,
+        occupancyRate: capacity > 0 ? Math.round((activeTotal / capacity) * 100) : 0
+      };
+    }).filter(t => {
+      const matchesSearch = !occupancySearch || t.tripCode.toLowerCase().includes(occupancySearch.toLowerCase()) || t.routeName.toLowerCase().includes(occupancySearch.toLowerCase());
+      const matchesDate = !occupancyDateFilter || t.travelDate === occupancyDateFilter;
+      return matchesSearch && matchesDate;
+    }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
+  }, [bookings, schedules, routes, occupancySearch, occupancyDateFilter]);
+
+  const isLoading = isBookingsLoading || isRoutesLoading || isSchedulesLoading;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -138,11 +217,6 @@ export default function SalesOverviewPage() {
           <div>
             <h2 className="text-xl sm:text-2xl font-black font-headline text-primary uppercase tracking-tight">Financial Intelligence</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">Revenue tracking and volume analysis across all routes.</p>
-          </div>
-          <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
-             <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase">Today</Button>
-             <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase">7 Days</Button>
-             <Button variant="secondary" size="sm" className="h-8 text-[10px] font-bold uppercase">All Time</Button>
           </div>
         </div>
 
@@ -169,7 +243,7 @@ export default function SalesOverviewPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-green-500" /> +12% growth
+                    <TrendingUp className="h-3 w-3 text-green-500" /> Nominal stats
                   </p>
                 </CardContent>
               </Card>
@@ -324,7 +398,114 @@ export default function SalesOverviewPage() {
               </Card>
             </div>
 
-            {/* Detailed Stats Section */}
+            {/* Voyage Occupancy Tracker */}
+            <Card className="border-none shadow-sm bg-white overflow-hidden">
+              <CardHeader className="bg-secondary/10 py-6">
+                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <CardTitle className="text-lg font-black text-primary uppercase tracking-tight flex items-center gap-2">
+                        <Ship className="h-5 w-5 text-accent" /> Voyage Occupancy Tracker
+                      </CardTitle>
+                      <CardDescription className="text-xs">Physical manifest breakdown per scheduled trip.</CardDescription>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                       <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input 
+                            placeholder="Filter by Trip ID..." 
+                            className="pl-8 h-9 text-xs w-40 bg-white"
+                            value={occupancySearch}
+                            onChange={(e) => setOccupancySearch(e.target.value)}
+                          />
+                       </div>
+                       <div className="flex items-center gap-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Date:</Label>
+                          <Input 
+                            type="date" 
+                            className="h-9 text-xs w-36 bg-white font-bold"
+                            value={occupancyDateFilter}
+                            onChange={(e) => setOccupancyDateFilter(e.target.value)}
+                          />
+                       </div>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                 {tripOccupancyData.length > 0 ? (
+                   <div className="overflow-x-auto">
+                     <Table>
+                        <TableHeader className="bg-secondary/20">
+                          <TableRow>
+                            <TableHead className="text-[10px] font-black uppercase">Trip Code</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase">Routing</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase text-center">Reserved</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase text-center">Confirmed</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase text-center">Waitlist</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase">Occupancy</TableHead>
+                            <TableHead className="text-right"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tripOccupancyData.map((trip, idx) => (
+                            <TableRow key={`${trip.scheduleId}_${trip.travelDate}`} className="group">
+                              <TableCell>
+                                <div className="space-y-0.5">
+                                   <div className="text-xs font-black text-accent">{trip.tripCode}</div>
+                                   <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                                      <Clock className="h-2.5 w-2.5" /> {trip.departureTime}
+                                   </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-xs font-bold text-primary truncate max-w-[180px]">{trip.routeName}</div>
+                                <div className="text-[9px] text-muted-foreground uppercase font-black">{trip.travelDate}</div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-100 font-black text-[10px] h-6 px-2 min-w-[30px]">
+                                   {trip.reserved}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 font-black text-[10px] h-6 px-2 min-w-[30px]">
+                                   {trip.confirmed + trip.used}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className={cn("font-black text-[10px] h-6 px-2 min-w-[30px]", trip.waitlisted > 0 ? "bg-orange-50 text-orange-600 border-orange-100" : "opacity-30")}>
+                                   {trip.waitlisted}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="min-w-[150px]">
+                                <div className="space-y-1.5">
+                                   <div className="flex justify-between items-center text-[10px] font-black">
+                                      <span className={cn(trip.occupancyRate >= 90 ? "text-destructive" : "text-muted-foreground")}>{trip.occupancyRate}%</span>
+                                      <span className="text-primary">{trip.activeTotal} / {trip.capacity}</span>
+                                   </div>
+                                   <Progress value={trip.occupancyRate} className={cn("h-1.5", trip.occupancyRate >= 90 ? "bg-red-100 [&>div]:bg-red-500" : "")} />
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                 <Link href={`/admin/manage-bookings?trip=${trip.scheduleId}&date=${trip.travelDate}`}>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-accent hover:text-primary">
+                                       <ArrowRight className="h-4 w-4" />
+                                    </Button>
+                                 </Link>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                     </Table>
+                   </div>
+                 ) : (
+                   <div className="py-20 text-center opacity-30 flex flex-col items-center">
+                      <Ship className="h-12 w-12 mb-2" />
+                      <p className="text-xs font-black uppercase tracking-widest">No trip data matching filters</p>
+                   </div>
+                 )}
+              </CardContent>
+            </Card>
+
+            {/* Lower Insights Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                <Card className="lg:col-span-1 border-none shadow-sm bg-white">
                   <CardHeader>
