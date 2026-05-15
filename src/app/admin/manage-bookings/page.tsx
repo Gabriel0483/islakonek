@@ -74,6 +74,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
 
@@ -192,6 +193,7 @@ BookingRow.displayName = "BookingRow";
 
 export default function ManageBookingsPage() {
   const db = useFirestore();
+  const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isActionProcessing, setIsActionProcessing] = useState(false);
@@ -315,7 +317,6 @@ export default function ManageBookingsPage() {
       const depTotal = depH * 60 + depM;
       const curTotal = curH * 60 + curM;
       
-      // If departure is less than 60 mins away or already past
       return (depTotal - curTotal) <= 60;
     });
   }, [bookings, schedules, todayPHT, currentTimePHT]);
@@ -398,41 +399,25 @@ export default function ManageBookingsPage() {
   };
 
   /**
-   * ATOMIC PROMOTION UTILITY
-   * Identifies next waitlisted party and promotes them.
-   * Internal helper for transactions.
+   * ATOMIC PROMOTION UTILITY - PRE-TRANSACTION LOOKUP
+   * Finds the next eligible waitlisted party.
    */
-  const promoteWaitlistedParty = async (transaction: any, scheduleId: string, travelDate: string) => {
-    if (!db) return;
-    const waitlistQuery = query(
-      collection(db, "bookings"),
-      where("scheduleId", "==", scheduleId),
-      where("travelDate", "==", travelDate),
-      where("status", "==", "Waitlisted"),
-      orderBy("createdAt", "asc"),
-      limit(1)
-    );
-    const snap = await getDocs(waitlistQuery);
-    if (!snap.empty) {
-      const candidate = snap.docs[0];
-      const voyageId = `${scheduleId}_${travelDate}`;
-      const voyageRef = doc(db, "voyages", voyageId);
-      const voyageSnap = await transaction.get(voyageRef);
-      
-      if (voyageSnap.exists()) {
-        const currentBooked = voyageSnap.data().bookedCount || 0;
-        transaction.update(candidate.ref, {
-          status: "Reserved",
-          boardingSequenceNumber: currentBooked + 1,
-          remarks: "Auto-promoted from Waitlist (System)",
-          updatedAt: new Date().toISOString()
-        });
-        transaction.update(voyageRef, {
-          bookedCount: increment(1),
-          waitlistCount: increment(-1),
-          updatedAt: new Date().toISOString()
-        });
-      }
+  const findWaitlistedCandidate = async (scheduleId: string, travelDate: string) => {
+    if (!db) return null;
+    try {
+      const waitlistQuery = query(
+        collection(db, "bookings"),
+        where("scheduleId", "==", scheduleId),
+        where("travelDate", "==", travelDate),
+        where("status", "==", "Waitlisted"),
+        orderBy("createdAt", "asc"),
+        limit(1)
+      );
+      const snap = await getDocs(waitlistQuery);
+      return !snap.empty ? snap.docs[0] : null;
+    } catch (e) {
+      console.warn("Waitlist lookup failed (likely index building):", e);
+      return null;
     }
   };
 
@@ -442,12 +427,25 @@ export default function ManageBookingsPage() {
     
     const { booking, status: newStatus } = statusTarget;
     const penaltyAmount = calculateStatusPenalties();
-    const bookingRef = doc(db, "bookings", booking.id);
-    const voyageId = `${booking.scheduleId}_${booking.travelDate}`;
-    const voyageRef = doc(db, "voyages", voyageId);
+    
+    // UI Cleanup first to prevent FocusTrap issues
+    setIsStatusDialogOpen(false);
 
     try {
+      // Find candidate BEFORE starting the transaction to avoid illegal client-side nested queries
+      const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(booking.status);
+      const isNowInactive = ['Auto-cancelled', 'Refunded', 'Suspended'].includes(newStatus);
+      
+      let candidateDoc = null;
+      if (wasConfirmed && isNowInactive) {
+        candidateDoc = await findWaitlistedCandidate(booking.scheduleId, booking.travelDate);
+      }
+
       await runTransaction(db, async (transaction) => {
+        const bookingRef = doc(db, "bookings", booking.id);
+        const voyageId = `${booking.scheduleId}_${booking.travelDate}`;
+        const voyageRef = doc(db, "voyages", voyageId);
+
         const updateData: any = { 
           status: newStatus, 
           penaltyFees: penaltyAmount,
@@ -456,30 +454,39 @@ export default function ManageBookingsPage() {
           updatedAt: new Date().toISOString() 
         };
 
-        const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(booking.status);
-        const isNowInactive = ['Auto-cancelled', 'Refunded', 'Suspended'].includes(newStatus);
-
-        // 1. Update Booking
         transaction.update(bookingRef, updateData);
 
-        // 2. Adjust Inventory if seat vacated
         if (wasConfirmed && isNowInactive) {
           transaction.update(voyageRef, {
             bookedCount: increment(-1),
             updatedAt: new Date().toISOString()
           });
-          // Attempt Promotion
-          await promoteWaitlistedParty(transaction, booking.scheduleId, booking.travelDate);
+          
+          if (candidateDoc) {
+            const voyageSnap = await transaction.get(voyageRef);
+            const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
+            
+            transaction.update(candidateDoc.ref, {
+              status: "Reserved",
+              boardingSequenceNumber: currentBooked, // This is currentBooked - 1 + 1 effectively
+              remarks: "Auto-promoted from Waitlist (System)",
+              updatedAt: new Date().toISOString()
+            });
+            transaction.update(voyageRef, {
+              bookedCount: increment(1),
+              waitlistCount: increment(-1)
+            });
+          }
         }
       });
       
-      setIsStatusDialogOpen(false);
       if (newStatus === 'Confirmed') {
         setSelectedBooking((prev: any) => ({ ...prev, status: newStatus }));
         setIsBoardingPassOpen(true);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Status update failed:", e);
+      toast({ variant: "destructive", title: "Update Failed", description: e.message });
     } finally {
       setIsActionProcessing(false);
     }
@@ -550,12 +557,20 @@ export default function ManageBookingsPage() {
     
     const bookingId = selectedBooking.id;
     const voyageId = `${selectedBooking.scheduleId}_${selectedBooking.travelDate}`;
-    const voyageRef = doc(db, "voyages", voyageId);
-    const bookingRef = doc(db, "bookings", bookingId);
+    const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
+
+    // Close UI first
+    setIsDeleteConfirmOpen(false);
 
     try {
+      let candidateDoc = null;
+      if (wasConfirmed) {
+        candidateDoc = await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate);
+      }
+
       await runTransaction(db, async (transaction) => {
-        const wasConfirmed = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
+        const bookingRef = doc(db, "bookings", bookingId);
+        const voyageRef = doc(db, "voyages", voyageId);
         
         transaction.delete(bookingRef);
 
@@ -564,15 +579,29 @@ export default function ManageBookingsPage() {
             bookedCount: increment(-1),
             updatedAt: new Date().toISOString()
           });
-          // Attempt Promotion
-          await promoteWaitlistedParty(transaction, selectedBooking.scheduleId, selectedBooking.travelDate);
+          
+          if (candidateDoc) {
+            const voyageSnap = await transaction.get(voyageRef);
+            const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
+            
+            transaction.update(candidateDoc.ref, {
+              status: "Reserved",
+              boardingSequenceNumber: currentBooked,
+              remarks: "Auto-promoted from Waitlist (System)",
+              updatedAt: new Date().toISOString()
+            });
+            transaction.update(voyageRef, {
+              bookedCount: increment(1),
+              waitlistCount: increment(-1)
+            });
+          }
         }
       });
       
-      setIsDeleteConfirmOpen(false);
       setSelectedBooking(null);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Delete failed:", e);
+      toast({ variant: "destructive", title: "Delete Failed", description: e.message });
     } finally {
       setIsActionProcessing(false);
     }
@@ -583,50 +612,47 @@ export default function ManageBookingsPage() {
     setIsActionProcessing(true);
 
     try {
-      await runTransaction(db, async (transaction) => {
-        // Group ghosts by voyageId for counter updates
-        const voyageGroups: Record<string, any[]> = {};
-        ghostBookings.forEach(b => {
-          const vId = `${b.scheduleId}_${b.travelDate}`;
-          if (!voyageGroups[vId]) voyageGroups[vId] = [];
-          voyageGroups[vId].push(b);
-        });
-
-        for (const [voyageId, ghosts] of Object.entries(voyageGroups)) {
+      // For each ghost, attempt promotion sequence
+      for (const b of ghostBookings) {
+        const candidateDoc = await findWaitlistedCandidate(b.scheduleId, b.travelDate);
+        
+        await runTransaction(db, async (transaction) => {
+          const voyageId = `${b.scheduleId}_${b.travelDate}`;
           const voyageRef = doc(db, "voyages", voyageId);
-          const voyageSnap = await transaction.get(voyageRef);
+          const bRef = doc(db, "bookings", b.id);
           
-          if (voyageSnap.exists()) {
-            const currentBooked = voyageSnap.data().bookedCount || 0;
-            const releasedCount = ghosts.length;
-            
-            // 1. Cancel Ghosts
-            ghosts.forEach(ghost => {
-              const bRef = doc(db, "bookings", ghost.id);
-              transaction.update(bRef, {
-                status: "Auto-cancelled",
-                updatedAt: new Date().toISOString(),
-                remarks: "Purged: Unpaid ghost reservation released 1hr before departure."
-              });
-            });
+          transaction.update(bRef, {
+            status: "Auto-cancelled",
+            updatedAt: new Date().toISOString(),
+            remarks: "Purged: Unpaid ghost reservation released 1hr before departure."
+          });
 
-            // 2. Adjust counters
-            transaction.update(voyageRef, {
-              bookedCount: increment(-releasedCount),
+          transaction.update(voyageRef, {
+            bookedCount: increment(-1),
+            updatedAt: new Date().toISOString()
+          });
+
+          if (candidateDoc) {
+            const voyageSnap = await transaction.get(voyageRef);
+            const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
+            
+            transaction.update(candidateDoc.ref, {
+              status: "Reserved",
+              boardingSequenceNumber: currentBooked,
               updatedAt: new Date().toISOString()
             });
-
-            // 3. Promote Waitlisted
-            for (let i = 0; i < releasedCount; i++) {
-              await promoteWaitlistedParty(transaction, ghosts[0].scheduleId, ghosts[0].travelDate);
-            }
+            transaction.update(voyageRef, {
+              bookedCount: increment(1),
+              waitlistCount: increment(-1)
+            });
           }
-        }
-      });
+        });
+      }
       
       setIsPurgeDialogOpen(false);
     } catch (e: any) {
       console.error("Purge failed:", e);
+      toast({ variant: "destructive", title: "Purge Failed", description: e.message });
     } finally {
       setIsActionProcessing(false);
     }
