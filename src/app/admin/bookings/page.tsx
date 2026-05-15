@@ -821,17 +821,6 @@ export default function DeskBookingsPage() {
                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Total Amount to Collect</p>
                 <p className="text-5xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
              </div>
-             
-             <div className="bg-secondary/20 p-4 rounded-xl space-y-3">
-                <p className="text-xs font-bold text-primary flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-orange-600" /> Administrative Protocol
-                </p>
-                <ul className="text-[10px] space-y-1.5 text-muted-foreground font-medium uppercase leading-relaxed">
-                   <li className="flex items-center gap-2">• Receive exact fare amount</li>
-                   <li className="flex items-center gap-2">• Provide official paper receipt</li>
-                   <li className="flex items-center gap-2">• Count notes in view of passenger</li>
-                </ul>
-             </div>
           </div>
           <DialogFooter className="p-6 border-t bg-secondary/5 gap-3">
              <Button variant="outline" className="flex-1 font-bold" onClick={() => setIsPaymentCollectionAlertOpen(false)}>Not Yet</Button>
