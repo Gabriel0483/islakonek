@@ -422,20 +422,28 @@ export default function ManageBookingsPage() {
 
     try {
       const activeStates = ['Confirmed', 'Reserved', 'Used'];
-      const wasActive = activeStates.includes(booking.status);
-      const wasWaitlisted = booking.status === 'Waitlisted';
-      const isNowActive = activeStates.includes(newStatus);
-      const isNowInactive = ['Auto-cancelled', 'Refunded', 'Suspended'].includes(newStatus);
-
-      let candidateDoc = (wasActive && isNowInactive) ? await findWaitlistedCandidate(booking.scheduleId, booking.travelDate) : null;
+      const inactiveStates = ['Auto-cancelled', 'Refunded', 'Suspended'];
+      
+      let candidateDoc = await findWaitlistedCandidate(booking.scheduleId, booking.travelDate);
 
       await runTransaction(db, async (transaction) => {
         const voyageId = `${booking.scheduleId}_${booking.travelDate}`;
         const voyageRef = doc(db, "voyages", voyageId);
         const bookingRef = doc(db, "bookings", booking.id);
 
-        const voyageSnap = await transaction.get(voyageRef);
+        const [bookingSnap, voyageSnap] = await Promise.all([
+          transaction.get(bookingRef),
+          transaction.get(voyageRef)
+        ]);
+
+        if (!bookingSnap.exists()) throw new Error("Booking no longer exists.");
         
+        const freshStatus = bookingSnap.data().status;
+        const wasActive = activeStates.includes(freshStatus);
+        const wasWaitlisted = freshStatus === 'Waitlisted';
+        const isNowActive = activeStates.includes(newStatus);
+        const isNowInactive = inactiveStates.includes(newStatus);
+
         transaction.update(bookingRef, { 
           status: newStatus, 
           penaltyFees: penaltyAmount,
@@ -444,24 +452,31 @@ export default function ManageBookingsPage() {
           updatedAt: new Date().toISOString() 
         });
 
-        if (wasActive && isNowInactive) {
-          transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
-          if (candidateDoc) {
-            const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
-            transaction.update(candidateDoc.ref, {
-              status: "Reserved",
-              boardingSequenceNumber: Math.max(1, currentBooked),
-              remarks: "Auto-promoted from Waitlist (System)",
-              updatedAt: new Date().toISOString()
-            });
-            transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
+        if (voyageSnap.exists()) {
+          if (wasActive && isNowInactive) {
+            transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
+            
+            if (candidateDoc) {
+              const freshCandidateSnap = await transaction.get(candidateDoc.ref);
+              if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
+                const currentBooked = voyageSnap.data().bookedCount || 0;
+                transaction.update(candidateDoc.ref, {
+                  status: "Reserved",
+                  boardingSequenceNumber: Math.max(1, currentBooked),
+                  remarks: "Auto-promoted from Waitlist (System)",
+                  updatedAt: new Date().toISOString()
+                });
+                transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
+              }
+            }
+          } else if (wasWaitlisted && isNowInactive) {
+            transaction.update(voyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
+          } else if (wasWaitlisted && isNowActive) {
+            transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
           }
-        } else if (wasWaitlisted && isNowInactive) {
-          transaction.update(voyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
-        } else if (wasWaitlisted && isNowActive) {
-          transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
         }
       });
+      
       if (newStatus === 'Confirmed') setIsBoardingPassOpen(true);
     } catch (e: any) {
       toast({ variant: "destructive", title: "Update Failed", description: e.message });
@@ -485,8 +500,6 @@ export default function ManageBookingsPage() {
     const bookingId = selectedBooking.id;
     const oldVoyageId = `${selectedBooking.scheduleId}_${selectedBooking.travelDate}`;
     const newVoyageId = `${rebookingData.newScheduleId}_${rebookingData.newTravelDate}`;
-    const wasActive = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
-    const wasWaitlisted = selectedBooking.status === 'Waitlisted';
 
     try {
       await runTransaction(db, async (transaction) => {
@@ -494,17 +507,28 @@ export default function ManageBookingsPage() {
         const oldVoyageRef = doc(db, "voyages", oldVoyageId);
         const newVoyageRef = doc(db, "voyages", newVoyageId);
 
-        const newVoyageSnap = await transaction.get(newVoyageRef);
-        const currentNewBooked = newVoyageSnap.exists() ? (newVoyageSnap.data().bookedCount || 0) : 0;
+        const [bookingSnap, oldVoyageSnap, newVoyageSnap] = await Promise.all([
+          transaction.get(bookingRef),
+          transaction.get(oldVoyageRef),
+          transaction.get(newVoyageRef)
+        ]);
 
-        // Update counters on old voyage
-        if (wasActive) {
-          transaction.update(oldVoyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
-        } else if (wasWaitlisted) {
-          transaction.update(oldVoyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
+        if (!bookingSnap.exists()) throw new Error("Booking not found.");
+        const currentStatus = bookingSnap.data().status;
+        const wasActive = ['Confirmed', 'Reserved', 'Used'].includes(currentStatus);
+        const wasWaitlisted = currentStatus === 'Waitlisted';
+
+        // Release from old
+        if (oldVoyageSnap.exists()) {
+          if (wasActive) {
+            transaction.update(oldVoyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
+          } else if (wasWaitlisted) {
+            transaction.update(oldVoyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
+          }
         }
 
-        // Update counters on new voyage
+        // Add to new
+        const currentNewBooked = newVoyageSnap.exists() ? (newVoyageSnap.data().bookedCount || 0) : 0;
         if (!newVoyageSnap.exists()) {
           transaction.set(newVoyageRef, {
             id: newVoyageId,
@@ -553,38 +577,51 @@ export default function ManageBookingsPage() {
     setIsActionProcessing(true);
     const bookingId = selectedBooking.id;
     const voyageId = `${selectedBooking.scheduleId}_${selectedBooking.travelDate}`;
-    const wasActive = ['Confirmed', 'Reserved', 'Used'].includes(selectedBooking.status);
-    const wasWaitlisted = selectedBooking.status === 'Waitlisted';
-
+    
+    let candidateDoc = await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate);
     setIsDeleteConfirmOpen(false);
 
     try {
-      let candidateDoc = wasActive ? await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate) : null;
-
       await runTransaction(db, async (transaction) => {
         const voyageRef = doc(db, "voyages", voyageId);
         const bookingRef = doc(db, "bookings", bookingId);
         
-        const voyageSnap = await transaction.get(voyageRef);
+        const [bookingSnap, voyageSnap] = await Promise.all([
+          transaction.get(bookingRef),
+          transaction.get(voyageRef)
+        ]);
+
+        if (!bookingSnap.exists()) return;
         
+        const freshStatus = bookingSnap.data().status;
+        const wasActive = ['Confirmed', 'Reserved', 'Used'].includes(freshStatus);
+        const wasWaitlisted = freshStatus === 'Waitlisted';
+
         transaction.delete(bookingRef);
 
-        if (wasActive) {
-          transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
-          if (candidateDoc) {
-            const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
-            transaction.update(candidateDoc.ref, {
-              status: "Reserved",
-              boardingSequenceNumber: Math.max(1, currentBooked),
-              remarks: "Auto-promoted from Waitlist (System)",
-              updatedAt: new Date().toISOString()
-            });
-            transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
+        if (voyageSnap.exists()) {
+          if (wasActive) {
+            transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
+            
+            if (candidateDoc) {
+              const freshCandidateSnap = await transaction.get(candidateDoc.ref);
+              if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
+                const currentBooked = voyageSnap.data().bookedCount || 0;
+                transaction.update(candidateDoc.ref, {
+                  status: "Reserved",
+                  boardingSequenceNumber: Math.max(1, currentBooked),
+                  remarks: "Auto-promoted from Waitlist (System)",
+                  updatedAt: new Date().toISOString()
+                });
+                transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
+              }
+            }
+          } else if (wasWaitlisted) {
+            transaction.update(voyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
           }
-        } else if (wasWaitlisted) {
-          transaction.update(voyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
         }
       });
+      toast({ title: "Booking Deleted", description: "The manifest and inventory have been updated." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Delete Failed", description: e.message });
     } finally { 
@@ -604,19 +641,31 @@ export default function ManageBookingsPage() {
           const voyageRef = doc(db, "voyages", voyageId);
           const bRef = doc(db, "bookings", b.id);
           
-          const voyageSnap = await transaction.get(voyageRef);
+          const [bSnap, voyageSnap] = await Promise.all([
+            transaction.get(bRef),
+            transaction.get(voyageRef)
+          ]);
+
+          if (!bSnap.exists() || bSnap.data().status !== 'Reserved') return;
           
           transaction.update(bRef, { status: "Auto-cancelled", updatedAt: new Date().toISOString(), remarks: "Purged: Unpaid ghost reservation released 1hr before departure." });
-          transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
           
-          if (candidateDoc) {
-            const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
-            transaction.update(candidateDoc.ref, { status: "Reserved", boardingSequenceNumber: Math.max(1, currentBooked), updatedAt: new Date().toISOString() });
-            transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
+          if (voyageSnap.exists()) {
+            transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
+            
+            if (candidateDoc) {
+              const freshCandidateSnap = await transaction.get(candidateDoc.ref);
+              if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
+                const currentBooked = voyageSnap.data().bookedCount || 0;
+                transaction.update(candidateDoc.ref, { status: "Reserved", boardingSequenceNumber: Math.max(1, currentBooked), updatedAt: new Date().toISOString() });
+                transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
+              }
+            }
           }
         });
       }
       setIsPurgeDialogOpen(false);
+      toast({ title: "Ghost Purge Complete", description: `Released ${ghostBookings.length} seats.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Purge Failed", description: e.message });
     } finally { setIsActionProcessing(false); }
