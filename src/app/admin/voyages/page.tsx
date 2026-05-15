@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -131,58 +132,6 @@ export default function VoyageManagementPage() {
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [schedules, selectedDate, selectedRouteId, search, voyageStatuses, routes, vessels]);
 
-  const handleRecalibrateInventory = async (voyage: any) => {
-    if (!db || isSyncing) return;
-    setIsSyncing(voyage.voyageId);
-    
-    try {
-      const bookingsQuery = query(
-        collection(db, "bookings"),
-        where("scheduleId", "==", voyage.id),
-        where("travelDate", "==", selectedDate)
-      );
-      
-      const snap = await getDocs(bookingsQuery);
-      let realBooked = 0;
-      let realWaitlisted = 0;
-      
-      snap.docs.forEach(doc => {
-        const data = doc.data();
-        if (['Confirmed', 'Reserved', 'Used'].includes(data.status)) realBooked++;
-        if (data.status === 'Waitlisted') realWaitlisted++;
-      });
-
-      await runTransaction(db, async (transaction) => {
-        const vRef = doc(db, "voyages", voyage.voyageId);
-        const vSnap = await transaction.get(vRef);
-        
-        const payload = {
-          bookedCount: realBooked,
-          waitlistCount: realWaitlisted,
-          updatedAt: new Date().toISOString()
-        };
-
-        if (vSnap.exists()) {
-          transaction.update(vRef, payload);
-        } else {
-          transaction.set(vRef, {
-            ...payload,
-            id: voyage.voyageId,
-            scheduleId: voyage.id,
-            travelDate: selectedDate,
-            status: "Scheduled"
-          });
-        }
-      });
-
-      toast({ title: "Inventory Recalibrated", description: `Trip ${voyage.tripCode} now showing ${realBooked} confirmed seats.` });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Recalibration Failed", description: e.message });
-    } finally {
-      setIsSyncing(null);
-    }
-  };
-
   const handleOpenUpdate = (voyage: any) => {
     setSelectedVoyage(voyage);
     setStatusForm({
@@ -288,10 +237,10 @@ export default function VoyageManagementPage() {
              <Card className="border-none shadow-sm bg-primary text-primary-foreground p-5">
                 <div className="space-y-3">
                    <h3 className="font-black uppercase tracking-tight text-sm flex items-center gap-2">
-                     <Activity className="h-4 w-4" /> Integrity Tools
+                     <Ship className="h-4 w-4" /> Voyage Dispatch
                    </h3>
                    <p className="text-[10px] opacity-70 leading-relaxed">
-                     If atomic inventory counts seem inaccurate, use the recalibration tool on each voyage card to perform a manual audit against the manifest.
+                     Update trip progress to keep passengers informed. Broadcasted statuses are reflected in real-time on the public Live Status board.
                    </p>
                 </div>
              </Card>
@@ -339,15 +288,6 @@ export default function VoyageManagementPage() {
                                 </div>
                              </div>
                              <div className="bg-secondary/10 px-4 py-3 lg:px-6 lg:py-0 flex items-center justify-end gap-2 lg:border-l">
-                                <Button 
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRecalibrateInventory(voyage)}
-                                  className={cn("h-10 text-[10px] font-bold uppercase gap-2", isSyncing === voyage.voyageId && "animate-pulse")}
-                                >
-                                   {isSyncing === voyage.voyageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                                   <span className="hidden xl:inline">Recalibrate</span>
-                                </Button>
                                 <Button 
                                   onClick={() => handleOpenUpdate(voyage)}
                                   className="h-10 px-6 font-bold text-xs uppercase tracking-wider bg-white border border-primary/10 text-primary hover:bg-primary hover:text-white"
