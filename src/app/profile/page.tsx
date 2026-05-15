@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -217,18 +216,6 @@ export default function ProfilePage() {
                   </div>
                 )}
               </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-10">
-                 <Ticket className="h-24 w-24 -rotate-12 translate-x-8 translate-y-8" />
-               </div>
-               <CardContent className="p-6 relative z-10 space-y-4">
-                 <h3 className="font-black uppercase tracking-tight">Booking Pro-tip</h3>
-                 <p className="text-xs opacity-80 leading-relaxed">
-                   Storing family details here allows for rapid selection during trip booking. No more re-typing names and birthdays!
-                 </p>
-               </CardContent>
             </Card>
           </div>
 
