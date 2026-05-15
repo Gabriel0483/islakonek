@@ -52,7 +52,10 @@ export default function ProfilePage() {
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [profileForm, setProfileForm] = useState({
     displayName: "",
-    phoneNumber: ""
+    phoneNumber: "",
+    email: "",
+    birthDate: "",
+    emergencyContact: ""
   });
 
   const [isFamilyDialogOpen, setIsFamilyDialogOpen] = useState(false);
@@ -67,10 +70,18 @@ export default function ProfilePage() {
     if (profile) {
       setProfileForm({
         displayName: profile.displayName || "",
-        phoneNumber: profile.phoneNumber || ""
+        phoneNumber: profile.phoneNumber || "",
+        email: profile.email || user?.email || "",
+        birthDate: profile.birthDate || "",
+        emergencyContact: profile.emergencyContact || ""
       });
+    } else if (user) {
+      setProfileForm(prev => ({
+        ...prev,
+        email: user.email || ""
+      }));
     }
-  }, [profile]);
+  }, [profile, user]);
 
   const handleUpdateProfile = () => {
     if (!profileRef) return;
@@ -177,12 +188,32 @@ export default function ProfilePage() {
                       <p className="font-bold text-primary">{profile?.displayName || "Not set"}</p>
                     </div>
                     <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Email Address</Label>
+                      <p className="font-bold text-primary flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground" /> {profile?.email || user?.email}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
                       <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Mobile Number</Label>
-                      <p className="font-bold text-primary">{profile?.phoneNumber || "Not set"}</p>
+                      <p className="font-bold text-primary flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" /> {profile?.phoneNumber || "Not set"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Date of Birth</Label>
+                      <p className="font-bold text-primary flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> {profile?.birthDate || "Not set"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Emergency Contact</Label>
+                      <p className="font-bold text-primary flex items-center gap-2">
+                        <Heart className="h-3.5 w-3.5 text-destructive" /> {profile?.emergencyContact || "Not set"}
+                      </p>
                     </div>
                     <Button 
                       variant="outline" 
-                      className="w-full h-10 font-bold text-xs uppercase tracking-wider"
+                      className="w-full h-10 font-bold text-xs uppercase tracking-wider mt-2"
                       onClick={() => setIsProfileEditing(true)}
                     >
                       <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Account
@@ -199,10 +230,37 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase">Email</Label>
+                      <Input 
+                        type="email"
+                        value={profileForm.email} 
+                        onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
+                        className="h-10 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
                       <Label className="text-[10px] font-bold uppercase">Mobile</Label>
                       <Input 
                         value={profileForm.phoneNumber} 
                         onChange={(e) => setProfileForm({...profileForm, phoneNumber: e.target.value})}
+                        placeholder="09XX XXX XXXX"
+                        className="h-10 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase">Date of Birth</Label>
+                      <Input 
+                        type="date"
+                        value={profileForm.birthDate} 
+                        onChange={(e) => setProfileForm({...profileForm, birthDate: e.target.value})}
+                        className="h-10 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase">Emergency Number</Label>
+                      <Input 
+                        value={profileForm.emergencyContact} 
+                        onChange={(e) => setProfileForm({...profileForm, emergencyContact: e.target.value})}
                         placeholder="09XX XXX XXXX"
                         className="h-10 text-sm"
                       />
