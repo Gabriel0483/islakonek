@@ -276,9 +276,15 @@ export default function ManageBookingsPage() {
     return collection(db, "schedules");
   }, [db]);
 
+  const faresRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "fares");
+  }, [db]);
+
   const { data: routes } = useCollection(routesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
   const { data: schedules } = useCollection(schedulesRef);
+  const { data: fares } = useCollection(faresRef);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
@@ -296,7 +302,8 @@ export default function ManageBookingsPage() {
     passengerEmail: "",
     passengerContact: "",
     emergencyContact: "",
-    travelDate: ""
+    travelDate: "",
+    fareId: ""
   });
 
   const [rebookingData, setRebookingData] = useState({
@@ -372,7 +379,8 @@ export default function ManageBookingsPage() {
       passengerEmail: booking.passengerEmail || "",
       passengerContact: booking.passengerContact || "",
       emergencyContact: booking.emergencyContact || "",
-      travelDate: booking.travelDate || ""
+      travelDate: booking.travelDate || "",
+      fareId: booking.fareId || ""
     });
     setIsEditDialogOpen(true);
   }, []);
@@ -594,9 +602,26 @@ export default function ManageBookingsPage() {
   const handleSaveEdit = () => {
     if (!db || !selectedBooking || isActionProcessing) return;
     setIsActionProcessing(true);
+    
+    // If fare type changed, update both label and amount
+    const selectedFare = fares?.find(f => f.id === editFormData.fareId);
+    const updatePayload: any = { 
+      ...editFormData, 
+      updatedAt: new Date().toISOString() 
+    };
+
+    if (selectedFare) {
+      updatePayload.segmentLabel = selectedFare.segmentLabel;
+      updatePayload.finalFare = selectedFare.finalFare;
+    }
+
     const bookingRef = doc(db, "bookings", selectedBooking.id);
-    updateDocumentNonBlocking(bookingRef, { ...editFormData, updatedAt: new Date().toISOString() });
-    setTimeout(() => { setIsEditDialogOpen(false); setIsActionProcessing(false); }, 200);
+    updateDocumentNonBlocking(bookingRef, updatePayload);
+    
+    setTimeout(() => { 
+      setIsEditDialogOpen(false); 
+      setIsActionProcessing(false); 
+    }, 200);
   };
 
   const handleDeleteRecord = async () => {
@@ -733,6 +758,7 @@ export default function ManageBookingsPage() {
   };
 
   const availableRebookingSchedules = schedules?.filter(s => s.routeId === selectedBooking?.routeId && s.isActive);
+  const availableEditFares = fares?.filter(f => f.routeId === selectedBooking?.routeId);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -1043,7 +1069,22 @@ export default function ManageBookingsPage() {
                   <div className="space-y-2"><Label>Mobile</Label><Input value={editFormData.passengerContact} onChange={(e) => setEditFormData({...editFormData, passengerContact: e.target.value})} /></div>
                   <div className="space-y-2"><Label>Emergency</Label><Input value={editFormData.emergencyContact} onChange={(e) => setEditFormData({...editFormData, emergencyContact: e.target.value})} /></div>
                 </div>
-                <div className="space-y-2"><Label>Email</Label><Input type="email" value={editFormData.passengerEmail} onChange={(e) => setEditFormData({...editFormData, passengerEmail: e.target.value})} /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={editFormData.passengerEmail} onChange={(e) => setEditFormData({...editFormData, passengerEmail: e.target.value})} /></div>
+                  <div className="space-y-2">
+                    <Label>Fare Type</Label>
+                    <Select value={editFormData.fareId} onValueChange={(val) => setEditFormData({...editFormData, fareId: val})}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Select demographic" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableEditFares?.map(f => (
+                          <SelectItem key={f.id} value={f.id}>{f.segmentLabel} (₱{f.finalFare})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
               <DialogFooter className="p-4 sm:p-6 border-t gap-2">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
