@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -546,7 +545,6 @@ export default function DeskBookingsPage() {
                           <div className="flex flex-row items-center justify-between">
                             <div className="space-y-0.5">
                               <FormLabel className="text-base font-black text-primary uppercase">Step 5: Process Payment Now</FormLabel>
-                              <FormDescription className="text-xs italic">Is the customer paying at the counter? Paid bookings are Issued immediately.</FormDescription>
                             </div>
                             <FormControl>
                               <Switch 
