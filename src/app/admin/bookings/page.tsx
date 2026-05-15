@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -20,7 +21,8 @@ import {
   Calendar,
   MapPin,
   Mail,
-  Heart
+  Heart,
+  AlertCircle
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -45,7 +47,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase"
-import { collection, doc, runTransaction, where, query, getDocs } from "firebase/firestore"
+import { collection, doc, runTransaction, where, query, increment } from "firebase/firestore"
 import React, { useMemo, useState, useEffect } from "react"
 import { format, addDays } from "date-fns"
 import { TripItinerary } from "@/components/trip-itinerary"
@@ -105,11 +107,13 @@ export default function DeskBookingsPage() {
   const routesRef = useMemoFirebase(() => firestore ? collection(firestore, 'routes') : null, [firestore]);
   const faresRef = useMemoFirebase(() => firestore ? collection(firestore, 'fares') : null, [firestore]);
   const usersRef = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const voyagesRef = useMemoFirebase(() => firestore ? collection(firestore, 'voyages') : null, [firestore]);
 
   const { data: allSchedules, isLoading: isLoadingSchedules } = useCollection(schedulesRef);
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesRef);
   const { data: allFares, isLoading: isLoadingFares } = useCollection(faresRef);
   const { data: registeredUsers } = useCollection(usersRef);
+  const { data: voyageStatuses } = useCollection(voyagesRef);
 
   const [availableFares, setAvailableFares] = useState<any[]>([]);
   
@@ -156,37 +160,29 @@ export default function DeskBookingsPage() {
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [watchRouteId, watchTravelDate, allSchedules]);
 
-  const bookingsQuery = useMemoFirebase(() => {
-    if (!firestore || !watchScheduleId || !watchTravelDate) return null;
-    return query(
-      collection(firestore, 'bookings'), 
-      where('scheduleId', '==', watchScheduleId),
-      where('travelDate', '==', watchTravelDate)
-    );
-  }, [firestore, watchScheduleId, watchTravelDate]);
-
-  const { data: currentTripBookings } = useCollection(bookingsQuery);
+  const voyageInfo = useMemo(() => {
+    if (!watchScheduleId || !watchTravelDate || !voyageStatuses) return null;
+    const voyageId = `${watchScheduleId}_${watchTravelDate}`;
+    return voyageStatuses.find(v => v.id === voyageId);
+  }, [watchScheduleId, watchTravelDate, voyageStatuses]);
 
   const inventoryStats = useMemo(() => {
     const schedule = allSchedules?.find(s => s.id === watchScheduleId);
     if (!schedule) return null;
 
-    const activeBookings = currentTripBookings?.filter(b => 
-      !['Cancelled', 'Auto-cancelled', 'Suspended', 'Refunded'].includes(b.status)
-    ) || [];
-
-    const used = activeBookings.length;
+    const used = voyageInfo?.bookedCount || 0;
+    const waitlisted = voyageInfo?.waitlistCount || 0;
     const capacity = schedule.passengerCapacity || 0;
     const waitlistLimit = schedule.waitlistLimit || 0;
     
     return {
       remaining: Math.max(0, capacity - used),
       capacity,
-      waitlistSpots: Math.max(0, (capacity + waitlistLimit) - used),
+      waitlistSpotsRemaining: Math.max(0, waitlistLimit - waitlisted),
       isWaitlistOnly: used >= capacity,
-      isFull: used >= (capacity + waitlistLimit)
+      isFull: used >= capacity && waitlisted >= waitlistLimit
     };
-  }, [allSchedules, watchScheduleId, currentTripBookings]);
+  }, [allSchedules, watchScheduleId, voyageInfo]);
 
   useEffect(() => {
     if (watchRouteId) {
@@ -232,28 +228,43 @@ export default function DeskBookingsPage() {
         const capacity = scheduleData.passengerCapacity || 0;
         const waitlistLimit = scheduleData.waitlistLimit || 0;
         
-        const currentTripBookingsQuery = query(
-          collection(firestore, 'bookings'),
-          where('scheduleId', '==', data.scheduleId),
-          where('travelDate', '==', data.travelDate),
-          where('status', 'in', ['Confirmed', 'Used', 'Reserved', 'Waitlisted'])
-        );
-        const existingBookingsSnap = await getDocs(currentTripBookingsQuery);
-        const seatsUsed = existingBookingsSnap.docs.length;
+        const voyageId = `${data.scheduleId}_${data.travelDate}`;
+        const voyageRef = doc(firestore, 'voyages', voyageId);
+        const voyageSnap = await transaction.get(voyageRef);
+        
+        const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
+        const currentWaitlisted = voyageSnap.exists() ? (voyageSnap.data().waitlistCount || 0) : 0;
 
         let status: 'Reserved' | 'Waitlisted' | 'Confirmed';
-        if (seatsUsed + data.passengers.length <= capacity) {
+        if (currentBooked + data.passengers.length <= capacity) {
           status = data.isPaid ? 'Confirmed' : 'Reserved';
-        } else if (seatsUsed + data.passengers.length <= capacity + waitlistLimit) {
+        } else if (currentWaitlisted + data.passengers.length <= waitlistLimit) {
           status = 'Waitlisted';
         } else {
-          throw new Error("This trip is fully booked.");
+          throw new Error("This trip is fully booked including waitlist.");
         }
 
-        const tripBookings = existingBookingsSnap.docs.filter(d => ['Confirmed', 'Used'].includes(d.data().status));
-        let boardingSeq = status === 'Confirmed' ? tripBookings.length + 1 : null;
-        let runningTotal = 0;
+        // Update counters atomically
+        if (!voyageSnap.exists()) {
+          transaction.set(voyageRef, {
+            id: voyageId,
+            scheduleId: data.scheduleId,
+            travelDate: data.travelDate,
+            status: "Scheduled",
+            bookedCount: status === 'Waitlisted' ? 0 : data.passengers.length,
+            waitlistCount: status === 'Waitlisted' ? data.passengers.length : 0,
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          transaction.update(voyageRef, {
+            bookedCount: status === 'Waitlisted' ? increment(0) : increment(data.passengers.length),
+            waitlistCount: status === 'Waitlisted' ? increment(data.passengers.length) : increment(0),
+            updatedAt: new Date().toISOString()
+          });
+        }
 
+        let boardingSeq = status !== 'Waitlisted' ? currentBooked + 1 : null;
+        let runningTotal = 0;
         const baseBookingId = Math.random().toString(36).substring(2, 8).toUpperCase();
         
         data.passengers.forEach((p, idx) => {
@@ -409,9 +420,9 @@ export default function DeskBookingsPage() {
                       <div className="flex items-center gap-3">
                         <BarChart className={cn("h-5 w-5", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-600")} />
                         <div>
-                           <p className="text-[10px] font-black uppercase text-muted-foreground">Live Seat Inventory</p>
+                           <p className="text-[10px] font-black uppercase text-muted-foreground">Atomic Seat Inventory</p>
                            <p className={cn("text-lg font-black", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-600")}>
-                             {inventoryStats.isFull ? "VOYAGE FULL" : inventoryStats.isWaitlistOnly ? "WAITLIST ONLY" : `${inventoryStats.remaining} Seats Remaining`}
+                             {inventoryStats.isFull ? "VOYAGE FULL" : inventoryStats.isWaitlistOnly ? `WAITLIST ACTIVE (${inventoryStats.waitlistSpotsRemaining} left)` : `${inventoryStats.remaining} Seats Remaining`}
                            </p>
                         </div>
                       </div>
@@ -535,10 +546,11 @@ export default function DeskBookingsPage() {
             <Button 
               onClick={form.handleSubmit(handleFinalReserve)} 
               disabled={isReserving || !watchScheduleId || inventoryStats?.isFull}
-              className="bg-primary px-10 font-black uppercase tracking-wider shadow-lg"
+              className={cn("px-10 font-black uppercase tracking-wider shadow-lg", 
+                inventoryStats?.isWaitlistOnly ? "bg-orange-600 text-white" : "bg-primary")}
             >
               {isReserving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-              Confirm & Issue
+              {inventoryStats?.isWaitlistOnly ? "Add to Waitlist" : "Confirm & Issue"}
             </Button>
           </DialogFooter>
         </DialogContent>

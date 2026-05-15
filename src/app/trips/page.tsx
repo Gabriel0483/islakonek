@@ -38,9 +38,9 @@ import {
   BarChart,
   UserPlus
 } from "lucide-react";
-import { collection, doc, query, where } from "firebase/firestore";
+import { collection, doc, query, where, runTransaction, increment } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from "@/firebase";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Navbar as MainNavbar } from "@/components/navbar";
 import { 
   Dialog, 
   DialogContent, 
@@ -118,15 +118,9 @@ function TripsContent() {
   const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
   const voyagesRef = useMemoFirebase(() => collection(db!, "voyages"), [db]);
 
-  const bookingsQuery = useMemoFirebase(() => {
-    if (!db || !targetDate) return null;
-    return query(collection(db, "bookings"), where("travelDate", "==", targetDate));
-  }, [db, targetDate]);
-
   const { data: routes } = useCollection(routesRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: fares } = useCollection(faresRef);
-  const { data: bookings } = useCollection(bookingsQuery);
   const { data: vessels } = useCollection(vesselsRef);
   const { data: ports } = useCollection(portsRef);
   const { data: voyageStatuses } = useCollection(voyagesRef);
@@ -135,6 +129,7 @@ function TripsContent() {
   const selectedOriginPort = searchParams.get("originPortId") || "all";
 
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isReserving, setIsReserving] = useState(false);
   const [bookingStep, setBookingStep] = useState(1); 
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   
@@ -189,15 +184,10 @@ function TripsContent() {
       const assignedVesselId = voyageInfo?.vesselId || schedule.vesselId;
       const vessel = vessels?.find(v => v.id === assignedVesselId);
       
-      const tripBookings = bookings?.filter(b => 
-        b.scheduleId === schedule.id && 
-        !['Cancelled', 'Auto-cancelled', 'Suspended', 'Refunded'].includes(b.status)
-      ) || [];
-
-      const usedSeats = tripBookings.length;
+      const usedSeats = voyageInfo?.bookedCount || 0;
+      const waitlistedCount = voyageInfo?.waitlistCount || 0;
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
       const waitlistLimit = schedule.waitlistLimit || 0;
-      const waitlistedCount = tripBookings.filter(b => b.status === 'Waitlisted').length;
 
       return {
         ...schedule,
@@ -210,12 +200,12 @@ function TripsContent() {
         waitlistUsed: waitlistedCount,
         waitlistLimit,
         waitlistSpotsRemaining: Math.max(0, waitlistLimit - waitlistedCount),
-        isWaitlistOnly: usedSeats >= capacity && usedSeats < (capacity + waitlistLimit),
-        isFull: usedSeats >= (capacity + waitlistLimit),
+        isWaitlistOnly: usedSeats >= capacity && waitlistedCount < waitlistLimit,
+        isFull: usedSeats >= capacity && waitlistedCount >= waitlistLimit,
         fillPercentage: capacity > 0 ? Math.min(100, (usedSeats / capacity) * 100) : 0
       };
     });
-  }, [schedules, routes, vessels, ports, bookings, voyageStatuses, searchQuery, selectedOriginPort, searchDate, isMounted, phtState, targetDate]);
+  }, [schedules, routes, vessels, ports, voyageStatuses, searchQuery, selectedOriginPort, searchDate, isMounted, phtState, targetDate]);
 
   const handleBookNow = (schedule: any) => {
     setSelectedSchedule(schedule);
@@ -258,7 +248,6 @@ function TripsContent() {
   };
 
   const handleApplyFamily = (familyMember: any) => {
-    // Look for first empty slot or append
     const emptyIndex = passengers.findIndex(p => !p.passengerName);
     if (emptyIndex !== -1) {
       const updated = [...passengers];
@@ -281,43 +270,85 @@ function TripsContent() {
     }
   };
 
-  const handleProcessBooking = () => {
+  const handleProcessBooking = async () => {
     if (!db || !selectedSchedule || !targetDate) return;
+    setIsReserving(true);
 
-    const status = selectedSchedule.isWaitlistOnly ? 'Waitlisted' : 'Reserved';
+    try {
+      await runTransaction(db, async (transaction) => {
+        const voyageId = `${selectedSchedule.id}_${targetDate}`;
+        const voyageRef = doc(db, "voyages", voyageId);
+        const voyageSnap = await transaction.get(voyageRef);
+        
+        const capacity = selectedSchedule.capacity;
+        const waitlistLimit = selectedSchedule.waitlistLimit;
+        const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
+        const currentWaitlisted = voyageSnap.exists() ? (voyageSnap.data().waitlistCount || 0) : 0;
 
-    passengers.forEach(p => {
-      const selectedFare = fares?.find(f => f.id === p.fareId);
-      const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const timestamp = new Date().toISOString();
-      const bookingRef = doc(db, "bookings", newId);
+        let status: 'Reserved' | 'Waitlisted';
+        if (currentBooked + passengers.length <= capacity) {
+          status = 'Reserved';
+        } else if (currentWaitlisted + passengers.length <= waitlistLimit) {
+          status = 'Waitlisted';
+        } else {
+          throw new Error("This trip is fully booked including waitlist.");
+        }
 
-      setDocumentNonBlocking(bookingRef, {
-        id: newId,
-        userId: user?.uid || null,
-        scheduleId: selectedSchedule.id,
-        routeId: selectedSchedule.routeId,
-        travelDate: targetDate,
-        passengerName: p.passengerName,
-        passengerDob: p.passengerDob,
-        passengerEmail: p.passengerEmail,
-        passengerContact: p.passengerContact,
-        emergencyContact: p.emergencyContact,
-        fareId: p.fareId,
-        segmentLabel: selectedFare?.segmentLabel || "",
-        finalFare: selectedFare?.finalFare || 0,
-        status: status,
-        bookingSource: "Public",
-        createdAt: timestamp,
-        updatedAt: timestamp
-      }, { merge: true });
-    });
+        // Update counters
+        if (!voyageSnap.exists()) {
+          transaction.set(voyageRef, {
+            id: voyageId,
+            scheduleId: selectedSchedule.id,
+            travelDate: targetDate,
+            status: "Scheduled",
+            bookedCount: status === 'Waitlisted' ? 0 : passengers.length,
+            waitlistCount: status === 'Waitlisted' ? passengers.length : 0,
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          transaction.update(voyageRef, {
+            bookedCount: status === 'Waitlisted' ? increment(0) : increment(passengers.length),
+            waitlistCount: status === 'Waitlisted' ? increment(passengers.length) : increment(0),
+            updatedAt: new Date().toISOString()
+          });
+        }
 
-    setIsBookingOpen(false);
-    setBookingStep(1);
-    setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: user?.email || "", passengerContact: "", emergencyContact: "", fareId: "" }]);
-    
-    alert(`Successfully processed ${passengers.length} booking request(s)!`);
+        passengers.forEach((p, idx) => {
+          const selectedFare = fares?.find(f => f.id === p.fareId);
+          const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
+          const bookingRef = doc(collection(db, "bookings"), newId);
+          
+          transaction.set(bookingRef, {
+            id: newId,
+            userId: user?.uid || null,
+            scheduleId: selectedSchedule.id,
+            routeId: selectedSchedule.routeId,
+            travelDate: targetDate,
+            passengerName: p.passengerName,
+            passengerDob: p.passengerDob,
+            passengerEmail: p.passengerEmail,
+            passengerContact: p.passengerContact,
+            emergencyContact: p.emergencyContact,
+            fareId: p.fareId,
+            segmentLabel: selectedFare?.segmentLabel || "",
+            finalFare: selectedFare?.finalFare || 0,
+            status: status,
+            bookingSource: "Public",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        });
+      });
+
+      setIsBookingOpen(false);
+      setBookingStep(1);
+      setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: user?.email || "", passengerContact: "", emergencyContact: "", fareId: "" }]);
+      alert(`Successfully processed ${passengers.length} booking request(s)!`);
+    } catch (e: any) {
+      alert("Booking failed: " + e.message);
+    } finally {
+      setIsReserving(false);
+    }
   };
 
   const availableFares = fares?.filter(f => f.routeId === selectedSchedule?.routeId);
@@ -341,7 +372,7 @@ function TripsContent() {
 
   return (
     <div className="min-h-screen bg-background font-body">
-      <Navbar />
+      <MainNavbar />
       
       <div className="container mx-auto px-4 py-6 sm:py-8 max-w-5xl">
         <header className="mb-6 sm:mb-8">
@@ -439,7 +470,7 @@ function TripsContent() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-end">
                            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
-                              <BarChart className="h-3 w-3" /> Live Seat Inventory
+                              <BarChart className="h-3 w-3" /> Atomic Seat Inventory
                            </div>
                            <div className="text-[10px] sm:text-xs font-black text-primary">
                              {trip.isWaitlistOnly 
@@ -776,10 +807,12 @@ function TripsContent() {
             ) : (
               <Button 
                 onClick={handleProcessBooking} 
+                disabled={isReserving}
                 className={cn("h-11 sm:h-14 px-6 sm:px-12 font-black uppercase tracking-widest text-[10px] sm:text-base rounded-xl shadow-lg", 
                   selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-accent text-primary hover:bg-accent/90')}
               >
-                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Booking'} <Check className="h-5 w-5 ml-1 sm:ml-2" />
+                {isReserving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Check className="h-5 w-5 ml-1 sm:ml-2" />}
+                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Booking'}
               </Button>
             )}
           </DialogFooter>

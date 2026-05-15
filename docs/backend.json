@@ -200,13 +200,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "VoyageStatus",
       "type": "object",
-      "description": "Real-time status tracking for a specific schedule on a specific date.",
+      "description": "Real-time status tracking and atomic inventory for a voyage instance.",
       "properties": {
         "id": { "type": "string", "description": "Format: scheduleId_YYYY-MM-DD" },
         "scheduleId": { "type": "string" },
         "vesselId": { "type": "string", "description": "ID of the vessel assigned for this specific instance." },
         "travelDate": { "type": "string", "format": "date" },
         "status": { "type": "string", "enum": ["Scheduled", "On-time", "Delayed", "Departed", "Arrived", "Cancelled"] },
+        "bookedCount": { "type": "number", "default": 0, "description": "Atomic counter for confirmed/reserved seats." },
+        "waitlistCount": { "type": "number", "default": 0, "description": "Atomic counter for waitlisted passengers." },
         "remarks": { "type": "string" },
         "actualDeparture": { "type": "string", "format": "date-time" },
         "actualArrival": { "type": "string", "format": "date-time" },
@@ -347,7 +349,7 @@
           "schema": {
             "$ref": "#/backend/entities/VoyageStatus"
           },
-          "description": "Date-specific status tracking for voyages."
+          "description": "Date-specific status tracking and atomic inventory for voyages."
         }
       },
       {
