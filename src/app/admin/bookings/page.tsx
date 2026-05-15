@@ -711,7 +711,7 @@ export default function DeskBookingsPage() {
                                   <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Mobile Number</FormLabel><FormControl><Input placeholder="0917XXXXXXX" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={form.control} name={`passengers.${index}.emergencyContact`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3 text-red-500" /> Emergency Number</FormLabel><FormControl><Input placeholder="Backup Contact" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Heart className="h-2.5 w-2.5 text-red-500" /> Emergency Number</FormLabel><FormControl><Input placeholder="Backup Contact" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
                                 )} />
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -839,6 +839,9 @@ export default function DeskBookingsPage() {
 
       <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[550px] p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Booking Confirmation</DialogTitle>
+          </DialogHeader>
           <div className="p-6 space-y-6">
             <TripItinerary booking={confirmedBooking} />
             <Button onClick={() => setIsConfirmationOpen(false)} className="w-full h-12 font-bold bg-primary text-white">

@@ -1136,6 +1136,9 @@ export default function ManageBookingsPage() {
 
       <Dialog open={isBoardingPassOpen} onOpenChange={setIsBoardingPassOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[450px] p-0 bg-transparent border-none shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Boarding Pass</DialogTitle>
+          </DialogHeader>
           {isBoardingPassOpen && (
             <div className="bg-white rounded-2xl overflow-hidden shadow-2xl mx-auto my-4 border">
               <div className="bg-primary p-6 text-primary-foreground text-center space-y-2">
