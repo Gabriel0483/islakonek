@@ -14,7 +14,8 @@ import {
   ArrowRight,
   Ship,
   Search,
-  Filter
+  Filter,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
