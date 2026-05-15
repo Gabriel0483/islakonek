@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useFieldArray, useForm } from "react-hook-form"
+import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import * as z from "zod"
 import { 
   Ticket, 
@@ -148,11 +148,12 @@ export default function DeskBookingsPage() {
     name: "passengers",
   });
   
-  const watchRouteId = form.watch('routeId');
-  const watchTravelDate = form.watch('travelDate');
-  const watchScheduleId = form.watch('scheduleId');
-  const watchPassengers = form.watch('passengers');
-  const watchIsPaid = form.watch('isPaid');
+  // Use useWatch for deep reactivity on form fields
+  const watchRouteId = useWatch({ control: form.control, name: "routeId" });
+  const watchTravelDate = useWatch({ control: form.control, name: "travelDate" });
+  const watchScheduleId = useWatch({ control: form.control, name: "scheduleId" });
+  const watchPassengers = useWatch({ control: form.control, name: "passengers" });
+  const watchIsPaid = useWatch({ control: form.control, name: "isPaid" });
 
   const filteredSchedules = useMemo(() => {
     if (!watchRouteId || !watchTravelDate || !allSchedules) return [];
@@ -180,6 +181,7 @@ export default function DeskBookingsPage() {
   const currentTotalPrice = useMemo(() => {
     if (!availableFares.length || !watchPassengers) return 0;
     return watchPassengers.reduce((sum, p) => {
+      if (!p || !p.fareType) return sum;
       const fareInfo = availableFares.find(f => f.segmentLabel === p.fareType);
       return sum + (fareInfo?.finalFare || 0);
     }, 0);
@@ -212,18 +214,20 @@ export default function DeskBookingsPage() {
   useEffect(() => {
     if (watchRouteId) {
       form.setValue('scheduleId', "");
+      // Clear specific fares when route changes to avoid stale pricing
+      const current = form.getValues('passengers');
+      if (current) {
+        current.forEach((_, idx) => {
+          form.setValue(`passengers.${idx}.fareType`, "");
+        });
+      }
     }
   }, [watchRouteId, form]);
 
   const handleApplyProfile = (index: number, user: any) => {
-    const currentPassengers = form.getValues('passengers');
-    currentPassengers[index] = {
-      ...currentPassengers[index],
-      fullName: user.displayName || "",
-      passengerEmail: user.email || "",
-      passengerContact: user.phoneNumber || "",
-    };
-    form.setValue('passengers', currentPassengers);
+    form.setValue(`passengers.${index}.fullName`, user.displayName || "");
+    form.setValue(`passengers.${index}.passengerEmail`, user.email || "");
+    form.setValue(`passengers.${index}.passengerContact`, user.phoneNumber || "");
     setLookupSearch('');
     setActiveLookupIndex(null);
   };
