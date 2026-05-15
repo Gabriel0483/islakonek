@@ -476,8 +476,8 @@ export default function ManageBookingsPage() {
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
         <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
           <ClipboardList className="h-5 w-5 text-accent" />
-          <span className="hidden sm:inline">Manage Bookings & Manifest</span>
-          <span className="sm:hidden">Manifest</span>
+          <span className="hidden sm:inline">Manage Bookings</span>
+          <span className="sm:hidden">Bookings</span>
         </h1>
       </header>
 

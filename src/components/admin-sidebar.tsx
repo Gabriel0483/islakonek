@@ -36,7 +36,7 @@ export function AdminSidebar() {
     { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
     { label: "Boarding Mode", icon: Scan, href: "/admin/boarding" },
     { label: "Desk Bookings", icon: Ticket, href: "/admin/bookings" },
-    { label: "Manage Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },
+    { label: "Manage Bookings", icon: ClipboardList, href: "/admin/manage-bookings" },
   ];
 
   const configItems = [

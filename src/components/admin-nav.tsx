@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -41,7 +40,7 @@ const menuItems = [
   { label: "Voyages", icon: Radio, href: "/admin/voyages" },
   { label: "Boarding", icon: Scan, href: "/admin/boarding" },
   { label: "Desk", icon: Ticket, href: "/admin/bookings" },
-  { label: "Manifest", icon: ClipboardList, href: "/admin/manage-bookings" },
+  { label: "Bookings", icon: ClipboardList, href: "/admin/manage-bookings" },
 ];
 
 const analyticItems = [
