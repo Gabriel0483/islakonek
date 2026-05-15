@@ -151,6 +151,7 @@ export default function DeskBookingsPage() {
   const watchTravelDate = useWatch({ control: form.control, name: "travelDate" });
   const watchScheduleId = useWatch({ control: form.control, name: "scheduleId" });
   const watchPassengers = useWatch({ control: form.control, name: "passengers" });
+  const watchIsPaid = useWatch({ control: form.control, name: "isPaid" });
 
   const filteredSchedules = useMemo(() => {
     if (!watchRouteId || !watchTravelDate || !allSchedules) return [];
@@ -534,7 +535,7 @@ export default function DeskBookingsPage() {
                     </div>
                   </section>
 
-                  <section className={cn("p-6 rounded-2xl border-2 space-y-4 transition-all", form.getValues('isPaid') ? "bg-green-50 border-green-200" : "bg-primary/5")}>
+                  <section className={cn("p-6 rounded-2xl border-2 space-y-4 transition-all", watchIsPaid ? "bg-green-50 border-green-200" : "bg-primary/5")}>
                     <FormField
                       control={form.control}
                       name="isPaid"
@@ -585,7 +586,7 @@ export default function DeskBookingsPage() {
             </div>
             <Button 
               onClick={form.handleSubmit(handleFinalReserve)} 
-              disabled={isReserving || !watchScheduleId || inventoryStats?.isFull}
+              disabled={isReserving || !watchScheduleId || inventoryStats?.isFull || (!inventoryStats?.isWaitlistOnly && !watchIsPaid)}
               className={cn("px-10 font-black uppercase tracking-wider shadow-lg", 
                 inventoryStats?.isWaitlistOnly ? "bg-orange-600 text-white" : "bg-primary")}
             >
