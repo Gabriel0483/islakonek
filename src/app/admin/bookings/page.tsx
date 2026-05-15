@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -22,7 +23,13 @@ import {
   Mail,
   Heart,
   AlertCircle,
-  HandCoins
+  HandCoins,
+  Globe,
+  ArrowRight,
+  UserCheck,
+  Ship,
+  Tag,
+  QrCode
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -33,7 +40,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -47,7 +53,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase"
-import { collection, doc, runTransaction, where, query, increment } from "firebase/firestore"
+import { collection, doc, runTransaction, where, query, increment, getDoc } from "firebase/firestore"
 import React, { useMemo, useState, useEffect } from "react"
 import { format, addDays } from "date-fns"
 import { TripItinerary } from "@/components/trip-itinerary"
@@ -91,13 +97,20 @@ export default function DeskBookingsPage() {
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
   
+  // UI Dialog States
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+  const [isOnlineSearchDialogOpen, setIsOnlineSearchDialogOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [isPaymentCollectionAlertOpen, setIsPaymentCollectionAlertOpen] = useState(false);
+  
+  // Processing States
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
   const [isReserving, setIsReserving] = useState(false);
-  const [dateRange, setDateRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
+  const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+  const [onlineBookingId, setOnlineBookingId] = useState("");
+  const [foundBooking, setFoundOnlineBooking] = useState<any>(null);
   
+  const [dateRange, setDateRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   const [lookupSearch, setLookupSearch] = useState('');
   const [activeLookupIndex, setActiveLookupIndex] = useState<number | null>(null);
 
@@ -212,12 +225,6 @@ export default function DeskBookingsPage() {
   useEffect(() => {
     if (watchRouteId) {
       form.setValue('scheduleId', "");
-      const current = form.getValues('passengers');
-      if (current) {
-        current.forEach((_, idx) => {
-          form.setValue(`passengers.${idx}.fareType`, "");
-        });
-      }
     }
   }, [watchRouteId, form]);
 
@@ -229,6 +236,111 @@ export default function DeskBookingsPage() {
     setActiveLookupIndex(null);
   };
 
+  /**
+   * Search for an online booking
+   */
+  const handleSearchOnlineBooking = async () => {
+    if (!firestore || !onlineBookingId) return;
+    setIsSearchingOnline(true);
+    setFoundOnlineBooking(null);
+
+    try {
+      const docRef = doc(firestore, "bookings", onlineBookingId.toUpperCase());
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        setFoundOnlineBooking(snap.data());
+      } else {
+        toast({ variant: "destructive", title: "Not Found", description: "Reference ID does not exist." });
+      }
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    } finally {
+      setIsSearchingOnline(false);
+    }
+  };
+
+  /**
+   * Process and issue payment for an existing online booking
+   */
+  const handleProcessOnlineConfirm = async () => {
+    if (!firestore || !foundBooking) return;
+    setIsReserving(true);
+
+    try {
+      const result = await runTransaction(firestore, async (transaction) => {
+        const bookingRef = doc(firestore, 'bookings', foundBooking.id);
+        const voyageId = `${foundBooking.scheduleId}_${foundBooking.travelDate}`;
+        const voyageRef = doc(firestore, 'voyages', voyageId);
+        const scheduleRef = doc(firestore, 'schedules', foundBooking.scheduleId);
+
+        const [bookingSnap, voyageSnap, scheduleSnap] = await Promise.all([
+          transaction.get(bookingRef),
+          transaction.get(voyageRef),
+          transaction.get(scheduleRef)
+        ]);
+
+        if (!bookingSnap.exists()) throw new Error("Booking no longer exists.");
+        if (!scheduleSnap.exists()) throw new Error("Schedule no longer exists.");
+
+        const currentStatus = bookingSnap.data().status;
+        const scheduleData = scheduleSnap.data();
+        const capacity = scheduleData.passengerCapacity || 0;
+        const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
+
+        let boardingSeq = null;
+
+        // Transition from Waitlist or Reserved to Confirmed
+        if (currentStatus === 'Waitlisted') {
+           if (currentBooked < capacity) {
+              boardingSeq = currentBooked + 1;
+              transaction.update(voyageRef, {
+                 bookedCount: increment(1),
+                 waitlistCount: increment(-1),
+                 updatedAt: new Date().toISOString()
+              });
+           } else {
+              throw new Error("No physical seats available to promote this waitlisted passenger.");
+           }
+        } else if (currentStatus === 'Reserved') {
+           boardingSeq = currentBooked + 1;
+           // If already reserved, count was already in bookedCount, just need to confirm payment & assign seq
+        } else {
+           throw new Error(`Ticket is already ${currentStatus}.`);
+        }
+
+        transaction.update(bookingRef, {
+          status: "Confirmed",
+          boardingSequenceNumber: boardingSeq,
+          updatedAt: new Date().toISOString()
+        });
+
+        return { 
+          ...bookingSnap.data(), 
+          status: 'Confirmed', 
+          boardingSequenceNumber: boardingSeq 
+        };
+      });
+
+      setConfirmedBooking({
+        ...result,
+        routeName: routes?.find(r => r.id === result.routeId)?.name || 'Unknown Route',
+        departureTime: allSchedules?.find(s => s.id === result.scheduleId)?.departureTime || '',
+        passengers: [{ fullName: result.passengerName, fareType: result.segmentLabel }],
+        totalPrice: result.finalFare
+      });
+
+      setIsOnlineSearchDialogOpen(false);
+      setIsConfirmationOpen(true);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Processing Failed", description: e.message });
+    } finally {
+      setIsReserving(false);
+    }
+  };
+
+  /**
+   * Create a new counter booking
+   */
   async function handleFinalReserve(data: BookingFormData) {
     if (!firestore) return;
     setIsReserving(true);
@@ -277,7 +389,6 @@ export default function DeskBookingsPage() {
           });
         }
 
-        // ONLY assign sequence number if status is Confirmed
         let boardingSeq = status === 'Confirmed' ? currentBooked + 1 : null;
         let runningTotal = 0;
         const baseBookingId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -328,7 +439,6 @@ export default function DeskBookingsPage() {
       setIsBookingDialogOpen(false);
       setIsConfirmationOpen(true);
     } catch (e: any) {
-      console.error(e);
       toast({ variant: "destructive", title: "Booking Failed", description: e.message });
     } finally {
         setIsReserving(false);
@@ -352,32 +462,128 @@ export default function DeskBookingsPage() {
       <AdminNav />
       <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white">
         <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
-          <Ticket className="h-5 w-5 text-accent" /> Desk Bookings
+          <Ticket className="h-5 w-5 text-accent" /> Desk Operations
         </h1>
       </header>
 
       <main className="p-4 sm:p-6 space-y-6 container mx-auto">
-        <Card className="border-none shadow-md overflow-hidden bg-white">
-          <CardHeader className="bg-primary text-primary-foreground p-6">
-            <CardTitle className="text-xl">Counter Sales</CardTitle>
-            <CardDescription className="text-primary-foreground/70">Issue valid boarding passes for walk-in passengers.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-10 sm:p-20 text-center">
-             <Ticket className="h-16 w-16 text-accent/20 mx-auto mb-6" />
-             <h2 className="text-2xl font-black text-primary mb-2">Ready to Issue?</h2>
-             <p className="text-muted-foreground mb-8 max-w-md mx-auto">Verify trip availability and capture manifest details to generate passenger itineraries.</p>
-             <Button onClick={() => { form.reset(); setIsBookingDialogOpen(true); }} size="lg" className="bg-primary px-12 h-14 text-lg">
-               New Ticket Booking
-             </Button>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <Card 
+            className="border-none shadow-md hover:ring-2 hover:ring-primary/20 transition-all group cursor-pointer bg-white"
+            onClick={() => { form.reset(); setIsBookingDialogOpen(true); }}
+           >
+              <CardHeader className="p-8 pb-4">
+                 <div className="bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <UserPlus className="h-8 w-8 text-primary group-hover:text-white" />
+                 </div>
+                 <CardTitle className="text-2xl font-black text-primary">Process New Booking</CardTitle>
+                 <CardDescription>Issue new tickets for walk-in passengers.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 pt-0">
+                 <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                   Register new passengers, verify seat availability, and collect payment for immediate issuance.
+                 </p>
+                 <div className="flex items-center gap-2 text-xs font-black text-accent uppercase tracking-widest group-hover:gap-4 transition-all">
+                    Counter Issuance <ArrowRight className="h-4 w-4" />
+                 </div>
+              </CardContent>
+           </Card>
+
+           <Card 
+            className="border-none shadow-md hover:ring-2 hover:ring-accent/40 transition-all group cursor-pointer bg-white"
+            onClick={() => { setOnlineBookingId(""); setFoundOnlineBooking(null); setIsOnlineSearchDialogOpen(true); }}
+           >
+              <CardHeader className="p-8 pb-4">
+                 <div className="bg-accent/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-accent group-hover:text-primary transition-colors">
+                    <Globe className="h-8 w-8 text-accent group-hover:text-primary" />
+                 </div>
+                 <CardTitle className="text-2xl font-black text-primary">Process Online Booking</CardTitle>
+                 <CardDescription>Verify and issue tickets for web reservations.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 pt-0">
+                 <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                   Confirm status for passengers who reserved online. Search by ID to verify manifest and finalize payment.
+                 </p>
+                 <div className="flex items-center gap-2 text-xs font-black text-accent uppercase tracking-widest group-hover:gap-4 transition-all">
+                    Web Intake <ArrowRight className="h-4 w-4" />
+                 </div>
+              </CardContent>
+           </Card>
+        </div>
       </main>
 
+      {/* ONLINE PROCESSING DIALOG */}
+      <Dialog open={isOnlineSearchDialogOpen} onOpenChange={setIsOnlineSearchDialogOpen}>
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-primary text-primary-foreground">
+             <DialogTitle className="flex items-center gap-2 text-lg font-black uppercase">
+               <Globe className="h-5 w-5 text-accent" /> Online Intake
+             </DialogTitle>
+             <DialogDescription className="text-primary-foreground/70">Enter the 6-character reference code.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-6 space-y-6">
+             <div className="flex gap-2">
+                <Input 
+                  placeholder="e.g. ABCDEF" 
+                  value={onlineBookingId}
+                  onChange={(e) => setOnlineBookingId(e.target.value.toUpperCase())}
+                  className="font-mono h-12 text-lg font-bold"
+                />
+                <Button 
+                  onClick={handleSearchOnlineBooking} 
+                  disabled={isSearchingOnline || !onlineBookingId}
+                  className="bg-accent text-primary font-bold h-12 px-6"
+                >
+                  {isSearchingOnline ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
+                </Button>
+             </div>
+
+             {foundBooking && (
+                <div className="bg-secondary/10 p-5 rounded-2xl border-2 border-dashed space-y-4 animate-in zoom-in-95 duration-200">
+                   <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                         <p className="text-[10px] font-black uppercase text-muted-foreground">Passenger</p>
+                         <p className="font-black text-primary uppercase">{foundBooking.passengerName}</p>
+                      </div>
+                      <Badge className={cn(
+                        "uppercase font-black text-[9px]",
+                        foundBooking.status === 'Reserved' ? "bg-blue-500" : "bg-orange-500"
+                      )}>{foundBooking.status}</Badge>
+                   </div>
+                   <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                      <div>
+                         <p className="text-[10px] font-bold text-muted-foreground uppercase">Date</p>
+                         <p className="text-xs font-black">{foundBooking.travelDate}</p>
+                      </div>
+                      <div>
+                         <p className="text-[10px] font-bold text-muted-foreground uppercase">Fare</p>
+                         <p className="text-xs font-black">₱{foundBooking.finalFare?.toLocaleString()}</p>
+                      </div>
+                   </div>
+                   
+                   <div className="pt-4">
+                      <Button 
+                        onClick={handleProcessOnlineConfirm}
+                        disabled={isReserving}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-black uppercase"
+                      >
+                         {isReserving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
+                         Collect ₱{foundBooking.finalFare?.toLocaleString()} & Issue
+                      </Button>
+                   </div>
+                </div>
+             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* WALK-IN BOOKING DIALOG */}
       <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[800px] p-0 overflow-hidden h-[95vh] flex flex-col">
           <DialogHeader className="p-4 sm:p-6 border-b bg-white shrink-0">
             <DialogTitle className="flex items-center gap-2 text-lg font-black text-primary uppercase">
-              <Ticket className="h-5 w-5 text-accent" /> Desk Issuance
+              <UserPlus className="h-5 w-5 text-accent" /> New Walk-in
             </DialogTitle>
           </DialogHeader>
 
