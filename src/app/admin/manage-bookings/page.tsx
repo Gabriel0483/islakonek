@@ -30,7 +30,9 @@ import {
   Printer,
   ChevronRight,
   ChevronLeft,
-  Ghost
+  Ghost,
+  MapPin,
+  Filter
 } from "lucide-react";
 import { collection, doc, query, orderBy, limit, runTransaction, getDocs, where, increment } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -81,7 +83,6 @@ const ITEMS_PER_PAGE = 50;
 
 /**
  * MEMOIZED ROW COMPONENT
- * Prevents massive re-renders when a single row's state changes.
  */
 const BookingRow = memo(({ 
   booking, 
@@ -188,7 +189,6 @@ const BookingRow = memo(({
     </TableRow>
   );
 }, (prev, next) => {
-  // Deep equality check for memoization stability
   return prev.booking.id === next.booking.id && 
          prev.booking.status === next.booking.status &&
          prev.booking.updatedAt === next.booking.updatedAt &&
@@ -205,6 +205,12 @@ export default function ManageBookingsPage() {
   const [isActionProcessing, setIsActionProcessing] = useState(false);
   const [todayPHT, setTodayPHT] = useState("");
   const [currentTimePHT, setCurrentTimePHT] = useState("");
+
+  // Filter States
+  const [search, setSearch] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+  const [filterScheduleId, setFilterScheduleId] = useState("all");
+  const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
     setIsMounted(true);
@@ -227,7 +233,6 @@ export default function ManageBookingsPage() {
     return () => clearInterval(interval);
   }, []);
   
-  // Guard for stuck Radix body locks
   useEffect(() => {
     const checkBodyLock = () => {
       if (!document.querySelector('[role="dialog"]') && !document.querySelector('[role="menu"]')) {
@@ -256,9 +261,6 @@ export default function ManageBookingsPage() {
   const { data: routes } = useCollection(routesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
   const { data: schedules } = useCollection(schedulesRef);
-
-  const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
@@ -296,24 +298,26 @@ export default function ManageBookingsPage() {
     const searchLower = search.toLowerCase();
     
     return bookings.filter(b => {
-      // Search restricted to 6-digit alpha-numeric booking ID/reference only
-      const matchesSearch = 
-        !search ||
-        b.id?.toLowerCase().includes(searchLower);
-      
+      // 1. Reference Search
+      const matchesSearch = !search || b.id?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
+
+      // 2. Date Filter
+      if (filterDate && b.travelDate !== filterDate) return false;
+
+      // 3. Trip ID (Schedule) Filter
+      if (filterScheduleId !== "all" && b.scheduleId !== filterScheduleId) return false;
       
+      // 4. Status Tab Filter
       if (activeTab === "all") return true;
       if (activeTab === "reserved") return b.status === "Reserved";
       if (activeTab === "waitlisted") return b.status === "Waitlisted";
       if (activeTab === "confirmed") return b.status === "Confirmed";
       if (activeTab === "used") return b.status === "Used";
-      if (activeTab === "inactive") {
-        return ["Suspended", "Auto-cancelled", "Refunded"].includes(b.status) || !ACTIVE_STATUSES.includes(b.status);
-      }
+      
       return true;
     });
-  }, [bookings, search, activeTab]);
+  }, [bookings, search, filterDate, filterScheduleId, activeTab]);
 
   const ghostBookings = useMemo(() => {
     if (!bookings || !schedules || !todayPHT || !currentTimePHT) return [];
@@ -341,7 +345,6 @@ export default function ManageBookingsPage() {
   const getDeparture = useCallback((id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--", [schedules]);
   const getTripCode = useCallback((id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A", [schedules]);
 
-  // STABLE ACTION HANDLERS
   const handleOpenViewDetails = useCallback((booking: any) => {
     setSelectedBooking(booking);
     setIsViewDetailsOpen(true);
@@ -589,22 +592,73 @@ export default function ManageBookingsPage() {
       </header>
 
       <main className="p-4 sm:p-6 space-y-6 container mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="relative flex-1 w-full md:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search by 6-digit Booking ID..." 
-              className="pl-10 h-10 sm:h-12 bg-white border-none shadow-sm text-sm"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            />
-          </div>
-          <Badge variant="outline" className="bg-white px-3 py-1 font-bold text-[10px] sm:text-xs">Found {filteredBookings.length} records</Badge>
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-secondary/50 space-y-4">
+           <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
+              <Filter className="h-3.5 w-3.5 text-accent" /> Manifest Filters
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Booking Reference</Label>
+                <Search className="absolute left-3 top-[34px] h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="6-digit ID..." 
+                  className="pl-10 h-10 bg-secondary/10 border-none text-sm"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Travel Date</Label>
+                <div className="relative">
+                   <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                   <Input 
+                     type="date"
+                     className="pl-10 h-10 bg-secondary/10 border-none text-sm"
+                     value={filterDate}
+                     onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
+                   />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Trip Code</Label>
+                <Select value={filterScheduleId} onValueChange={(val) => { setFilterScheduleId(val); setCurrentPage(1); }}>
+                   <SelectTrigger className="h-10 bg-secondary/10 border-none text-sm">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-muted-foreground" />
+                        <SelectValue placeholder="All Trips" />
+                      </div>
+                   </SelectTrigger>
+                   <SelectContent>
+                      <SelectItem value="all">All Trips</SelectItem>
+                      {schedules?.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>
+                      ))}
+                   </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-end">
+                <Button 
+                  variant="ghost" 
+                  className="h-10 text-[10px] font-black uppercase text-muted-foreground hover:text-primary underline"
+                  onClick={() => {
+                    setSearch("");
+                    setFilterDate("");
+                    setFilterScheduleId("all");
+                    setCurrentPage(1);
+                  }}
+                >
+                  Clear All Filters
+                </Button>
+              </div>
+           </div>
         </div>
 
         <Tabs defaultValue="all" onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="space-y-6">
           <TabsList className="bg-white border p-1 h-auto flex flex-wrap w-full sm:w-fit">
-            {["all", "reserved", "waitlisted", "confirmed", "used", "inactive"].map(tab => (
+            {["all", "reserved", "waitlisted", "confirmed", "used"].map(tab => (
               <TabsTrigger key={tab} value={tab} className="text-[10px] sm:text-sm capitalize">{tab}</TabsTrigger>
             ))}
           </TabsList>
