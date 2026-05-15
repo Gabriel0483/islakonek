@@ -78,7 +78,6 @@ import { useToast } from "@/hooks/use-toast";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
 
-const ACTIVE_STATUSES = ["Reserved", "Waitlisted", "Confirmed", "Used"];
 const ITEMS_PER_PAGE = 50;
 
 /**
@@ -298,17 +297,11 @@ export default function ManageBookingsPage() {
     const searchLower = search.toLowerCase();
     
     return bookings.filter(b => {
-      // 1. Reference Search
       const matchesSearch = !search || b.id?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
-
-      // 2. Date Filter
       if (filterDate && b.travelDate !== filterDate) return false;
-
-      // 3. Trip ID (Schedule) Filter
       if (filterScheduleId !== "all" && b.scheduleId !== filterScheduleId) return false;
       
-      // 4. Status Tab Filter
       if (activeTab === "all") return true;
       if (activeTab === "reserved") return b.status === "Reserved";
       if (activeTab === "waitlisted") return b.status === "Waitlisted";
@@ -433,10 +426,14 @@ export default function ManageBookingsPage() {
       let candidateDoc = (wasConfirmed && isNowInactive) ? await findWaitlistedCandidate(booking.scheduleId, booking.travelDate) : null;
 
       await runTransaction(db, async (transaction) => {
-        const bookingRef = doc(db, "bookings", booking.id);
         const voyageId = `${booking.scheduleId}_${booking.travelDate}`;
         const voyageRef = doc(db, "voyages", voyageId);
+        const bookingRef = doc(db, "bookings", booking.id);
 
+        // GET all documents first in the transaction
+        const voyageSnap = await transaction.get(voyageRef);
+        
+        // THEN do the writes
         transaction.update(bookingRef, { 
           status: newStatus, 
           penaltyFees: penaltyAmount,
@@ -448,7 +445,6 @@ export default function ManageBookingsPage() {
         if (wasConfirmed && isNowInactive) {
           transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
           if (candidateDoc) {
-            const voyageSnap = await transaction.get(voyageRef);
             const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
             transaction.update(candidateDoc.ref, {
               status: "Reserved",
@@ -517,18 +513,22 @@ export default function ManageBookingsPage() {
       let candidateDoc = wasConfirmed ? await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate) : null;
 
       await runTransaction(db, async (transaction) => {
-        const bookingRef = doc(db, "bookings", bookingId);
         const voyageRef = doc(db, "voyages", voyageId);
+        const bookingRef = doc(db, "bookings", bookingId);
+        
+        // GET first
+        const voyageSnap = await transaction.get(voyageRef);
+        
+        // THEN writes
         transaction.delete(bookingRef);
 
         if (wasConfirmed) {
           transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
           if (candidateDoc) {
-            const voyageSnap = await transaction.get(voyageRef);
             const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
             transaction.update(candidateDoc.ref, {
               status: "Reserved",
-              boardingSequenceNumber: currentBooked,
+              boardingSequenceNumber: Math.max(1, currentBooked),
               remarks: "Auto-promoted from Waitlist (System)",
               updatedAt: new Date().toISOString()
             });
@@ -554,12 +554,17 @@ export default function ManageBookingsPage() {
           const voyageId = `${b.scheduleId}_${b.travelDate}`;
           const voyageRef = doc(db, "voyages", voyageId);
           const bRef = doc(db, "bookings", b.id);
+          
+          // READ first
+          const voyageSnap = await transaction.get(voyageRef);
+          
+          // WRITE after
           transaction.update(bRef, { status: "Auto-cancelled", updatedAt: new Date().toISOString(), remarks: "Purged: Unpaid ghost reservation released 1hr before departure." });
           transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
+          
           if (candidateDoc) {
-            const voyageSnap = await transaction.get(voyageRef);
             const currentBooked = voyageSnap.exists() ? (voyageSnap.data().bookedCount || 0) : 0;
-            transaction.update(candidateDoc.ref, { status: "Reserved", boardingSequenceNumber: currentBooked, updatedAt: new Date().toISOString() });
+            transaction.update(candidateDoc.ref, { status: "Reserved", boardingSequenceNumber: Math.max(1, currentBooked), updatedAt: new Date().toISOString() });
             transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
           }
         });
@@ -870,14 +875,14 @@ export default function ManageBookingsPage() {
       <Dialog open={isBoardingPassOpen} onOpenChange={setIsBoardingPassOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[450px] p-0 bg-transparent border-none shadow-none">
           {isBoardingPassOpen && (
-            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl mx-auto my-4">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl mx-auto my-4 border">
               <div className="bg-primary p-6 text-primary-foreground text-center space-y-2">
                 <Ship className="h-8 w-8 mx-auto mb-2" /><h2 className="text-xl font-black uppercase">Boarding Pass</h2>
               </div>
               <div className="p-6 space-y-6">
                 <div className="flex justify-between items-start border-b border-dashed pb-4">
-                  <div className="flex-1 overflow-hidden"><p className="text-[10px] text-muted-foreground uppercase font-bold">Passenger</p><p className="font-black text-primary uppercase truncate">{selectedBooking?.passengerName}</p></div>
-                  <div className="text-right"><p className="text-[10px] text-muted-foreground uppercase font-bold">Ticket ID</p><p className="font-mono text-sm font-bold">#{selectedBooking?.id}</p></div>
+                  <div className="flex-1 overflow-hidden mr-2"><p className="text-[10px] text-muted-foreground uppercase font-bold">Passenger</p><p className="font-black text-primary uppercase truncate">{selectedBooking?.passengerName}</p></div>
+                  <div className="text-right shrink-0"><p className="text-[10px] text-muted-foreground uppercase font-bold">Ticket ID</p><p className="font-mono text-sm font-bold">#{selectedBooking?.id}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><p className="text-[10px] text-muted-foreground uppercase font-bold">Trip</p><p className="font-black text-accent uppercase">{getTripCode(selectedBooking?.scheduleId)}</p></div>

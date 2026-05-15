@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -148,7 +147,6 @@ export default function DeskBookingsPage() {
     name: "passengers",
   });
   
-  // Use useWatch for deep reactivity on form fields
   const watchRouteId = useWatch({ control: form.control, name: "routeId" });
   const watchTravelDate = useWatch({ control: form.control, name: "travelDate" });
   const watchScheduleId = useWatch({ control: form.control, name: "scheduleId" });
@@ -197,8 +195,8 @@ export default function DeskBookingsPage() {
     const schedule = allSchedules?.find(s => s.id === watchScheduleId);
     if (!schedule) return null;
 
-    const used = voyageInfo?.bookedCount || 0;
-    const waitlisted = voyageInfo?.waitlistCount || 0;
+    const used = Math.max(0, voyageInfo?.bookedCount || 0);
+    const waitlisted = Math.max(0, voyageInfo?.waitlistCount || 0);
     const capacity = schedule.passengerCapacity || 0;
     const waitlistLimit = schedule.waitlistLimit || 0;
     
@@ -214,7 +212,6 @@ export default function DeskBookingsPage() {
   useEffect(() => {
     if (watchRouteId) {
       form.setValue('scheduleId', "");
-      // Clear specific fares when route changes to avoid stale pricing
       const current = form.getValues('passengers');
       if (current) {
         current.forEach((_, idx) => {
@@ -262,7 +259,6 @@ export default function DeskBookingsPage() {
           throw new Error("This trip is fully booked including waitlist.");
         }
 
-        // Update counters atomically
         if (!voyageSnap.exists()) {
           transaction.set(voyageRef, {
             id: voyageId,
@@ -388,7 +384,6 @@ export default function DeskBookingsPage() {
             <div className="p-4 sm:p-6 space-y-8 pb-10">
               <Form {...form}>
                 <form className="space-y-8">
-                  {/* Step 1: Selection */}
                   <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-secondary/10 p-4 rounded-xl border-2 border-dashed">
                     <FormField
                       control={form.control}
@@ -431,7 +426,6 @@ export default function DeskBookingsPage() {
                     />
                   </section>
 
-                  {/* Step 2: Inventory */}
                   {inventoryStats && (
                     <div className={cn("p-4 rounded-xl flex items-center justify-between border-2 shadow-sm", 
                       inventoryStats.isFull ? "bg-red-50 border-red-200" : inventoryStats.isWaitlistOnly ? "bg-orange-50 border-orange-200" : "bg-green-50 border-green-200")}>
@@ -448,7 +442,6 @@ export default function DeskBookingsPage() {
                     </div>
                   )}
 
-                  {/* Step 3 & 4: Profile Lookup & Passenger Details */}
                   <section className="space-y-6">
                     <div className="flex items-center justify-between border-b pb-2">
                       <h3 className="font-black text-primary uppercase text-lg flex items-center gap-2">
@@ -471,7 +464,6 @@ export default function DeskBookingsPage() {
                             </Button>
 
                             <div className="space-y-6">
-                              {/* Step 3: Rapid Profile Lookup */}
                               <div className="space-y-2 relative">
                                 <Label className="text-[10px] font-black uppercase text-accent flex items-center gap-1.5 tracking-wider">
                                   <Search className="h-3 w-3" /> Step 3: Rapid Profile Lookup
@@ -499,7 +491,6 @@ export default function DeskBookingsPage() {
                                 )}
                               </div>
 
-                              {/* Step 4: Passenger Details */}
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField control={form.control} name={`passengers.${index}.fullName`} render={({ field }) => (
                                   <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</FormLabel><FormControl><Input placeholder="Juan Dela Cruz" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
@@ -544,7 +535,6 @@ export default function DeskBookingsPage() {
                     </div>
                   </section>
 
-                  {/* Step 5: Process Payment */}
                   <section className={cn("p-6 rounded-2xl border-2 space-y-4 transition-all", watchIsPaid ? "bg-green-50 border-green-200" : "bg-primary/5")}>
                     <FormField
                       control={form.control}
