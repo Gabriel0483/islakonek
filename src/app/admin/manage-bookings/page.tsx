@@ -33,7 +33,9 @@ import {
   ChevronLeft,
   Ghost,
   MapPin,
-  Filter
+  Filter,
+  Wrench,
+  ShieldAlert
 } from "lucide-react";
 import { collection, doc, query, orderBy, limit, runTransaction, getDocs, where, increment } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -269,6 +271,7 @@ export default function ManageBookingsPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
   const [isPurgeDialogOpen, setIsPurgeDialogOpen] = useState(false);
+  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
 
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -672,6 +675,31 @@ export default function ManageBookingsPage() {
     } finally { setIsActionProcessing(false); }
   };
 
+  const handleWipeAllBookings = async () => {
+    if (!db || isActionProcessing) return;
+    setIsActionProcessing(true);
+    try {
+      const bookingsSnap = await getDocs(collection(db, "bookings"));
+      const voyagesSnap = await getDocs(collection(db, "voyages"));
+
+      await runTransaction(db, async (transaction) => {
+        bookingsSnap.docs.forEach(d => transaction.delete(d.ref));
+        voyagesSnap.docs.forEach(d => {
+           transaction.update(d.ref, {
+             bookedCount: 0,
+             waitlistCount: 0,
+             updatedAt: new Date().toISOString()
+           });
+        });
+      });
+
+      setIsMaintenanceOpen(false);
+      toast({ title: "Manifest Purged", description: "All records deleted and atomic counters zeroed." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Wipe Failed", description: e.message });
+    } finally { setIsActionProcessing(false); }
+  };
+
   const availableRebookingSchedules = schedules?.filter(s => s.routeId === selectedBooking?.routeId && s.isActive);
 
   return (
@@ -681,16 +709,27 @@ export default function ManageBookingsPage() {
         <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
           <ClipboardList className="h-5 w-5 text-accent" /> Manage Bookings
         </h1>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className={cn("h-9 gap-2 font-bold transition-all", ghostBookings.length > 0 ? "border-orange-200 bg-orange-50 text-orange-600 animate-pulse" : "text-muted-foreground")}
-          onClick={() => setIsPurgeDialogOpen(true)}
-        >
-          <Ghost className="h-4 w-4" />
-          <span className="hidden sm:inline">Ghost Purge</span>
-          {ghostBookings.length > 0 && <Badge className="bg-orange-600 h-5 px-1.5 min-w-[20px]">{ghostBookings.length}</Badge>}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-9 gap-2 font-bold text-muted-foreground hover:bg-secondary"
+            onClick={() => setIsMaintenanceOpen(true)}
+          >
+            <Wrench className="h-4 w-4" />
+            <span className="hidden sm:inline">System Maintenance</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={cn("h-9 gap-2 font-bold transition-all", ghostBookings.length > 0 ? "border-orange-200 bg-orange-50 text-orange-600 animate-pulse" : "text-muted-foreground")}
+            onClick={() => setIsPurgeDialogOpen(true)}
+          >
+            <Ghost className="h-4 w-4" />
+            <span className="hidden sm:inline">Ghost Purge</span>
+            {ghostBookings.length > 0 && <Badge className="bg-orange-600 h-5 px-1.5 min-w-[20px]">{ghostBookings.length}</Badge>}
+          </Button>
+        </div>
       </header>
 
       <main className="p-4 sm:p-6 space-y-6 container mx-auto">
@@ -826,6 +865,56 @@ export default function ManageBookingsPage() {
       </main>
 
       {/* DIALOGS */}
+      <Dialog open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-destructive text-destructive-foreground">
+             <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <ShieldAlert className="h-6 w-6" />
+                </div>
+                <div>
+                   <DialogTitle className="text-xl font-black uppercase">System Maintenance</DialogTitle>
+                   <DialogDescription className="text-destructive-foreground/80 text-xs">Administrative data management tools.</DialogDescription>
+                </div>
+             </div>
+          </DialogHeader>
+          <div className="p-8 space-y-6">
+             <div className="space-y-4">
+                <h3 className="font-bold text-primary flex items-center gap-2">
+                   <Trash2 className="h-4 w-4 text-destructive" /> Database Cleanup
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Removing "legacy" bookings and resetting inventory counters is often required after testing phases.
+                </p>
+                <div className="p-4 bg-secondary/20 rounded-xl border border-dashed space-y-4">
+                   <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm font-bold">Wipe All Bookings</p>
+                        <p className="text-[10px] text-muted-foreground">Delete all manifest records and zero inventory.</p>
+                      </div>
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        className="font-black uppercase text-[10px]"
+                        onClick={() => {
+                          if (confirm("DANGER: This will permanently delete ALL existing bookings and reset every voyage counter to zero. This cannot be undone. Proceed?")) {
+                            handleWipeAllBookings();
+                          }
+                        }}
+                        disabled={isActionProcessing}
+                      >
+                        {isActionProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "Purge All"}
+                      </Button>
+                   </div>
+                </div>
+             </div>
+          </div>
+          <DialogFooter className="p-6 border-t bg-secondary/5">
+             <Button variant="outline" className="w-full font-bold" onClick={() => setIsMaintenanceOpen(false)}>Close Maintenance</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isPurgeDialogOpen} onOpenChange={setIsPurgeDialogOpen}>
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[500px] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-orange-600 text-white">
