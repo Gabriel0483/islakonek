@@ -22,7 +22,8 @@ import {
   MapPin,
   Mail,
   Heart,
-  AlertCircle
+  AlertCircle,
+  HandCoins
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -56,7 +57,14 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AdminNav } from "@/components/admin-nav"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
 const passengerSchema = z.object({
@@ -74,7 +82,7 @@ const bookingFormSchema = z.object({
   travelDate: z.string().min(1, { message: "Date is required."}),
   scheduleId: z.string({ required_error: "Select schedule." }),
   passengers: z.array(passengerSchema).min(1, "At least one passenger is required."),
-  isPaid: z.boolean().default(true),
+  isPaid: z.boolean().default(false),
 });
 
 type BookingFormData = z.infer<typeof bookingFormSchema>;
@@ -86,6 +94,7 @@ export default function DeskBookingsPage() {
   
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [isPaymentCollectionAlertOpen, setIsPaymentCollectionAlertOpen] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
   const [isReserving, setIsReserving] = useState(false);
   const [dateRange, setDateRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
@@ -132,7 +141,7 @@ export default function DeskBookingsPage() {
         passengerEmail: "", 
         fareType: "" 
       }],
-      isPaid: true,
+      isPaid: false,
     },
   });
 
@@ -144,6 +153,16 @@ export default function DeskBookingsPage() {
   const watchRouteId = form.watch('routeId');
   const watchTravelDate = form.watch('travelDate');
   const watchScheduleId = form.watch('scheduleId');
+  const watchPassengers = form.watch('passengers');
+  const watchIsPaid = form.watch('isPaid');
+
+  const currentTotalPrice = useMemo(() => {
+    if (!availableFares || !watchPassengers) return 0;
+    return watchPassengers.reduce((sum, p) => {
+      const fareInfo = availableFares.find(f => f.segmentLabel === p.fareType);
+      return sum + (fareInfo?.finalFare || 0);
+    }, 0);
+  }, [availableFares, watchPassengers]);
 
   const filteredSchedules = useMemo(() => {
     if (!watchRouteId || !watchTravelDate || !allSchedules) return [];
@@ -519,19 +538,40 @@ export default function DeskBookingsPage() {
                   </section>
 
                   {/* Step 5: Process Payment */}
-                  <section className="bg-primary/5 p-6 rounded-2xl border-2 space-y-4">
+                  <section className={cn("p-6 rounded-2xl border-2 space-y-4 transition-all", watchIsPaid ? "bg-green-50 border-green-200" : "bg-primary/5")}>
                     <FormField
                       control={form.control}
                       name="isPaid"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base font-black text-primary uppercase">Step 5: Process Payment Now</FormLabel>
-                            <FormDescription className="text-xs italic">Is the customer paying at the counter? Paid bookings are Issued immediately.</FormDescription>
+                        <FormItem className="space-y-4">
+                          <div className="flex flex-row items-center justify-between">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base font-black text-primary uppercase">Step 5: Process Payment Now</FormLabel>
+                              <FormDescription className="text-xs italic">Is the customer paying at the counter? Paid bookings are Issued immediately.</FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch 
+                                checked={field.value} 
+                                onCheckedChange={(val) => {
+                                  if (val) {
+                                    setIsPaymentCollectionAlertOpen(true);
+                                  } else {
+                                    field.onChange(false);
+                                  }
+                                }} 
+                              />
+                            </FormControl>
                           </div>
-                          <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                          </FormControl>
+
+                          {field.value && (
+                            <div className="bg-white border-2 border-green-500 p-4 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+                               <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                               <div>
+                                 <p className="text-xs font-black text-green-700 uppercase">Payment Verified</p>
+                                 <p className="text-[10px] text-green-600 font-bold">Total of ₱{currentTotalPrice.toLocaleString()} has been marked as collected.</p>
+                               </div>
+                            </div>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -552,6 +592,51 @@ export default function DeskBookingsPage() {
               {isReserving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
               {inventoryStats?.isWaitlistOnly ? "Add to Waitlist" : "Confirm & Issue"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPaymentCollectionAlertOpen} onOpenChange={setIsPaymentCollectionAlertOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[450px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-orange-500 text-white">
+             <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-xl">
+                  <HandCoins className="h-8 w-8" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tight">Collect Payment</DialogTitle>
+                  <DialogDescription className="text-orange-100 text-xs font-medium">Verify cash or digital transaction before marking as paid.</DialogDescription>
+                </div>
+             </div>
+          </DialogHeader>
+          <div className="p-8 space-y-6">
+             <div className="text-center space-y-2">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Total Amount to Collect</p>
+                <p className="text-5xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
+             </div>
+             
+             <div className="bg-secondary/20 p-4 rounded-xl space-y-3">
+                <p className="text-xs font-bold text-primary flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-orange-600" /> Administrative Protocol
+                </p>
+                <ul className="text-[10px] space-y-1.5 text-muted-foreground font-medium uppercase leading-relaxed">
+                   <li className="flex items-center gap-2">• Receive exact fare amount</li>
+                   <li className="flex items-center gap-2">• Provide official paper receipt</li>
+                   <li className="flex items-center gap-2">• Count notes in view of passenger</li>
+                </ul>
+             </div>
+          </div>
+          <DialogFooter className="p-6 border-t bg-secondary/5 gap-3">
+             <Button variant="outline" className="flex-1 font-bold" onClick={() => setIsPaymentCollectionAlertOpen(false)}>Not Yet</Button>
+             <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest"
+                onClick={() => {
+                   form.setValue('isPaid', true);
+                   setIsPaymentCollectionAlertOpen(false);
+                }}
+             >
+               Funds Collected
+             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
