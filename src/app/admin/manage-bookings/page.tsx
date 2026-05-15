@@ -37,7 +37,18 @@ import {
   Wrench,
   ShieldAlert
 } from "lucide-react";
-import { collection, doc, query, orderBy, limit, runTransaction, getDocs, where, increment } from "firebase/firestore";
+import { 
+  collection, 
+  doc, 
+  query, 
+  orderBy, 
+  limit, 
+  runTransaction, 
+  getDocs, 
+  where, 
+  increment,
+  writeBatch 
+} from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { 
   updateDocumentNonBlocking
@@ -679,25 +690,32 @@ export default function ManageBookingsPage() {
     if (!db || isActionProcessing) return;
     setIsActionProcessing(true);
     try {
-      const bookingsSnap = await getDocs(collection(db, "bookings"));
-      const voyagesSnap = await getDocs(collection(db, "voyages"));
+      const [bookingsSnap, voyagesSnap] = await Promise.all([
+        getDocs(collection(db, "bookings")),
+        getDocs(collection(db, "voyages"))
+      ]);
 
-      await runTransaction(db, async (transaction) => {
-        bookingsSnap.docs.forEach(d => transaction.delete(d.ref));
-        voyagesSnap.docs.forEach(d => {
-           transaction.update(d.ref, {
-             bookedCount: 0,
-             waitlistCount: 0,
-             updatedAt: new Date().toISOString()
-           });
+      const batch = writeBatch(db);
+
+      bookingsSnap.docs.forEach(d => batch.delete(d.ref));
+      voyagesSnap.docs.forEach(d => {
+        batch.update(d.ref, {
+          bookedCount: 0,
+          waitlistCount: 0,
+          updatedAt: new Date().toISOString()
         });
       });
+
+      await batch.commit();
 
       setIsMaintenanceOpen(false);
       toast({ title: "Manifest Purged", description: "All records deleted and atomic counters zeroed." });
     } catch (e: any) {
+      console.error("Purge Error:", e);
       toast({ variant: "destructive", title: "Wipe Failed", description: e.message });
-    } finally { setIsActionProcessing(false); }
+    } finally { 
+      setIsActionProcessing(false); 
+    }
   };
 
   const availableRebookingSchedules = schedules?.filter(s => s.routeId === selectedBooking?.routeId && s.isActive);
