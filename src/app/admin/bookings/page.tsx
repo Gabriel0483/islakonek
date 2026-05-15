@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -277,7 +278,8 @@ export default function DeskBookingsPage() {
           });
         }
 
-        let boardingSeq = status !== 'Waitlisted' ? currentBooked + 1 : null;
+        // ONLY assign sequence number if status is Confirmed
+        let boardingSeq = status === 'Confirmed' ? currentBooked + 1 : null;
         let runningTotal = 0;
         const baseBookingId = Math.random().toString(36).substring(2, 8).toUpperCase();
         

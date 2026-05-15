@@ -122,6 +122,8 @@ const BookingRow = memo(({
     }
   };
 
+  const canShowPass = booking.status === 'Confirmed' || booking.status === 'Used';
+
   return (
     <TableRow className="hover:bg-accent/5">
       <TableCell className="font-mono text-[10px] font-bold">
@@ -156,6 +158,9 @@ const BookingRow = memo(({
             + ₱{isMounted ? booking.penaltyFees.toLocaleString() : "---"}
           </div>
         )}
+        {booking.boardingSequenceNumber && (
+          <div className="text-[9px] font-black text-accent uppercase mt-1">Seq: #{booking.boardingSequenceNumber}</div>
+        )}
       </TableCell>
       <TableCell>
         <DropdownMenu>
@@ -169,7 +174,7 @@ const BookingRow = memo(({
             <DropdownMenuItem onSelect={() => onView(booking)}>
               <Eye className="h-4 w-4 mr-2 text-muted-foreground" /> View Details
             </DropdownMenuItem>
-            {(booking.status === 'Confirmed' || booking.status === 'Used') && (
+            {canShowPass && (
               <DropdownMenuItem onSelect={() => onPass(booking)}>
                 <QrCode className="h-4 w-4 mr-2 text-primary" /> Boarding Pass
               </DropdownMenuItem>
@@ -312,6 +317,7 @@ export default function ManageBookingsPage() {
     const searchLower = search.toLowerCase();
     
     return bookings.filter(b => {
+      // ONLY search by 6-digit booking ID
       const matchesSearch = !search || b.id?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
       if (filterDate && b.travelDate !== filterDate) return false;
@@ -459,11 +465,18 @@ export default function ManageBookingsPage() {
         const isNowActive = activeStates.includes(newStatus);
         const isNowInactive = inactiveStates.includes(newStatus);
 
+        // Calculate sequence number if becoming confirmed
+        let sequenceToAssign = bookingSnap.data().boardingSequenceNumber || null;
+        if (newStatus === 'Confirmed' && !sequenceToAssign && voyageSnap.exists()) {
+           sequenceToAssign = (voyageSnap.data().bookedCount || 0) + 1;
+        }
+
         transaction.update(bookingRef, { 
           status: newStatus, 
           penaltyFees: penaltyAmount,
           isFeeWaived: statusActionData.isFeeWaived,
           waiveReason: statusActionData.isFeeWaived ? statusActionData.waiveReason : "",
+          boardingSequenceNumber: sequenceToAssign,
           updatedAt: new Date().toISOString() 
         });
 
@@ -474,10 +487,9 @@ export default function ManageBookingsPage() {
             if (candidateDoc) {
               const freshCandidateSnap = await transaction.get(candidateDoc.ref);
               if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
-                const currentBooked = voyageSnap.data().bookedCount || 0;
                 transaction.update(candidateDoc.ref, {
                   status: "Reserved",
-                  boardingSequenceNumber: Math.max(1, currentBooked),
+                  boardingSequenceNumber: null, // Only confirmed gets a number
                   remarks: "Auto-promoted from Waitlist (System)",
                   updatedAt: new Date().toISOString()
                 });
@@ -565,7 +577,7 @@ export default function ManageBookingsPage() {
           penaltyFees: fees,
           isFeeWaived: rebookingData.isFeeWaived,
           waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
-          boardingSequenceNumber: currentNewBooked + 1,
+          boardingSequenceNumber: currentNewBooked + 1, // Rebooking defaults to confirmed for desk workflow
           updatedAt: new Date().toISOString()
         });
       });
@@ -621,10 +633,9 @@ export default function ManageBookingsPage() {
             if (candidateDoc) {
               const freshCandidateSnap = await transaction.get(candidateDoc.ref);
               if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
-                const currentBooked = voyageSnap.data().bookedCount || 0;
                 transaction.update(candidateDoc.ref, {
                   status: "Reserved",
-                  boardingSequenceNumber: Math.max(1, currentBooked),
+                  boardingSequenceNumber: null, // Promoted to reserved, no seq yet
                   remarks: "Auto-promoted from Waitlist (System)",
                   updatedAt: new Date().toISOString()
                 });
@@ -671,8 +682,11 @@ export default function ManageBookingsPage() {
             if (candidateDoc) {
               const freshCandidateSnap = await transaction.get(candidateDoc.ref);
               if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
-                const currentBooked = voyageSnap.data().bookedCount || 0;
-                transaction.update(candidateDoc.ref, { status: "Reserved", boardingSequenceNumber: Math.max(1, currentBooked), updatedAt: new Date().toISOString() });
+                transaction.update(candidateDoc.ref, { 
+                  status: "Reserved", 
+                  boardingSequenceNumber: null, // No seq until confirmed
+                  updatedAt: new Date().toISOString() 
+                });
                 transaction.update(voyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
               }
             }
@@ -1055,6 +1069,9 @@ export default function ManageBookingsPage() {
                   <div><p className="text-muted-foreground text-[10px] uppercase font-black">Time</p><p className="font-bold">{getDeparture(selectedBooking?.scheduleId)}</p></div>
                   <div><p className="text-muted-foreground text-[10px] uppercase font-black">Amount</p><p className="font-bold">₱{selectedBooking?.finalFare?.toLocaleString()}</p></div>
                 </div>
+                {selectedBooking?.boardingSequenceNumber && (
+                   <div className="col-span-2 pt-2 border-t"><p className="text-muted-foreground text-[10px] uppercase font-black">Boarding Sequence</p><p className="font-black text-accent text-lg">#{selectedBooking.boardingSequenceNumber}</p></div>
+                )}
               </div>
               <DialogFooter className="p-4 border-t"><Button className="w-full" onClick={() => setIsViewDetailsOpen(false)}>Close</Button></DialogFooter>
             </>
@@ -1096,6 +1113,12 @@ export default function ManageBookingsPage() {
                   <div className="bg-secondary/20 p-4 rounded-2xl mb-4">
                     <Image src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=PASS_${selectedBooking?.id}`} alt="QR" width={100} height={100} className="mix-blend-multiply" />
                   </div>
+                  {selectedBooking?.boardingSequenceNumber && (
+                    <div className="text-center">
+                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Sequence</p>
+                       <p className="text-3xl font-black text-primary">#{selectedBooking.boardingSequenceNumber}</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="bg-secondary/30 p-4 flex gap-2"><Button className="flex-1" onClick={() => window.print()}>Print</Button><Button variant="outline" className="flex-1" onClick={() => setIsBoardingPassOpen(false)}>Close</Button></div>
