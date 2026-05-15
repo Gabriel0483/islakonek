@@ -233,121 +233,118 @@ export default function MyBookingsPage() {
 
       {/* Pass View / Details Dialog */}
       <Dialog open={isPassOpen} onOpenChange={setIsPassOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[480px] p-0 overflow-y-auto max-h-[98vh] bg-transparent border-none shadow-none no-scrollbar">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[420px] p-0 overflow-y-auto max-h-[90vh] bg-transparent border-none shadow-none no-scrollbar">
           <DialogHeader className="sr-only">
              <DialogTitle>Ticket Details</DialogTitle>
              <DialogDescription>Itinerary and boarding pass for passenger</DialogDescription>
           </DialogHeader>
           
-          <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl relative mx-auto my-4 border animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl overflow-hidden shadow-2xl relative mx-auto my-2 border animate-in zoom-in-95 duration-200">
             <div className={cn(
-              "p-5 sm:p-7 text-white text-center space-y-2",
+              "p-3 text-white text-center space-y-1 relative",
               ['Confirmed', 'Used'].includes(selectedBooking?.status) ? "bg-primary" : "bg-muted-foreground"
             )}>
               <button 
                 onClick={() => setIsPassOpen(false)}
-                className="absolute top-4 right-4 p-2 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
               >
-                <X className="h-5 w-5 text-white" />
+                <X className="h-4 w-4 text-white" />
               </button>
-              <div className="flex justify-center mb-2">
-                <div className="bg-white/20 p-2 sm:p-3 rounded-2xl shadow-inner">
-                  <Ship className="h-7 w-7 sm:h-9 sm:w-9" />
+              <div className="flex justify-center mb-0.5">
+                <div className="bg-white/20 p-1.5 rounded-xl shadow-inner">
+                  <Ship className="h-5 w-5" />
                 </div>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black font-headline uppercase tracking-tight leading-none">
+              <h2 className="text-lg font-black font-headline uppercase tracking-tight leading-none">
                 {['Confirmed', 'Used'].includes(selectedBooking?.status) ? 'Digital Pass' : 'Ticket Summary'}
               </h2>
-              <p className="text-[9px] sm:text-[10px] opacity-80 font-bold uppercase tracking-[0.3em]">Isla Konek Maritime Services</p>
+              <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">Isla Konek Maritime</p>
             </div>
 
-            <div className="p-5 sm:p-7 space-y-6 sm:space-y-8">
-              <div className="flex justify-between items-start border-b border-dashed pb-5">
-                <div className="flex-1 mr-4 overflow-hidden">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Passenger Name</p>
-                  <p className="text-xl sm:text-2xl font-black text-primary uppercase truncate leading-tight">{selectedBooking?.passengerName}</p>
+            <div className="p-4 space-y-4">
+              <div className="flex justify-between items-start border-b border-dashed pb-3">
+                <div className="flex-1 mr-2 overflow-hidden text-left">
+                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Passenger</p>
+                  <p className="text-lg font-black text-primary uppercase truncate leading-tight">{selectedBooking?.passengerName}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Ticket ID</p>
-                  <p className="font-mono text-sm sm:text-base font-black text-primary">#{selectedBooking?.id}</p>
+                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Ticket ID</p>
+                  <p className="font-mono text-xs font-black text-primary">#{selectedBooking?.id}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-y-6 gap-x-8">
-                <div className="space-y-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Trip Code</p>
-                  <p className="font-black text-accent text-lg sm:text-xl uppercase leading-none">{getTripInfo(selectedBooking).code}</p>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                <div className="space-y-0.5 text-left">
+                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Trip Code</p>
+                  <p className="font-black text-accent text-sm uppercase leading-none">{getTripInfo(selectedBooking).code}</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Status</p>
-                  <div className="mt-1">{getStatusBadge(selectedBooking?.status)}</div>
+                <div className="space-y-0.5 text-right">
+                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Status</p>
+                  <div className="mt-0.5">{getStatusBadge(selectedBooking?.status)}</div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> Travel Date
+                <div className="space-y-0.5 text-left">
+                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-1">
+                    <Calendar className="h-2 w-2" /> Date
                   </p>
-                  <p className="font-bold text-sm sm:text-base text-primary">{selectedBooking?.travelDate}</p>
+                  <p className="font-bold text-xs text-primary">{selectedBooking?.travelDate}</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> Departure
+                <div className="space-y-0.5 text-right">
+                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-1 justify-end">
+                    <Clock className="h-2 w-2" /> Time
                   </p>
-                  <p className="font-bold text-sm sm:text-base text-primary">{getTripInfo(selectedBooking).time}</p>
+                  <p className="font-bold text-xs text-primary">{getTripInfo(selectedBooking).time}</p>
                 </div>
-                <div className="col-span-2 space-y-1 bg-secondary/10 p-3 rounded-xl border border-secondary/50">
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> Route Information
+                <div className="col-span-2 space-y-0.5 bg-secondary/10 p-2 rounded-lg border border-secondary/50 text-left">
+                  <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-1">
+                    <MapPin className="h-2 w-2" /> Routing
                   </p>
-                  <p className="font-bold text-xs sm:text-sm text-primary leading-snug">{getTripInfo(selectedBooking).route}</p>
+                  <p className="font-bold text-[10px] text-primary leading-tight">{getTripInfo(selectedBooking).route}</p>
                 </div>
               </div>
 
               {['Confirmed', 'Used'].includes(selectedBooking?.status) ? (
-                <div className="flex flex-col items-center justify-center py-6 sm:py-8 border-t border-dashed mt-2">
-                  <div className="bg-secondary/20 p-4 sm:p-5 rounded-3xl mb-4 shadow-inner">
+                <div className="flex items-center justify-around py-3 border-t border-dashed mt-1">
+                  <div className="bg-secondary/20 p-2 rounded-2xl shadow-inner">
                     <Image 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber || '0'}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=BOARDING_PASS_${selectedBooking?.id}_${selectedBooking?.boardingSequenceNumber || '0'}`}
                       alt="Pass QR"
-                      width={140}
-                      height={120}
-                      className="mix-blend-multiply sm:w-[160px] sm:h-[160px]"
+                      width={110}
+                      height={110}
+                      className="mix-blend-multiply"
                     />
                   </div>
-                  <p className="text-[10px] sm:text-[11px] text-primary/60 font-black uppercase tracking-[0.2em] italic text-center px-4 mb-4">
-                    {selectedBooking?.status === 'Used' ? 'VALIDATED • ALREADY BOARDED' : 'PRESENT QR AT BOARDING GATE'}
-                  </p>
                   {selectedBooking?.boardingSequenceNumber && (
-                    <div className="flex flex-col items-center p-4 bg-primary/5 rounded-2xl border border-primary/10 w-full max-w-[200px]">
-                       <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Sequence</p>
-                       <p className="text-4xl sm:text-5xl font-black text-primary leading-none">#{selectedBooking.boardingSequenceNumber}</p>
+                    <div className="flex flex-col items-center p-2 bg-primary/5 rounded-xl border border-primary/10 min-w-[100px]">
+                       <p className="text-[7px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Sequence</p>
+                       <p className="text-3xl font-black text-primary leading-none">#{selectedBooking.boardingSequenceNumber}</p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-blue-50/80 p-5 sm:p-6 rounded-2xl border-2 border-dashed border-blue-200 text-center space-y-3">
-                   <BadgeInfo className="h-9 w-9 text-blue-500 mx-auto" />
+                <div className="bg-blue-50/80 p-4 rounded-xl border-2 border-dashed border-blue-200 text-center space-y-2">
+                   <BadgeInfo className="h-7 w-7 text-blue-500 mx-auto" />
                    <div>
-                     <p className="text-sm font-black text-blue-800 uppercase tracking-tight">Payment Verification Required</p>
-                     <p className="text-[10px] sm:text-xs font-medium text-blue-700 leading-relaxed max-w-[280px] mx-auto">
-                       Please proceed to the terminal issuance desk to finalize payment and activate your boarding pass.
+                     <p className="text-xs font-black text-blue-800 uppercase tracking-tight">Payment Verification Required</p>
+                     <p className="text-[9px] font-medium text-blue-700 leading-relaxed max-w-[240px] mx-auto">
+                       Finalize payment at the terminal desk to activate your boarding pass.
                      </p>
                    </div>
                 </div>
               )}
             </div>
 
-            <div className="bg-secondary/30 p-4 sm:p-6 flex gap-3 print:hidden border-t">
-              <Button className="flex-1 bg-primary text-white font-black h-12 sm:h-14 text-xs sm:text-sm shadow-lg hover:bg-primary/90" onClick={() => window.print()}>
-                <Printer className="h-4 w-4 mr-2" /> Print Pass
+            <div className="bg-secondary/30 p-3 flex gap-2 print:hidden border-t">
+              <Button className="flex-1 bg-primary text-white font-black h-9 text-xs shadow-lg" onClick={() => window.print()}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
               </Button>
-              <Button variant="outline" className="flex-1 font-black h-12 sm:h-14 text-xs sm:text-sm bg-white border-primary/20 text-primary shadow-sm">
-                <Download className="h-4 w-4 mr-2" /> Save Offline
+              <Button variant="outline" className="flex-1 font-black h-9 text-xs bg-white border-primary/20 text-primary shadow-sm">
+                <Download className="h-3.5 w-3.5 mr-1.5" /> Save
               </Button>
             </div>
           </div>
-          <div className="mt-2 text-center pb-8">
-            <Button variant="link" className="text-white text-xs opacity-50 hover:opacity-100 font-bold" onClick={() => setIsPassOpen(false)}>
-              Close Boarding Pass
+          <div className="text-center pb-4">
+            <Button variant="link" className="text-white text-[10px] opacity-50 hover:opacity-100 font-bold" onClick={() => setIsPassOpen(false)}>
+              Close View
             </Button>
           </div>
         </DialogContent>

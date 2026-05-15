@@ -1130,74 +1130,74 @@ export default function ManageBookingsPage() {
       </Dialog>
 
       <Dialog open={isBoardingPassOpen} onOpenChange={setIsBoardingPassOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[480px] p-0 overflow-y-auto max-h-[95vh] bg-transparent border-none shadow-none no-scrollbar">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[420px] p-0 overflow-y-auto max-h-[90vh] bg-transparent border-none shadow-none no-scrollbar">
           <DialogHeader className="sr-only">
             <DialogTitle>Administrative Boarding Pass View</DialogTitle>
           </DialogHeader>
           {isBoardingPassOpen && (
-            <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl relative mx-auto my-4 border animate-in zoom-in-95 duration-200">
-              <div className="p-5 sm:p-7 bg-primary text-white text-center space-y-2 relative">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl relative mx-auto my-2 border animate-in zoom-in-95 duration-200">
+              <div className="p-3 bg-primary text-white text-center space-y-1 relative">
                 <button 
                   onClick={() => setIsBoardingPassOpen(false)}
-                  className="absolute top-4 right-4 p-2 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
                 >
-                  <X className="h-5 w-5 text-white" />
+                  <X className="h-4 w-4 text-white" />
                 </button>
-                <div className="flex justify-center mb-1 sm:mb-2">
-                  <div className="bg-white/20 p-2 sm:p-3 rounded-2xl shadow-inner">
-                    <Ship className="h-7 w-7 sm:h-9 sm:w-9 text-white" />
+                <div className="flex justify-center mb-0.5">
+                  <div className="bg-white/20 p-1.5 rounded-xl shadow-inner">
+                    <Ship className="h-5 w-5 text-white" />
                   </div>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black font-headline uppercase tracking-tight leading-none">Boarding Pass</h2>
-                <p className="text-[9px] sm:text-[10px] opacity-80 font-bold uppercase tracking-[0.3em]">Official Internal Copy</p>
+                <h2 className="text-lg font-black font-headline uppercase tracking-tight leading-none">Boarding Pass</h2>
+                <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">Official Internal Copy</p>
               </div>
               
-              <div className="p-5 sm:p-7 space-y-6 sm:space-y-8">
-                <div className="flex justify-between items-start border-b border-dashed pb-5">
-                  <div className="flex-1 mr-4 overflow-hidden">
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Passenger</p>
-                    <p className="text-xl sm:text-2xl font-black text-primary uppercase truncate leading-tight">{selectedBooking?.passengerName}</p>
+              <div className="p-4 space-y-4">
+                <div className="flex justify-between items-start border-b border-dashed pb-3">
+                  <div className="flex-1 mr-2 overflow-hidden text-left">
+                    <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Passenger</p>
+                    <p className="text-lg font-black text-primary uppercase truncate leading-tight">{selectedBooking?.passengerName}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Reference</p>
-                    <p className="font-mono text-sm sm:text-base font-black text-primary">#{selectedBooking?.id}</p>
+                    <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Reference</p>
+                    <p className="font-mono text-xs font-black text-primary">#{selectedBooking?.id}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-6 gap-x-8">
-                  <div className="space-y-1">
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Trip Code</p>
-                    <p className="font-black text-accent text-lg sm:text-xl uppercase leading-none">{getTripCode(selectedBooking?.scheduleId)}</p>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                  <div className="space-y-0.5 text-left">
+                    <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Trip Code</p>
+                    <p className="font-black text-accent text-sm uppercase leading-none">{getTripCode(selectedBooking?.scheduleId)}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Departure</p>
-                    <p className="font-bold text-sm sm:text-base text-primary">{getDeparture(selectedBooking?.scheduleId)}</p>
+                  <div className="space-y-0.5 text-right">
+                    <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Departure</p>
+                    <p className="font-bold text-xs text-primary leading-none">{getDeparture(selectedBooking?.scheduleId)}</p>
                   </div>
-                  <div className="col-span-2 space-y-1 bg-secondary/10 p-3 rounded-xl border border-secondary/50">
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-widest">Date & Routing</p>
-                    <p className="font-bold text-xs sm:text-sm text-primary leading-snug">{selectedBooking?.travelDate} • {getRouteName(selectedBooking?.routeId)}</p>
+                  <div className="col-span-2 space-y-0.5 bg-secondary/10 p-2 rounded-lg border border-secondary/50 text-left">
+                    <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Date & Routing</p>
+                    <p className="font-bold text-[10px] text-primary leading-tight">{selectedBooking?.travelDate} • {getRouteName(selectedBooking?.routeId)}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-6 sm:py-8 border-t border-dashed mt-2">
-                  <div className="bg-secondary/20 p-4 sm:p-5 rounded-3xl mb-4 shadow-inner">
-                    <Image src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=PASS_${selectedBooking?.id}`} alt="QR" width={140} height={140} className="mix-blend-multiply sm:w-[160px] sm:h-[160px]" />
+                <div className="flex items-center justify-around py-3 border-t border-dashed mt-1">
+                  <div className="bg-secondary/20 p-2 rounded-2xl shadow-inner">
+                    <Image src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=PASS_${selectedBooking?.id}`} alt="QR" width={110} height={110} className="mix-blend-multiply" />
                   </div>
                   {selectedBooking?.boardingSequenceNumber && (
-                    <div className="flex flex-col items-center p-4 bg-primary/5 rounded-2xl border border-primary/10 w-full max-w-[200px]">
-                       <p className="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Sequence</p>
-                       <p className="text-4xl sm:text-5xl font-black text-primary leading-none">#{selectedBooking.boardingSequenceNumber}</p>
+                    <div className="flex flex-col items-center p-2 bg-primary/5 rounded-xl border border-primary/10 min-w-[100px]">
+                       <p className="text-[7px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Sequence</p>
+                       <p className="text-3xl font-black text-primary leading-none">#{selectedBooking.boardingSequenceNumber}</p>
                     </div>
                   )}
                 </div>
               </div>
               
-              <div className="bg-secondary/30 p-4 sm:p-6 flex gap-3 print:hidden border-t">
-                <Button className="flex-1 bg-primary text-white font-black h-12 sm:h-14 text-xs sm:text-sm" onClick={() => window.print()}>
-                  <Printer className="h-4 w-4 mr-2" /> Print Pass
+              <div className="bg-secondary/30 p-3 flex gap-2 print:hidden border-t">
+                <Button className="flex-1 bg-primary text-white font-black h-9 text-xs" onClick={() => window.print()}>
+                  <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
                 </Button>
-                <Button variant="outline" className="flex-1 font-black h-12 sm:h-14 text-xs sm:text-sm bg-white border-primary/20 text-primary" onClick={() => setIsBoardingPassOpen(false)}>
-                  Close View
+                <Button variant="outline" className="flex-1 font-black h-9 text-xs bg-white border-primary/20 text-primary" onClick={() => setIsBoardingPassOpen(false)}>
+                  Close
                 </Button>
               </div>
             </div>
