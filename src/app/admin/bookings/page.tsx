@@ -124,8 +124,6 @@ export default function DeskBookingsPage() {
   const { data: registeredUsers } = useCollection(usersRef);
   const { data: voyageStatuses } = useCollection(voyagesRef);
 
-  const [availableFares, setAvailableFares] = useState<any[]>([]);
-  
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
@@ -156,14 +154,6 @@ export default function DeskBookingsPage() {
   const watchPassengers = form.watch('passengers');
   const watchIsPaid = form.watch('isPaid');
 
-  const currentTotalPrice = useMemo(() => {
-    if (!availableFares || !watchPassengers) return 0;
-    return watchPassengers.reduce((sum, p) => {
-      const fareInfo = availableFares.find(f => f.segmentLabel === p.fareType);
-      return sum + (fareInfo?.finalFare || 0);
-    }, 0);
-  }, [availableFares, watchPassengers]);
-
   const filteredSchedules = useMemo(() => {
     if (!watchRouteId || !watchTravelDate || !allSchedules) return [];
     const formattedTravelDate = watchTravelDate;
@@ -178,6 +168,22 @@ export default function DeskBookingsPage() {
       return false;
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [watchRouteId, watchTravelDate, allSchedules]);
+
+  const availableFares = useMemo(() => {
+    const selectedSchedule = allSchedules?.find(s => s.id === watchScheduleId);
+    if (selectedSchedule && allFares) {
+      return allFares.filter(f => f.routeId === selectedSchedule.routeId);
+    }
+    return [];
+  }, [watchScheduleId, allSchedules, allFares]);
+
+  const currentTotalPrice = useMemo(() => {
+    if (!availableFares.length || !watchPassengers) return 0;
+    return watchPassengers.reduce((sum, p) => {
+      const fareInfo = availableFares.find(f => f.segmentLabel === p.fareType);
+      return sum + (fareInfo?.finalFare || 0);
+    }, 0);
+  }, [availableFares, watchPassengers]);
 
   const voyageInfo = useMemo(() => {
     if (!watchScheduleId || !watchTravelDate || !voyageStatuses) return null;
@@ -206,19 +212,8 @@ export default function DeskBookingsPage() {
   useEffect(() => {
     if (watchRouteId) {
       form.setValue('scheduleId', "");
-      setAvailableFares([]);
     }
   }, [watchRouteId, form]);
-
-  useEffect(() => {
-    const selectedSchedule = filteredSchedules?.find(s => s.id === watchScheduleId);
-    if (selectedSchedule && routes && allFares) {
-      const routeFares = allFares.filter(f => f.routeId === selectedSchedule.routeId);
-      setAvailableFares(routeFares);
-    } else {
-      setAvailableFares([]);
-    }
-  }, [watchScheduleId, filteredSchedules, routes, allFares]);
 
   const handleApplyProfile = (index: number, user: any) => {
     const currentPassengers = form.getValues('passengers');
@@ -440,7 +435,7 @@ export default function DeskBookingsPage() {
                         <BarChart className={cn("h-5 w-5", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-600")} />
                         <div>
                            <p className="text-[10px] font-black uppercase text-muted-foreground">Atomic Seat Inventory</p>
-                           <p className={cn("text-lg font-black", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-600")}>
+                           <p className={cn("text-lg font-black", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? `text-orange-600` : "text-green-600")}>
                              {inventoryStats.isFull ? "VOYAGE FULL" : inventoryStats.isWaitlistOnly ? `WAITLIST ACTIVE (${inventoryStats.waitlistSpotsRemaining} left)` : `${inventoryStats.remaining} Seats Remaining`}
                            </p>
                         </div>
@@ -458,79 +453,87 @@ export default function DeskBookingsPage() {
                     </div>
 
                     <div className="space-y-10">
-                      {fields.map((field, index) => (
-                        <div key={field.id} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-4 sm:p-6 pt-10 group hover:border-accent/40 transition-colors">
-                          <div className="absolute -top-4 left-4 bg-white border-2 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary tracking-widest z-10 shadow-sm">
-                            Passenger #{index + 1}
-                          </div>
-                          <Button type="button" variant="ghost" size="icon" className="absolute -top-3 -right-3 h-8 w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20" onClick={() => remove(index)} disabled={fields.length === 1}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      {fields.map((field, index) => {
+                        const currentFareLabel = watchPassengers?.[index]?.fareType;
+                        const currentFarePrice = availableFares.find(f => f.segmentLabel === currentFareLabel)?.finalFare || 0;
 
-                          <div className="space-y-6">
-                            {/* Step 3: Rapid Profile Lookup */}
-                            <div className="space-y-2 relative">
-                              <Label className="text-[10px] font-black uppercase text-accent flex items-center gap-1.5 tracking-wider">
-                                <Search className="h-3 w-3" /> Step 3: Rapid Profile Lookup
-                              </Label>
-                              <input 
-                                placeholder="Search by name or mobile..." 
-                                value={activeLookupIndex === index ? lookupSearch : ''}
-                                onChange={(e) => { setLookupSearch(e.target.value); setActiveLookupIndex(index); }}
-                                onFocus={() => setActiveLookupIndex(index)}
-                                className="flex h-11 w-full rounded-md border border-accent/20 bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                              />
-                              {activeLookupIndex === index && lookupSearch.length > 1 && (
-                                <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
-                                  {registeredUsers?.filter(u => u.displayName?.toLowerCase().includes(lookupSearch.toLowerCase()) || u.phoneNumber?.includes(lookupSearch)).slice(0, 3).map(user => (
-                                    <button key={user.id} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors">
-                                      <div className="bg-primary/10 p-2 rounded-lg shrink-0"><Users className="h-5 w-5 text-primary" /></div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-primary truncate">{user.displayName}</p>
-                                        <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {user.phoneNumber || "No mobile set"}</p>
-                                      </div>
-                                      <UserPlus className="h-5 w-5 ml-auto text-accent shrink-0" />
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
+                        return (
+                          <div key={field.id} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-4 sm:p-6 pt-10 group hover:border-accent/40 transition-colors">
+                            <div className="absolute -top-4 left-4 bg-white border-2 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary tracking-widest z-10 shadow-sm">
+                              Passenger #{index + 1}
                             </div>
+                            <Button type="button" variant="ghost" size="icon" className="absolute -top-3 -right-3 h-8 w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20" onClick={() => remove(index)} disabled={fields.length === 1}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
 
-                            {/* Step 4: Passenger Details */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <FormField control={form.control} name={`passengers.${index}.fullName`} render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</FormLabel><FormControl><Input placeholder="Juan Dela Cruz" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
-                              )} />
-                              <FormField control={form.control} name={`passengers.${index}.birthDate`} render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Date of Birth</FormLabel><FormControl><Input type="date" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
-                              )} />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <FormField control={form.control} name={`passengers.${index}.passengerContact`} render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Mobile Number</FormLabel><FormControl><Input placeholder="0917XXXXXXX" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
-                              )} />
-                              <FormField control={form.control} name={`passengers.${index}.emergencyContact`} render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3 text-red-500" /> Emergency Number</FormLabel><FormControl><Input placeholder="Backup Contact" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
-                              )} />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <FormField control={form.control} name={`passengers.${index}.passengerEmail`} render={({ field }) => (
-                                <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Email Address</FormLabel><FormControl><Input type="email" placeholder="juan@example.com" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
-                              )} />
-                              <FormField control={form.control} name={`passengers.${index}.fareType`} render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Fare Type</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value} disabled={!watchScheduleId}>
-                                    <FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Select Tier" /></SelectTrigger></FormControl>
-                                    <SelectContent>{availableFares.map(f => <SelectItem key={f.id} value={f.segmentLabel}>{f.segmentLabel} (₱{f.finalFare})</SelectItem>)}</SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )} />
+                            <div className="space-y-6">
+                              {/* Step 3: Rapid Profile Lookup */}
+                              <div className="space-y-2 relative">
+                                <Label className="text-[10px] font-black uppercase text-accent flex items-center gap-1.5 tracking-wider">
+                                  <Search className="h-3 w-3" /> Step 3: Rapid Profile Lookup
+                                </Label>
+                                <input 
+                                  placeholder="Search by name or mobile..." 
+                                  value={activeLookupIndex === index ? lookupSearch : ''}
+                                  onChange={(e) => { setLookupSearch(e.target.value); setActiveLookupIndex(index); }}
+                                  onFocus={() => setActiveLookupIndex(index)}
+                                  className="flex h-11 w-full rounded-md border border-accent/20 bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                                />
+                                {activeLookupIndex === index && lookupSearch.length > 1 && (
+                                  <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
+                                    {registeredUsers?.filter(u => u.displayName?.toLowerCase().includes(lookupSearch.toLowerCase()) || u.phoneNumber?.includes(lookupSearch)).slice(0, 3).map(user => (
+                                      <button key={user.id} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors">
+                                        <div className="bg-primary/10 p-2 rounded-lg shrink-0"><Users className="h-5 w-5 text-primary" /></div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-bold text-primary truncate">{user.displayName}</p>
+                                          <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {user.phoneNumber || "No mobile set"}</p>
+                                        </div>
+                                        <UserPlus className="h-5 w-5 ml-auto text-accent shrink-0" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Step 4: Passenger Details */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField control={form.control} name={`passengers.${index}.fullName`} render={({ field }) => (
+                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</FormLabel><FormControl><Input placeholder="Juan Dela Cruz" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name={`passengers.${index}.birthDate`} render={({ field }) => (
+                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Date of Birth</FormLabel><FormControl><Input type="date" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField control={form.control} name={`passengers.${index}.passengerContact`} render={({ field }) => (
+                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Mobile Number</FormLabel><FormControl><Input placeholder="0917XXXXXXX" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name={`passengers.${index}.emergencyContact`} render={({ field }) => (
+                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3 text-red-500" /> Emergency Number</FormLabel><FormControl><Input placeholder="Backup Contact" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField control={form.control} name={`passengers.${index}.passengerEmail`} render={({ field }) => (
+                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Email Address</FormLabel><FormControl><Input type="email" placeholder="juan@example.com" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={form.control} name={`passengers.${index}.fareType`} render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Fare Type</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={!watchScheduleId}>
+                                      <FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Select Tier" /></SelectTrigger></FormControl>
+                                      <SelectContent>{availableFares.map(f => <SelectItem key={f.id} value={f.segmentLabel}>{f.segmentLabel} (₱{f.finalFare})</SelectItem>)}</SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    {currentFarePrice > 0 && (
+                                      <p className="text-[10px] font-black text-primary uppercase mt-1">Applied Fare: ₱{currentFarePrice.toLocaleString()}</p>
+                                    )}
+                                  </FormItem>
+                                )} />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       <Button type="button" variant="outline" onClick={() => append({ id: nanoid(), fullName: "", birthDate: "", passengerContact: "", emergencyContact: "", passengerEmail: "", fareType: "" })} disabled={!watchScheduleId || inventoryStats?.isFull} className="w-full gap-2 border-2 border-dashed font-bold">
                         <PlusCircle className="h-4 w-4" /> Add Another Passenger
                       </Button>
@@ -581,8 +584,12 @@ export default function DeskBookingsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 shrink-0 flex flex-row items-center justify-between">
+          <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 shrink-0 items-center flex flex-row justify-between">
             <Button variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="px-8 font-bold">Cancel</Button>
+            <div className="flex flex-col items-end mr-4">
+               <p className="text-[9px] font-black uppercase text-muted-foreground">Booking Total</p>
+               <p className="text-xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
+            </div>
             <Button 
               onClick={form.handleSubmit(handleFinalReserve)} 
               disabled={isReserving || !watchScheduleId || inventoryStats?.isFull}
