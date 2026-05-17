@@ -328,6 +328,23 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "fullName", "email", "role", "status"]
+    },
+    "Advisory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Advisory",
+      "type": "object",
+      "description": "A public announcement or alert displayed on the home page and advisories board.",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["Weather", "Service Disruption", "Route/Fare Change", "General Information"] },
+        "severity": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "isActive": { "type": "boolean", "default": true },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "content", "category", "severity"]
     }
   },
   "auth": {
@@ -436,6 +453,16 @@
             "$ref": "#/backend/entities/Staff"
           },
           "description": "Internal staff registry managed by SuperAdmin."
+        }
+      },
+      {
+        "path": "/advisories/{advisoryId}",
+        "definition": {
+          "entityName": "Advisory",
+          "schema": {
+            "$ref": "#/backend/entities/Advisory"
+          },
+          "description": "Public announcements and alerts."
         }
       }
     ]

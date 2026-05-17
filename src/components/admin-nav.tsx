@@ -21,7 +21,8 @@ import {
   User,
   TrendingUp,
   Radio,
-  Users
+  Users,
+  Megaphone
 } from "lucide-react";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -39,9 +40,9 @@ import { signOut } from "firebase/auth";
 import { collection } from "firebase/firestore";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
-  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories"],
+  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
   "Finance/Accounting": ["fares", "bookings", "sales"]
@@ -57,6 +58,7 @@ const menuItems = [
 const analyticItems = [
   { id: "sales", label: "Sales", icon: TrendingUp, href: "/admin/sales-overview" },
   { id: "ops", label: "Ops", icon: Activity, href: "/admin/operational-overview" },
+  { id: "advisories", label: "Advisories", icon: Megaphone, href: "/admin/advisories" },
 ];
 
 const configItems = [
@@ -75,7 +77,6 @@ export function AdminNav() {
   const { user } = useUser();
   const db = useFirestore();
 
-  // Defer staff registry read until user is authenticated
   const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const { data: allStaff } = useCollection(staffRef);
 
@@ -83,7 +84,6 @@ export function AdminNav() {
   const myStaffRecord = allStaff?.find(s => s.email === user?.email);
   const currentRole = isSuperAdmin ? "SuperAdmin" : (myStaffRecord?.role || "Guest");
   
-  // Prioritize custom authorizedModules list if it exists in the staff record
   const permissions = isSuperAdmin 
     ? ROLE_PERMISSIONS["SuperAdmin"] 
     : (myStaffRecord?.authorizedModules || ROLE_PERMISSIONS[currentRole] || []);
@@ -142,6 +142,8 @@ export function AdminNav() {
                 <DropdownMenuContent align="end" className="w-56 max-h-[85vh] overflow-y-auto">
                   <DropdownMenuLabel>Modules</DropdownMenuLabel>
                   {filteredMenuItems.map(item => <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="flex items-center gap-2"><item.icon className="h-4 w-4" /> {item.label}</Link></DropdownMenuItem>)}
+                  <DropdownMenuSeparator />
+                  {filteredAnalyticItems.map(item => <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="flex items-center gap-2"><item.icon className="h-4 w-4" /> {item.label}</Link></DropdownMenuItem>)}
                   <DropdownMenuSeparator />
                   {filteredConfigItems.map(item => <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="flex items-center gap-2"><item.icon className="h-4 w-4" /> {item.label}</Link></DropdownMenuItem>)}
                   <DropdownMenuSeparator />

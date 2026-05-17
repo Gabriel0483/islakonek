@@ -1,8 +1,8 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 4.0
- * Update: Implemented Hierarchical Staff Access and Management.
+ * Version: 5.0
+ * Update: Implemented Advisory Module and Public Read Access.
  */
 
 rules_version = '2';
@@ -16,8 +16,7 @@ service cloud.firestore {
     }
 
     // Helper: Get user role from the staff collection
-    // Note: We'll assume for the prototype that we're checking email matching or specific path.
-    // For rules efficiency, we allow read for all authenticated staff.
+    // Note: Authenticated staff check
     function isStaff() {
       return request.auth != null;
     }
@@ -30,13 +29,16 @@ service cloud.firestore {
     match /maintenance/{recordId} { allow read: if true; allow write: if isStaff(); }
     match /schedules/{scheduleId} { allow read: if true; allow write: if isStaff(); }
     match /voyages/{voyageId} { allow read: if true; allow write: if isStaff(); }
+    
+    // Advisories: Public read, Staff write
+    match /advisories/{advisoryId} { allow read: if true; allow write: if isStaff(); }
 
     // Staff Management Hierarchy
     match /staff/{staffId} { 
       allow read: if isStaff(); 
       allow write: if isSuperAdmin() || 
-                    (request.resource.data.role in ['Port Officer', 'Finance/Accounting']) || // Ops Manager logic handled in UI for now
-                    (request.resource.data.role in ['Desk Agent', 'Crew']); // Port Officer logic handled in UI for now
+                    (request.resource.data.role in ['Port Officer', 'Finance/Accounting']) || 
+                    (request.resource.data.role in ['Desk Agent', 'Crew']); 
     }
 
     // Bookings: Open for MVP operations

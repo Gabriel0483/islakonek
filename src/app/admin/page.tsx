@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Radio,
   Users,
-  ShieldCheck
+  ShieldCheck,
+  Megaphone
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -30,9 +31,9 @@ import { AdminNav } from "@/components/admin-nav";
 import { collection } from "firebase/firestore";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
-  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories"],
+  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
   "Finance/Accounting": ["fares", "bookings", "sales"]
@@ -43,7 +44,6 @@ export default function AdminDashboard() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Defer staff registry read until user is authenticated
   const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
 
@@ -57,7 +57,6 @@ export default function AdminDashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Wait for auth and staff data (if not superadmin) before rendering
   if (isUserLoading || (isStaffLoading && user && !isSuperAdmin)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -66,7 +65,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // If authenticated user is not staff, show access denied
   if (user && !isAuthorizedStaff && !isStaffLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/20 p-4">
@@ -92,6 +90,7 @@ export default function AdminDashboard() {
     { id: "voyages", title: "Voyage Control", description: "Real-time status management.", icon: Radio, link: "/admin/voyages", color: "text-accent" },
     { id: "sales", title: "Sales Overview", description: "Revenue and route volume analysis.", icon: TrendingUp, link: "/admin/sales-overview", color: "text-green-600" },
     { id: "ops", title: "Operational Overview", description: "System status and infrastructure alerts.", icon: Activity, link: "/admin/operational-overview", color: "text-blue-500" },
+    { id: "advisories", title: "Operational Advisories", description: "Public announcements and safety alerts.", icon: Megaphone, link: "/admin/advisories", color: "text-orange-600" },
     { id: "boarding", title: "Boarding Mode", description: "Passenger verification and manifest.", icon: Scan, link: "/admin/boarding", color: "text-accent" },
     { id: "desk", title: "Desk Bookings", description: "Counter ticket sales and rapid intake.", icon: Ticket, link: "/admin/bookings", color: "text-green-600" },
     { id: "bookings", title: "Manage Bookings", description: "Manifest review and rebooking.", icon: ClipboardList, link: "/admin/manage-bookings", color: "text-indigo-600" },
@@ -105,7 +104,6 @@ export default function AdminDashboard() {
 
   const currentRole = isSuperAdmin ? "SuperAdmin" : (myStaffRecord?.role || "Restricted");
   
-  // Prioritize custom authorizedModules list if it exists in the staff record
   const permissions = isSuperAdmin 
     ? ROLE_PERMISSIONS["SuperAdmin"] 
     : (myStaffRecord?.authorizedModules || ROLE_PERMISSIONS[currentRole] || []);
@@ -140,7 +138,7 @@ export default function AdminDashboard() {
                      <module.icon className="h-24 w-24 -rotate-12 translate-x-8 translate-y-8" />
                   </div>
                   <CardHeader className="pb-2">
-                    <div className="p-2 w-fit rounded-lg bg-secondary mb-2 group-hover:bg-accent group-hover:text-primary transition-colors">
+                    <div className={cn("p-2 w-fit rounded-lg bg-secondary mb-2 group-hover:bg-accent group-hover:text-primary transition-colors", module.color && `group-hover:${module.color}`)}>
                       <module.icon className="h-5 w-5" />
                     </div>
                     <CardTitle className="text-lg font-bold">{module.title}</CardTitle>
