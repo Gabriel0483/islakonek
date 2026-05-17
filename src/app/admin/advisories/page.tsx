@@ -18,7 +18,8 @@ import {
   Cloud,
   Wrench,
   Waypoints,
-  FileText
+  FileText,
+  Check
 } from "lucide-react";
 import { collection, doc, serverTimestamp } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -79,6 +80,8 @@ export default function AdvisoriesManagementPage() {
     isActive: true
   });
 
+  const isFormValid = formData.title.trim().length > 0 && formData.content.trim().length > 0;
+
   const filteredAdvisories = advisories?.filter(a => 
     a.title.toLowerCase().includes(search.toLowerCase()) ||
     a.content.toLowerCase().includes(search.toLowerCase())
@@ -112,7 +115,7 @@ export default function AdvisoriesManagementPage() {
   };
 
   const handleSave = () => {
-    if (!db || !formData.title || !formData.content) return;
+    if (!db || !isFormValid) return;
     
     const timestamp = new Date().toISOString();
     const payload = {
@@ -123,7 +126,7 @@ export default function AdvisoriesManagementPage() {
     if (editingAdvisory) {
       updateDocumentNonBlocking(doc(db, "advisories", editingAdvisory.id), payload);
     } else {
-      const newId = Math.random().toString(36).substr(2, 9).toUpperCase();
+      const newId = Math.random().toString(36).substring(2, 11).toUpperCase();
       setDocumentNonBlocking(doc(db, "advisories", newId), { 
         ...payload, 
         id: newId, 
@@ -330,8 +333,16 @@ export default function AdvisoriesManagementPage() {
           </ScrollArea>
 
           <DialogFooter className="p-6 border-t gap-2 shrink-0 bg-secondary/5">
-             <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 font-bold rounded-xl h-12">Cancel</Button>
-             <Button onClick={handleSave} className="flex-1 bg-primary text-white font-black uppercase text-xs tracking-widest rounded-xl h-12 shadow-lg">
+             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 font-bold rounded-xl h-12">Cancel</Button>
+             <Button 
+               type="button"
+               onClick={handleSave} 
+               disabled={!isFormValid}
+               className={cn(
+                 "flex-1 text-white font-black uppercase text-xs tracking-widest rounded-xl h-12 shadow-lg transition-all",
+                 isFormValid ? "bg-primary hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"
+               )}
+             >
                {editingAdvisory ? "Update Broadcast" : "Start Broadcast"}
              </Button>
           </DialogFooter>
