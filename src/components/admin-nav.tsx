@@ -74,7 +74,8 @@ export function AdminNav() {
   const { user } = useUser();
   const db = useFirestore();
 
-  const staffRef = useMemoFirebase(() => db ? collection(db, "staff") : null, [db]);
+  // Defer staff registry read until user is authenticated
+  const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const { data: allStaff } = useCollection(staffRef);
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';

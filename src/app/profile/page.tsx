@@ -50,15 +50,16 @@ export default function ProfilePage() {
     return doc(db, "users", user.uid);
   }, [db, user?.uid]);
 
+  // Defer collection reads until user is authenticated
   const staffRef = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || !user) return null;
     return collection(db, "staff");
-  }, [db]);
+  }, [db, user]);
 
   const portsRef = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || !user) return null;
     return collection(db, "ports");
-  }, [db]);
+  }, [db, user]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
   const { data: allStaff } = useCollection(staffRef);

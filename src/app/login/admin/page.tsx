@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,7 +17,9 @@ export default function AdminLoginPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   
-  const staffRef = useMemoFirebase(() => db ? collection(db, "staff") : null, [db]);
+  // Only attempt to fetch the staff collection if a user is authenticated
+  // to avoid triggering permission errors for guest users.
+  const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
 
   const [email, setEmail] = useState("");
@@ -26,6 +27,7 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // If authenticated and staff list is loaded, verify permissions and redirect
     if (!isUserLoading && !isStaffLoading && user) {
       const isSuperAdmin = user.email === 'rielmagpantay@gmail.com';
       const isStaffMember = allStaff?.some(s => s.email === user.email && s.status === 'Active');
@@ -33,7 +35,7 @@ export default function AdminLoginPage() {
       if (isSuperAdmin || isStaffMember) {
         router.push("/admin");
       } else {
-        // Not staff, push to public home
+        // Logged in but not staff, push to public home
         router.push("/");
       }
     }
@@ -51,7 +53,18 @@ export default function AdminLoginPage() {
     }, 2000);
   };
 
-  if (isUserLoading || (isStaffLoading && !user)) {
+  // Show loader during auth check or while verifying staff role
+  if (isUserLoading || (user && isStaffLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  // If user is logged in, the useEffect will handle the redirect.
+  // We avoid rendering the login form for logged-in users.
+  if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-accent" />

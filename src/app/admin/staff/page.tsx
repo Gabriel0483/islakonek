@@ -96,8 +96,9 @@ export default function StaffManagementPage() {
   const db = useFirestore();
   const { user } = useUser();
   
-  const staffRef = useMemoFirebase(() => db ? collection(db, "staff") : null, [db]);
-  const portsRef = useMemoFirebase(() => db ? collection(db, "ports") : null, [db]);
+  // Defer collection reads until auth is confirmed
+  const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
+  const portsRef = useMemoFirebase(() => (db && user) ? collection(db, "ports") : null, [db, user]);
   
   const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
   const { data: ports } = useCollection(portsRef);

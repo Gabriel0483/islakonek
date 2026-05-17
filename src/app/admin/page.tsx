@@ -42,7 +42,8 @@ export default function AdminDashboard() {
   const db = useFirestore();
   const router = useRouter();
 
-  const staffRef = useMemoFirebase(() => db ? collection(db, "staff") : null, [db]);
+  // Defer staff registry read until user is authenticated
+  const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
@@ -55,7 +56,8 @@ export default function AdminDashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || (isStaffLoading && !isSuperAdmin)) {
+  // Wait for auth and staff data (if not superadmin) before rendering
+  if (isUserLoading || (isStaffLoading && user && !isSuperAdmin)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-accent" />
@@ -63,7 +65,8 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isAuthorizedStaff) {
+  // If authenticated user is not staff, show access denied
+  if (user && !isAuthorizedStaff && !isStaffLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/20 p-4">
         <Card className="max-w-md w-full text-center p-8 border-none shadow-xl">
