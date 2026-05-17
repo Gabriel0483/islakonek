@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -13,18 +14,25 @@ import {
   UserCheck,
   Calendar,
   RotateCcw,
-  MapPin
+  MapPin,
+  ShieldCheck,
+  Lock,
+  Anchor,
+  PlayCircle,
+  AlertCircle,
+  BarChart,
+  ClipboardCheck
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { AdminNav } from "@/components/admin-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select, 
   SelectContent, 
@@ -32,6 +40,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export default function BoardingPage() {
   const db = useFirestore();
@@ -77,9 +86,15 @@ export default function BoardingPage() {
     return collection(db, "bookings");
   }, [db]);
 
+  const voyagesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "voyages");
+  }, [db]);
+
   const { data: routes } = useCollection(routesRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
+  const { data: voyages } = useCollection(voyagesRef);
 
   const activeTodaySchedules = useMemo(() => {
     if (!schedules || !todayPHT) return [];
@@ -101,6 +116,23 @@ export default function BoardingPage() {
     if (selectedRouteId === "all") return activeTodaySchedules;
     return activeTodaySchedules.filter(s => s.routeId === selectedRouteId);
   }, [activeTodaySchedules, selectedRouteId]);
+
+  const currentVoyage = useMemo(() => {
+    if (!voyages || selectedScheduleId === "all" || !todayPHT) return null;
+    const voyageId = `${selectedScheduleId}_${todayPHT}`;
+    return voyages.find(v => v.id === voyageId) || {
+      id: voyageId,
+      status: "Scheduled",
+      compliance: {
+        sanitationChecked: false,
+        safetyGearChecked: false,
+        stabilityConfirmed: false,
+        headcountVerified: false,
+        vesselClear: false,
+        logbookFinalized: false
+      }
+    };
+  }, [voyages, selectedScheduleId, todayPHT]);
 
   const filteredBookings = useMemo(() => {
     if (!bookings || !todayPHT) return [];
@@ -130,8 +162,38 @@ export default function BoardingPage() {
     });
   }, [bookings, todayPHT, selectedScheduleId, selectedRouteId, search]);
 
+  const isPreBoardingOk = currentVoyage?.compliance?.sanitationChecked && currentVoyage?.compliance?.safetyGearChecked;
+  const isPreDepartureOk = currentVoyage?.compliance?.headcountVerified && currentVoyage?.compliance?.stabilityConfirmed;
+  const isPostArrivalOk = currentVoyage?.compliance?.vesselClear && currentVoyage?.compliance?.logbookFinalized;
+
+  const handleUpdateCompliance = (field: string, value: boolean) => {
+    if (!db || !currentVoyage) return;
+    const voyageRef = doc(db, "voyages", currentVoyage.id);
+    const updatedCompliance = { 
+      ...(currentVoyage.compliance || {}), 
+      [field]: value 
+    };
+    
+    setDocumentNonBlocking(voyageRef, {
+      id: currentVoyage.id,
+      scheduleId: selectedScheduleId,
+      travelDate: todayPHT,
+      compliance: updatedCompliance,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+  };
+
+  const handleUpdateVoyageStatus = (newStatus: string) => {
+    if (!db || !currentVoyage) return;
+    const voyageRef = doc(db, "voyages", currentVoyage.id);
+    updateDocumentNonBlocking(voyageRef, {
+      status: newStatus,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
   const handleBoardPassenger = (bookingId: string) => {
-    if (!db) return;
+    if (!db || !isPreBoardingOk) return;
     const bookingRef = doc(db, "bookings", bookingId);
     updateDocumentNonBlocking(bookingRef, {
       status: "Used",
@@ -167,9 +229,9 @@ export default function BoardingPage() {
   }, [filteredBookings]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
-      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-16 z-40">
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
             <Scan className="h-5 w-5 text-accent" />
@@ -189,7 +251,7 @@ export default function BoardingPage() {
 
       <main className="p-4 sm:p-6 space-y-6 container mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Card className="lg:col-span-1 border-none shadow-sm bg-white">
+          <Card className="lg:col-span-1 border-none shadow-sm bg-white h-fit">
             <CardHeader className="pb-2 border-b">
               <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Manifest Filters</CardTitle>
             </CardHeader>
@@ -239,6 +301,141 @@ export default function BoardingPage() {
           </Card>
 
           <div className="lg:col-span-3 space-y-6">
+            {/* COMPLIANCE CHECKLIST CONSOLE */}
+            {selectedScheduleId !== "all" && (
+              <Card className="border-none shadow-md overflow-hidden bg-white animate-in slide-in-from-top-4 duration-500">
+                <div className="bg-primary p-4 text-white flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-xl">
+                        <ShieldCheck className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-black uppercase tracking-tight text-sm">State-Locked Safety Compliance</h3>
+                        <p className="text-[10px] opacity-70">Verify protocols to advance voyage state.</p>
+                      </div>
+                   </div>
+                   <Badge className={cn("uppercase font-black text-[10px]", 
+                      currentVoyage?.status === 'Departed' ? "bg-blue-500" :
+                      currentVoyage?.status === 'Arrived' ? "bg-indigo-600" : "bg-accent text-primary")}>
+                      {currentVoyage?.status || 'Scheduled'}
+                   </Badge>
+                </div>
+                <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                   {/* STAGE 1: PRE-BOARDING */}
+                   <div className={cn("space-y-4 p-4 rounded-2xl border-2 transition-all", 
+                      currentVoyage?.status === 'Scheduled' ? "border-accent bg-accent/5 ring-4 ring-accent/10" : "border-secondary opacity-50")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="h-5 px-1.5 font-black bg-white">01</Badge>
+                        <span className="text-[11px] font-black uppercase text-primary">Pre-Boarding</span>
+                      </div>
+                      <div className="space-y-2">
+                         <div className="flex items-center gap-3">
+                            <Checkbox 
+                              id="sanitation" 
+                              checked={currentVoyage?.compliance?.sanitationChecked} 
+                              onCheckedChange={(checked) => handleUpdateCompliance('sanitationChecked', !!checked)}
+                              disabled={currentVoyage?.status !== 'Scheduled'}
+                            />
+                            <label htmlFor="sanitation" className="text-xs font-bold cursor-pointer">Sanitation Verified</label>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <Checkbox 
+                              id="safetygear" 
+                              checked={currentVoyage?.compliance?.safetyGearChecked} 
+                              onCheckedChange={(checked) => handleUpdateCompliance('safetyGearChecked', !!checked)}
+                              disabled={currentVoyage?.status !== 'Scheduled'}
+                            />
+                            <label htmlFor="safetygear" className="text-xs font-bold cursor-pointer">Safety Gear Ready</label>
+                         </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full h-9 font-black uppercase text-[10px] tracking-widest gap-2"
+                        disabled={!isPreBoardingOk || currentVoyage?.status !== 'Scheduled'}
+                        onClick={() => handleUpdateVoyageStatus('On-time')}
+                      >
+                         {currentVoyage?.status === 'Scheduled' ? <><PlayCircle className="h-4 w-4" /> Start Boarding</> : <><CheckCircle2 className="h-4 w-4" /> Boarding Active</>}
+                      </Button>
+                   </div>
+
+                   {/* STAGE 2: PRE-DEPARTURE */}
+                   <div className={cn("space-y-4 p-4 rounded-2xl border-2 transition-all", 
+                      currentVoyage?.status === 'On-time' ? "border-blue-500 bg-blue-50 ring-4 ring-blue-500/10" : "border-secondary opacity-50")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="h-5 px-1.5 font-black bg-white">02</Badge>
+                        <span className="text-[11px] font-black uppercase text-primary">Pre-Departure</span>
+                      </div>
+                      <div className="space-y-2">
+                         <div className="flex items-center gap-3">
+                            <Checkbox 
+                              id="headcount" 
+                              checked={currentVoyage?.compliance?.headcountVerified} 
+                              onCheckedChange={(checked) => handleUpdateCompliance('headcountVerified', !!checked)}
+                              disabled={currentVoyage?.status !== 'On-time'}
+                            />
+                            <label htmlFor="headcount" className="text-xs font-bold cursor-pointer">Manifest Count OK</label>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <Checkbox 
+                              id="stability" 
+                              checked={currentVoyage?.compliance?.stabilityConfirmed} 
+                              onCheckedChange={(checked) => handleUpdateCompliance('stabilityConfirmed', !!checked)}
+                              disabled={currentVoyage?.status !== 'On-time'}
+                            />
+                            <label htmlFor="stability" className="text-xs font-bold cursor-pointer">Weight & Stability</label>
+                         </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="secondary"
+                        className="w-full h-9 font-black uppercase text-[10px] tracking-widest gap-2 bg-blue-600 text-white hover:bg-blue-700"
+                        disabled={!isPreDepartureOk || currentVoyage?.status !== 'On-time'}
+                        onClick={() => handleUpdateVoyageStatus('Departed')}
+                      >
+                         {currentVoyage?.status === 'Departed' ? <><Anchor className="h-4 w-4" /> En Route</> : <><Anchor className="h-4 w-4" /> Depart Vessel</>}
+                      </Button>
+                   </div>
+
+                   {/* STAGE 3: POST-ARRIVAL */}
+                   <div className={cn("space-y-4 p-4 rounded-2xl border-2 transition-all", 
+                      currentVoyage?.status === 'Departed' ? "border-indigo-600 bg-indigo-50 ring-4 ring-indigo-600/10" : "border-secondary opacity-50")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="h-5 px-1.5 font-black bg-white">03</Badge>
+                        <span className="text-[11px] font-black uppercase text-primary">Post-Arrival</span>
+                      </div>
+                      <div className="space-y-2">
+                         <div className="flex items-center gap-3">
+                            <Checkbox 
+                              id="vesselclear" 
+                              checked={currentVoyage?.compliance?.vesselClear} 
+                              onCheckedChange={(checked) => handleUpdateCompliance('vesselClear', !!checked)}
+                              disabled={currentVoyage?.status !== 'Departed'}
+                            />
+                            <label htmlFor="vesselclear" className="text-xs font-bold cursor-pointer">Vessel Cleared</label>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <Checkbox 
+                              id="logbook" 
+                              checked={currentVoyage?.compliance?.logbookFinalized} 
+                              onCheckedChange={(checked) => handleUpdateCompliance('logbookFinalized', !!checked)}
+                              disabled={currentVoyage?.status !== 'Departed'}
+                            />
+                            <label htmlFor="logbook" className="text-xs font-bold cursor-pointer">Logbook Finalized</label>
+                         </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full h-9 font-black uppercase text-[10px] tracking-widest gap-2 bg-indigo-600 text-white"
+                        disabled={!isPostArrivalOk || currentVoyage?.status !== 'Departed'}
+                        onClick={() => handleUpdateVoyageStatus('Arrived')}
+                      >
+                         {currentVoyage?.status === 'Arrived' ? <><ClipboardCheck className="h-4 w-4" /> Logged</> : <><ClipboardCheck className="h-4 w-4" /> Finalize Log</>}
+                      </Button>
+                   </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Card className="border-none shadow-sm bg-primary text-primary-foreground">
                 <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center h-full">
@@ -282,7 +479,22 @@ export default function BoardingPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="p-0 relative">
+                {/* GLOBAL LOCK OVERLAY */}
+                {selectedScheduleId !== "all" && !isPreBoardingOk && (
+                  <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-[1px] flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-300">
+                     <div className="bg-white p-6 rounded-3xl shadow-2xl border-2 border-accent/20 flex flex-col items-center max-w-sm">
+                        <div className="bg-accent/10 p-4 rounded-full mb-4">
+                           <Lock className="h-10 w-10 text-primary" />
+                        </div>
+                        <h4 className="font-black uppercase tracking-tight text-primary text-lg mb-2">Operational Lock</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                           Passenger boarding is locked until **Pre-Boarding Safety & Sanitation** protocols are verified and the **"Start Boarding"** signal is broadcast.
+                        </p>
+                     </div>
+                  </div>
+                )}
+
                 {isSchedulesLoading || isBookingsLoading ? (
                   <div className="flex items-center justify-center py-20">
                     <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -345,6 +557,7 @@ export default function BoardingPage() {
                                 {!isBoarded ? (
                                   <Button 
                                     size="sm" 
+                                    disabled={!isPreBoardingOk}
                                     onClick={() => handleBoardPassenger(booking.id)}
                                     className="bg-primary hover:bg-primary/90 text-white font-bold h-7 sm:h-8 px-2 sm:px-4 text-[10px] sm:text-sm"
                                   >

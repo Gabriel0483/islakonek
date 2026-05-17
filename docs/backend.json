@@ -212,6 +212,17 @@
         "remarks": { "type": "string" },
         "actualDeparture": { "type": "string", "format": "date-time" },
         "actualArrival": { "type": "string", "format": "date-time" },
+        "compliance": {
+          "type": "object",
+          "properties": {
+            "sanitationChecked": { "type": "boolean", "default": false },
+            "safetyGearChecked": { "type": "boolean", "default": false },
+            "stabilityConfirmed": { "type": "boolean", "default": false },
+            "headcountVerified": { "type": "boolean", "default": false },
+            "vesselClear": { "type": "boolean", "default": false },
+            "logbookFinalized": { "type": "boolean", "default": false }
+          }
+        },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "scheduleId", "travelDate", "status"]
