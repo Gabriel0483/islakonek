@@ -23,7 +23,8 @@ import {
   X,
   LayoutGrid,
   Info,
-  Anchor
+  Anchor,
+  Ship
 } from "lucide-react";
 import { collection, doc, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -107,9 +108,11 @@ export default function StaffManagementPage() {
   
   const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const portsRef = useMemoFirebase(() => (db && user) ? collection(db, "ports") : null, [db, user]);
+  const vesselsRef = useMemoFirebase(() => (db && user) ? collection(db, "vessels") : null, [db, user]);
   
   const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
   const { data: ports } = useCollection(portsRef);
+  const { data: vessels } = useCollection(vesselsRef);
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
   const myStaffRecord = allStaff?.find(s => s.email === user?.email);
@@ -131,6 +134,7 @@ export default function StaffManagementPage() {
     phoneNumber: "",
     status: "Active",
     assignedPortId: "",
+    assignedVesselId: "",
     authorizedModules: [] as string[]
   });
 
@@ -153,6 +157,7 @@ export default function StaffManagementPage() {
         phoneNumber: member.phoneNumber || "",
         status: member.status || "Active",
         assignedPortId: member.assignedPortId || "",
+        assignedVesselId: member.assignedVesselId || "",
         authorizedModules: member.authorizedModules || ROLE_PERMISSIONS[member.role] || []
       });
     } else {
@@ -166,6 +171,7 @@ export default function StaffManagementPage() {
         phoneNumber: "",
         status: "Active",
         assignedPortId: "",
+        assignedVesselId: "",
         authorizedModules: ROLE_PERMISSIONS[defaultRole] || []
       });
     }
@@ -210,6 +216,7 @@ export default function StaffManagementPage() {
   };
 
   const getPortName = (id: string) => ports?.find(p => p.id === id)?.name || "Unassigned";
+  const getVesselName = (id: string) => vessels?.find(v => v.id === id)?.name || "No Ship Assigned";
 
   const getRoleBadge = (member: any) => {
     switch (member.role) {
@@ -302,6 +309,9 @@ export default function StaffManagementPage() {
                   <div className="space-y-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {member.email}</div>
                     <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {getPortName(member.assignedPortId)}</div>
+                    {member.assignedVesselId && (
+                      <div className="flex items-center gap-2"><Ship className="h-3.5 w-3.5" /> {getVesselName(member.assignedVesselId)}</div>
+                    )}
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(member)} className="h-8 text-[10px] font-black uppercase text-primary">Edit</Button>
@@ -369,24 +379,44 @@ export default function StaffManagementPage() {
                     </Select>
                   </div>
                 )}
-                <div className="space-y-1.5">
-                   <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Port Assignment</Label>
-                   <Select value={formData.assignedPortId} onValueChange={(val) => setFormData({...formData, assignedPortId: val})}>
-                     <SelectTrigger className="h-10"><SelectValue placeholder="Floating" /></SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="none">Unassigned / Floating</SelectItem>
-                       {ports?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                     </SelectContent>
-                   </Select>
+              </div>
+
+              {/* ASSIGNMENTS SECTION */}
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                   <MapPin className="h-4 w-4 text-accent" />
+                   <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Manual Assignments</Label>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-secondary/5 p-4 rounded-xl border">
+                  <div className="space-y-1.5">
+                     <Label className="text-[9px] font-black uppercase text-muted-foreground">Port Assignment</Label>
+                     <Select value={formData.assignedPortId || "none"} onValueChange={(val) => setFormData({...formData, assignedPortId: val === "none" ? "" : val})}>
+                       <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Floating / Unassigned" /></SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="none">Floating / Unassigned</SelectItem>
+                         {ports?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                       </SelectContent>
+                     </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                     <Label className="text-[9px] font-black uppercase text-muted-foreground">Ship Assignment</Label>
+                     <Select value={formData.assignedVesselId || "none"} onValueChange={(val) => setFormData({...formData, assignedVesselId: val === "none" ? "" : val})}>
+                       <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="No Ship Assigned" /></SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="none">No Ship Assigned</SelectItem>
+                         {vessels?.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                       </SelectContent>
+                     </Select>
+                  </div>
                 </div>
               </div>
 
               {/* MODULE ACCESS SELECTION */}
               {formData.role && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="flex items-center gap-2 border-b pb-2">
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 pt-4 border-t">
+                  <div className="flex items-center gap-2">
                     <LayoutGrid className="h-4 w-4 text-accent" />
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Custom Module Authorization</Label>
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Module Authorization</Label>
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-secondary/10 p-4 rounded-xl border border-secondary">
                     {MODULE_LIST.map((mod) => {
@@ -412,7 +442,7 @@ export default function StaffManagementPage() {
                     })}
                   </div>
                   <p className="text-[9px] text-muted-foreground italic leading-relaxed">
-                    * Modules are pre-selected based on role defaults. You can manually adjust access by ticking/unticking individual modules.
+                    * Selection defaults to standard role permissions. Ticking modules creates a custom access profile.
                   </p>
                 </div>
               )}

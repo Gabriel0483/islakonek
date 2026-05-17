@@ -311,6 +311,7 @@
         "phoneNumber": { "type": "string" },
         "status": { "type": "string", "enum": ["Active", "Inactive"] },
         "assignedPortId": { "type": "string", "description": "ID of the port this staff member is primarily assigned to." },
+        "assignedVesselId": { "type": "string", "description": "ID of the vessel (ship) this staff member is primarily assigned to." },
         "authorizedModules": { "type": "array", "items": { "type": "string" }, "description": "Custom list of modules this staff member can access." },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
