@@ -23,11 +23,11 @@ service cloud.firestore {
     }
 
     // Infrastructure: Public read, Admin/Manager write
-    match /ports/{portId} { allow read: if true; allow write: if isSuperAdmin(); }
-    match /routes/{routeId} { allow read: if true; allow write: if isSuperAdmin(); }
-    match /fares/{fareId} { allow read: if true; allow write: if isSuperAdmin(); }
-    match /vessels/{vesselId} { allow read: if true; allow write: if isSuperAdmin(); }
-    match /maintenance/{recordId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /ports/{portId} { allow read: if true; allow write: if isStaff(); }
+    match /routes/{routeId} { allow read: if true; allow write: if isStaff(); }
+    match /fares/{fareId} { allow read: if true; allow write: if isStaff(); }
+    match /vessels/{vesselId} { allow read: if true; allow write: if isStaff(); }
+    match /maintenance/{recordId} { allow read: if true; allow write: if isStaff(); }
     match /schedules/{scheduleId} { allow read: if true; allow write: if isStaff(); }
     match /voyages/{voyageId} { allow read: if true; allow write: if isStaff(); }
 

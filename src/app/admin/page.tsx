@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -31,7 +30,7 @@ import { collection } from "firebase/firestore";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "routes", "fleet", "schedules", "staff"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
   "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff"],
   "Desk Agent": ["boarding", "desk"],
   "Crew": ["boarding"],
