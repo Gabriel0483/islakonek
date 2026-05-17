@@ -29,6 +29,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebas
 import { Button } from "@/components/ui/button";
 import { AdminNav } from "@/components/admin-nav";
 import { collection } from "firebase/firestore";
+import { cn } from "@/lib/utils";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories"],
