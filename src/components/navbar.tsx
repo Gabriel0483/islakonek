@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ship, LayoutDashboard, Menu, User, LogOut, Radio } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut, Radio, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -70,17 +70,18 @@ export function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Account</DropdownMenuLabel>
+                  <DropdownMenuLabel>Account Services</DropdownMenuLabel>
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="cursor-pointer flex items-center gap-2">
+                      <UserCircle className="h-4 w-4 text-muted-foreground" /> Manage Profile
+                    </Link>
+                  </DropdownMenuItem>
                   
                   {!isSuperAdmin && (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile" className="cursor-pointer">Manage Profile</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/my-bookings" className="cursor-pointer">My Bookings</Link>
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem asChild>
+                      <Link href="/my-bookings" className="cursor-pointer">My Bookings</Link>
+                    </DropdownMenuItem>
                   )}
 
                   {isSuperAdmin && (
@@ -124,15 +125,13 @@ export function Navbar() {
               <DropdownMenuSeparator />
               {user ? (
                 <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">Manage Profile</Link>
+                  </DropdownMenuItem>
                   {!isSuperAdmin && (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile">Manage Profile</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/my-bookings">My Bookings</Link>
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem asChild>
+                      <Link href="/my-bookings">My Bookings</Link>
+                    </DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     Log Out

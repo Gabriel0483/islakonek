@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   User, 
   Users, 
@@ -16,10 +16,12 @@ import {
   ChevronRight,
   ShieldCheck,
   MapPin,
-  Ticket
+  Ticket,
+  Briefcase,
+  Anchor
 } from "lucide-react";
 import { doc, collection } from "firebase/firestore";
-import { useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { nanoid } from "nanoid";
 import { Separator } from "@/components/ui/separator";
 
@@ -47,7 +50,26 @@ export default function ProfilePage() {
     return doc(db, "users", user.uid);
   }, [db, user?.uid]);
 
+  const staffRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "staff");
+  }, [db]);
+
+  const portsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "ports");
+  }, [db]);
+
   const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
+  const { data: allStaff } = useCollection(staffRef);
+  const { data: ports } = useCollection(portsRef);
+
+  const myStaffRecord = useMemo(() => {
+    if (!allStaff || !user?.email) return null;
+    return allStaff.find(s => s.email === user.email);
+  }, [allStaff, user?.email]);
+
+  const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
 
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -87,6 +109,7 @@ export default function ProfilePage() {
     if (!profileRef) return;
     setDocumentNonBlocking(profileRef, {
       ...profileForm,
+      uid: user?.uid,
       updatedAt: new Date().toISOString()
     }, { merge: true });
     setIsProfileEditing(false);
@@ -143,6 +166,8 @@ export default function ProfilePage() {
     }
   };
 
+  const getPortName = (id: string) => ports?.find(p => p.id === id)?.name || "Floating / Unassigned";
+
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -158,26 +183,68 @@ export default function ProfilePage() {
     <div className="min-h-screen flex flex-col bg-background font-body">
       <Navbar />
       
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl space-y-8">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl space-y-8">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <h1 className="text-3xl font-black font-headline text-primary uppercase tracking-tight">Travel Profile</h1>
-            <p className="text-muted-foreground text-sm">Manage your personal and family travel records.</p>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black font-headline text-primary uppercase tracking-tight">Identity & Credentials</h1>
+            <p className="text-muted-foreground text-sm">Manage your passenger profile and view administrative status.</p>
           </div>
-          <div className="bg-primary/5 px-4 py-2 rounded-full border border-primary/10 flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-green-600" />
-            <span className="text-[10px] font-black uppercase text-primary tracking-widest">{profile?.email || user?.email}</span>
+          <div className="flex flex-wrap gap-2">
+            {isSuperAdmin && (
+              <Badge className="bg-accent text-primary font-black uppercase tracking-widest px-3 py-1">SuperAdmin Access</Badge>
+            )}
+            {myStaffRecord && !isSuperAdmin && (
+              <Badge className="bg-primary text-white font-black uppercase tracking-widest px-3 py-1">Authorized Staff</Badge>
+            )}
+            <div className="bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-green-600" />
+              <span className="text-[10px] font-black uppercase text-primary tracking-widest">{user?.email}</span>
+            </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Personal Info */}
-          <div className="lg:col-span-1 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* LEFT COLUMN: ACCOUNT & PROFESSIONAL */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Professional Status Card */}
+            {(myStaffRecord || isSuperAdmin) && (
+              <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                   <Briefcase className="h-24 w-24 -rotate-12 translate-x-8 translate-y-8" />
+                </div>
+                <CardHeader className="pb-2 relative z-10">
+                  <CardTitle className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" /> Professional Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-2 relative z-10">
+                  <div className="space-y-1">
+                    <p className="text-[9px] uppercase font-bold opacity-60">Organizational Role</p>
+                    <p className="font-black text-xl uppercase leading-tight">
+                      {isSuperAdmin ? "Super Administrator" : myStaffRecord?.role}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] uppercase font-bold opacity-60">Primary Assignment</p>
+                    <p className="text-sm font-bold flex items-center gap-1.5">
+                      <Anchor className="h-3.5 w-3.5 opacity-60" /> 
+                      {isSuperAdmin ? "All Terminals" : getPortName(myStaffRecord?.assignedPortId)}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-[10px] leading-relaxed opacity-70 italic">
+                      Staff credentials and role-based permissions are managed by higher-level management.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="border-none shadow-sm bg-white overflow-hidden">
               <div className="h-2 bg-accent" />
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-5 w-5 text-accent" /> Account Info
+                <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                  <User className="h-5 w-5 text-accent" /> Passenger Info
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 pt-2">
@@ -188,9 +255,9 @@ export default function ProfilePage() {
                       <p className="font-bold text-primary">{profile?.displayName || "Not set"}</p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Email Address</Label>
-                      <p className="font-bold text-primary flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" /> {profile?.email || user?.email}
+                      <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Registered Email</Label>
+                      <p className="font-bold text-primary flex items-center gap-2 truncate">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> {profile?.email || user?.email}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -213,10 +280,10 @@ export default function ProfilePage() {
                     </div>
                     <Button 
                       variant="outline" 
-                      className="w-full h-10 font-bold text-xs uppercase tracking-wider mt-2"
+                      className="w-full h-10 font-bold text-xs uppercase tracking-wider mt-2 hover:bg-accent hover:text-primary transition-colors"
                       onClick={() => setIsProfileEditing(true)}
                     >
-                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Account
+                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Personal Details
                     </Button>
                   </>
                 ) : (
@@ -227,15 +294,17 @@ export default function ProfilePage() {
                         value={profileForm.displayName} 
                         onChange={(e) => setProfileForm({...profileForm, displayName: e.target.value})}
                         className="h-10 text-sm"
+                        placeholder="Public Name"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase">Email</Label>
+                      <Label className="text-[10px] font-bold uppercase">Contact Email</Label>
                       <Input 
                         type="email"
                         value={profileForm.email} 
                         onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
                         className="h-10 text-sm"
+                        placeholder="itinerary@example.com"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -268,7 +337,7 @@ export default function ProfilePage() {
                     <div className="flex gap-2 pt-2">
                       <Button variant="ghost" className="flex-1 h-10 text-xs" onClick={() => setIsProfileEditing(false)}>Cancel</Button>
                       <Button className="flex-1 h-10 bg-primary text-white text-xs font-bold" onClick={handleUpdateProfile}>
-                        <Save className="h-3.5 w-3.5 mr-2" /> Save
+                        <Save className="h-3.5 w-3.5 mr-2" /> Save Changes
                       </Button>
                     </div>
                   </div>
@@ -277,11 +346,11 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          {/* Family Members */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* RIGHT COLUMN: FAMILY MEMBERS */}
+          <div className="lg:col-span-8 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold font-headline text-primary flex items-center gap-2">
-                <Users className="h-6 w-6 text-accent" /> Family Members
+                <Users className="h-6 w-6 text-accent" /> Travel Roster
               </h2>
               <Button onClick={() => handleOpenFamilyDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90 h-9 px-4 text-xs">
                 <Plus className="h-4 w-4 mr-1.5" /> Add Member
@@ -301,13 +370,13 @@ export default function ProfilePage() {
                         <div className="flex gap-4">
                            <div className="space-y-0.5">
                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Birthdate</p>
-                             <p className="text-xs font-bold flex items-center gap-1.5">
+                             <p className="text-xs font-bold flex items-center gap-1.5 text-primary">
                                <Calendar className="h-3 w-3 text-muted-foreground" /> {member.birthDate}
                              </p>
                            </div>
                            <div className="space-y-0.5">
                              <p className="text-[9px] uppercase font-bold text-muted-foreground">Emergency</p>
-                             <p className="text-xs font-bold flex items-center gap-1.5">
+                             <p className="text-xs font-bold flex items-center gap-1.5 text-primary">
                                <Phone className="h-3 w-3 text-muted-foreground" /> {member.emergencyContact}
                              </p>
                            </div>
@@ -325,13 +394,25 @@ export default function ProfilePage() {
                   </Card>
                 ))
               ) : (
-                <div className="col-span-full py-20 text-center border-2 border-dashed rounded-2xl bg-secondary/10 opacity-50">
+                <div className="col-span-full py-20 text-center border-2 border-dashed rounded-3xl bg-secondary/5 opacity-50">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="font-black uppercase tracking-widest text-sm">No family records found</p>
                   <p className="text-xs mt-1">Start building your travel roster for faster bookings.</p>
                 </div>
               )}
             </div>
+
+            <Card className="border-none shadow-sm bg-secondary/10 p-6 rounded-3xl border border-dashed mt-12">
+               <div className="flex items-start gap-4">
+                  <div className="bg-white p-3 rounded-2xl shadow-sm"><Users className="h-6 w-6 text-accent" /></div>
+                  <div className="space-y-1">
+                     <h3 className="font-black text-primary uppercase tracking-tight">Rapid Booking Context</h3>
+                     <p className="text-xs text-muted-foreground leading-relaxed">
+                        The profiles stored above are automatically synchronized with the island checkout system. Adding family members here allows you to bypass data entry for large groups during high-traffic travel periods.
+                     </p>
+                  </div>
+               </div>
+            </Card>
           </div>
         </div>
       </main>
