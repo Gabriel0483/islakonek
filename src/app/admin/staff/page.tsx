@@ -133,7 +133,7 @@ export default function StaffManagementPage() {
     crewRole: "",
     phoneNumber: "",
     status: "Active",
-    assignedPortId: "",
+    assignedPortIds: [] as string[],
     assignedVesselId: "",
     authorizedModules: [] as string[]
   });
@@ -156,7 +156,7 @@ export default function StaffManagementPage() {
         crewRole: member.crewRole || "",
         phoneNumber: member.phoneNumber || "",
         status: member.status || "Active",
-        assignedPortId: member.assignedPortId || "",
+        assignedPortIds: member.assignedPortIds || (member.assignedPortId ? [member.assignedPortId] : []),
         assignedVesselId: member.assignedVesselId || "",
         authorizedModules: member.authorizedModules || ROLE_PERMISSIONS[member.role] || []
       });
@@ -170,7 +170,7 @@ export default function StaffManagementPage() {
         crewRole: "",
         phoneNumber: "",
         status: "Active",
-        assignedPortId: "",
+        assignedPortIds: [],
         assignedVesselId: "",
         authorizedModules: ROLE_PERMISSIONS[defaultRole] || []
       });
@@ -183,9 +183,18 @@ export default function StaffManagementPage() {
       ...formData,
       role: role,
       crewRole: role === 'Crew' ? (formData.crewRole || "Deckhand") : "",
-      assignedVesselId: role === 'Crew' ? formData.assignedVesselId : "", // Only Crew can have ship assignments
+      assignedVesselId: role === 'Crew' ? formData.assignedVesselId : "", 
       authorizedModules: ROLE_PERMISSIONS[role] || []
     });
+  };
+
+  const handleTogglePort = (portId: string) => {
+    const current = [...formData.assignedPortIds];
+    if (current.includes(portId)) {
+      setFormData({ ...formData, assignedPortIds: current.filter(id => id !== portId) });
+    } else {
+      setFormData({ ...formData, assignedPortIds: [...current, portId] });
+    }
   };
 
   const handleToggleModule = (moduleId: string) => {
@@ -216,7 +225,11 @@ export default function StaffManagementPage() {
     }
   };
 
-  const getPortName = (id: string) => ports?.find(p => p.id === id)?.name || "Unassigned";
+  const getPortNames = (ids: string[]) => {
+    if (!ids || ids.length === 0) return "Unassigned";
+    return ids.map(id => ports?.find(p => p.id === id)?.name || "Unknown").join(", ");
+  };
+
   const getVesselName = (id: string) => vessels?.find(v => v.id === id)?.name || "No Ship Assigned";
 
   const getRoleBadge = (member: any) => {
@@ -309,7 +322,10 @@ export default function StaffManagementPage() {
                 <CardContent className="p-5 pt-0 space-y-4">
                   <div className="space-y-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {member.email}</div>
-                    <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {getPortName(member.assignedPortId)}</div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" /> 
+                      <span className="leading-tight">{getPortNames(member.assignedPortIds || (member.assignedPortId ? [member.assignedPortId] : []))}</span>
+                    </div>
                     {member.role === 'Crew' && member.assignedVesselId && (
                       <div className="flex items-center gap-2"><Ship className="h-3.5 w-3.5" /> {getVesselName(member.assignedVesselId)}</div>
                     )}
@@ -385,24 +401,41 @@ export default function StaffManagementPage() {
               {/* ASSIGNMENTS SECTION */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
-                   <MapPin className="h-4 w-4 text-accent" />
-                   <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Manual Assignments</Label>
+                   <Briefcase className="h-4 w-4 text-accent" />
+                   <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Operational Assignments</Label>
                 </div>
-                <div className={cn("grid gap-4 bg-secondary/5 p-4 rounded-xl border", formData.role === 'Crew' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
-                  <div className="space-y-1.5">
-                     <Label className="text-[9px] font-black uppercase text-muted-foreground">Port Assignment</Label>
-                     <Select value={formData.assignedPortId || "none"} onValueChange={(val) => setFormData({...formData, assignedPortId: val === "none" ? "" : val})}>
-                       <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Floating / Unassigned" /></SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="none">Floating / Unassigned</SelectItem>
-                         {ports?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                       </SelectContent>
-                     </Select>
+                <div className="grid gap-6">
+                  <div className="space-y-3 bg-secondary/5 p-4 rounded-xl border">
+                     <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2">
+                        <MapPin className="h-3 w-3" /> Port Assignments (Round-Trip Support)
+                     </Label>
+                     <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                        {ports?.map(p => {
+                          const isAssigned = formData.assignedPortIds.includes(p.id);
+                          return (
+                            <div key={p.id} className="flex items-center gap-2 group">
+                              <Checkbox 
+                                id={`port-${p.id}`} 
+                                checked={isAssigned} 
+                                onCheckedChange={() => handleTogglePort(p.id)}
+                              />
+                              <Label 
+                                htmlFor={`port-${p.id}`} 
+                                className={cn("text-[11px] font-bold cursor-pointer transition-colors", isAssigned ? "text-primary" : "text-muted-foreground/60 group-hover:text-muted-foreground")}
+                              >
+                                {p.name}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                     </div>
+                     <p className="text-[9px] text-muted-foreground italic">Tick all ports the member will operate at.</p>
                   </div>
+                  
                   {formData.role === 'Crew' && (
-                    <div className="space-y-1.5 animate-in slide-in-from-right-2 duration-300">
-                       <Label className="text-[9px] font-black uppercase text-muted-foreground flex items-center gap-1">
-                         <Ship className="h-3 w-3" /> Ship Assignment
+                    <div className="space-y-1.5 bg-secondary/5 p-4 rounded-xl border animate-in slide-in-from-right-2 duration-300">
+                       <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5 mb-1.5">
+                         <Ship className="h-3 w-3" /> Vessel Hub
                        </Label>
                        <Select value={formData.assignedVesselId || "none"} onValueChange={(val) => setFormData({...formData, assignedVesselId: val === "none" ? "" : val})}>
                          <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="No Ship Assigned" /></SelectTrigger>

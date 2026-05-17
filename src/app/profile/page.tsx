@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -167,7 +168,10 @@ export default function ProfilePage() {
     }
   };
 
-  const getPortName = (id: string) => ports?.find(p => p.id === id)?.name || "Floating / Unassigned";
+  const getPortNames = (ids: string[]) => {
+    if (!ids || ids.length === 0) return "Floating / Unassigned";
+    return ids.map(id => ports?.find(p => p.id === id)?.name || "Unknown Port").join(", ");
+  };
 
   if (isUserLoading || isProfileLoading) {
     return (
@@ -226,10 +230,10 @@ export default function ProfilePage() {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[9px] uppercase font-bold opacity-60">Primary Assignment</p>
-                    <p className="text-sm font-bold flex items-center gap-1.5">
-                      <Anchor className="h-3.5 w-3.5 opacity-60" /> 
-                      {isSuperAdmin ? "All Terminals" : getPortName(myStaffRecord?.assignedPortId)}
+                    <p className="text-[9px] uppercase font-bold opacity-60">Operational Assignment(s)</p>
+                    <p className="text-sm font-bold flex items-start gap-1.5">
+                      <Anchor className="h-3.5 w-3.5 opacity-60 shrink-0 mt-1" /> 
+                      <span>{isSuperAdmin ? "All Terminals" : getPortNames(myStaffRecord?.assignedPortIds || (myStaffRecord?.assignedPortId ? [myStaffRecord?.assignedPortId] : []))}</span>
                     </p>
                   </div>
                   <div className="pt-2 border-t border-white/10">

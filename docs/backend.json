@@ -310,7 +310,7 @@
         "crewRole": { "type": "string", "enum": ["Captain", "Engineer", "Deckhand"], "description": "Specific functional role for crew members." },
         "phoneNumber": { "type": "string" },
         "status": { "type": "string", "enum": ["Active", "Inactive"] },
-        "assignedPortId": { "type": "string", "description": "ID of the port this staff member is primarily assigned to." },
+        "assignedPortIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of the ports this staff member is assigned to." },
         "assignedVesselId": { "type": "string", "description": "ID of the vessel (ship) this staff member is primarily assigned to." },
         "authorizedModules": { "type": "array", "items": { "type": "string" }, "description": "Custom list of modules this staff member can access." },
         "createdAt": { "type": "string", "format": "date-time" },
