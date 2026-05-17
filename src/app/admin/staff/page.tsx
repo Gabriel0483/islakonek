@@ -183,6 +183,7 @@ export default function StaffManagementPage() {
       ...formData,
       role: role,
       crewRole: role === 'Crew' ? (formData.crewRole || "Deckhand") : "",
+      assignedVesselId: role === 'Crew' ? formData.assignedVesselId : "", // Only Crew can have ship assignments
       authorizedModules: ROLE_PERMISSIONS[role] || []
     });
   };
@@ -309,7 +310,7 @@ export default function StaffManagementPage() {
                   <div className="space-y-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {member.email}</div>
                     <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {getPortName(member.assignedPortId)}</div>
-                    {member.assignedVesselId && (
+                    {member.role === 'Crew' && member.assignedVesselId && (
                       <div className="flex items-center gap-2"><Ship className="h-3.5 w-3.5" /> {getVesselName(member.assignedVesselId)}</div>
                     )}
                   </div>
@@ -387,7 +388,7 @@ export default function StaffManagementPage() {
                    <MapPin className="h-4 w-4 text-accent" />
                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Manual Assignments</Label>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-secondary/5 p-4 rounded-xl border">
+                <div className={cn("grid gap-4 bg-secondary/5 p-4 rounded-xl border", formData.role === 'Crew' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
                   <div className="space-y-1.5">
                      <Label className="text-[9px] font-black uppercase text-muted-foreground">Port Assignment</Label>
                      <Select value={formData.assignedPortId || "none"} onValueChange={(val) => setFormData({...formData, assignedPortId: val === "none" ? "" : val})}>
@@ -398,16 +399,20 @@ export default function StaffManagementPage() {
                        </SelectContent>
                      </Select>
                   </div>
-                  <div className="space-y-1.5">
-                     <Label className="text-[9px] font-black uppercase text-muted-foreground">Ship Assignment</Label>
-                     <Select value={formData.assignedVesselId || "none"} onValueChange={(val) => setFormData({...formData, assignedVesselId: val === "none" ? "" : val})}>
-                       <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="No Ship Assigned" /></SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="none">No Ship Assigned</SelectItem>
-                         {vessels?.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                       </SelectContent>
-                     </Select>
-                  </div>
+                  {formData.role === 'Crew' && (
+                    <div className="space-y-1.5 animate-in slide-in-from-right-2 duration-300">
+                       <Label className="text-[9px] font-black uppercase text-muted-foreground flex items-center gap-1">
+                         <Ship className="h-3 w-3" /> Ship Assignment
+                       </Label>
+                       <Select value={formData.assignedVesselId || "none"} onValueChange={(val) => setFormData({...formData, assignedVesselId: val === "none" ? "" : val})}>
+                         <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="No Ship Assigned" /></SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="none">No Ship Assigned</SelectItem>
+                           {vessels?.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                         </SelectContent>
+                       </Select>
+                    </div>
+                  )}
                 </div>
               </div>
 
