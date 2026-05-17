@@ -243,7 +243,7 @@ export default function AdvisoriesManagementPage() {
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden flex flex-col h-[90vh] max-h-[90vh]">
           <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">
              <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-xl">
@@ -256,10 +256,10 @@ export default function AdvisoriesManagementPage() {
              </div>
           </DialogHeader>
           
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6">
-               <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Broadcast Category</Label>
+          <ScrollArea className="flex-1 h-full">
+            <div className="p-6 space-y-8">
+               <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Broadcast Category</Label>
                   <div className="grid grid-cols-2 gap-2">
                      {CATEGORIES.map((cat) => (
                         <button
@@ -280,10 +280,10 @@ export default function AdvisoriesManagementPage() {
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                     <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Urgency Level</Label>
+                  <div className="space-y-3">
+                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Urgency Level</Label>
                      <Select value={formData.severity} onValueChange={(val) => setFormData({...formData, severity: val})}>
-                        <SelectTrigger className="h-11 rounded-xl">
+                        <SelectTrigger className="h-12 rounded-xl border-2">
                            <SelectValue placeholder="Select Severity" />
                         </SelectTrigger>
                         <SelectContent>
@@ -291,8 +291,8 @@ export default function AdvisoriesManagementPage() {
                         </SelectContent>
                      </Select>
                   </div>
-                  <div className="flex items-center justify-between p-3 border-2 rounded-xl bg-secondary/10 h-[44px] mt-6">
-                     <Label className="text-[10px] font-black uppercase tracking-widest">Active Status</Label>
+                  <div className="flex items-center justify-between p-4 border-2 rounded-xl bg-secondary/5 h-[48px] mt-7">
+                     <Label className="text-[10px] font-black uppercase tracking-widest">Broadcast Active</Label>
                      <Switch 
                        checked={formData.isActive} 
                        onCheckedChange={(val) => setFormData({...formData, isActive: val})}
@@ -300,47 +300,54 @@ export default function AdvisoriesManagementPage() {
                   </div>
                </div>
 
-               <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Announcement Title</Label>
-                  <Input 
-                    placeholder="e.g. Typhoon Bising: Trip Suspensions" 
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="h-11 rounded-xl font-bold"
-                  />
+               <Separator />
+
+               <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase text-primary tracking-[0.2em]">Announcement Content</Label>
+                  <div className="space-y-4">
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-muted-foreground">Broadcast Title</Label>
+                        <Input 
+                          placeholder="e.g. Typhoon Bising: Trip Suspensions" 
+                          value={formData.title}
+                          onChange={(e) => setFormData({...formData, title: e.target.value})}
+                          className="h-12 rounded-xl font-bold border-2 focus-visible:ring-primary"
+                        />
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-muted-foreground">Detailed Instructions / Description</Label>
+                        <Textarea 
+                          placeholder="Provide clear details and next steps for travelers..." 
+                          value={formData.content}
+                          onChange={(e) => setFormData({...formData, content: e.target.value})}
+                          className="min-h-[180px] rounded-xl text-sm leading-relaxed border-2 focus-visible:ring-primary p-4"
+                        />
+                     </div>
+                  </div>
                </div>
 
-               <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Detailed Instructions / Description</Label>
-                  <Textarea 
-                    placeholder="Provide clear details and next steps for travelers..." 
-                    value={formData.content}
-                    onChange={(e) => setFormData({...formData, content: e.target.value})}
-                    className="min-h-[150px] rounded-xl text-sm leading-relaxed"
-                  />
-               </div>
-
-               <div className="bg-accent/10 p-4 rounded-xl border-2 border-dashed border-accent/20 flex items-start gap-3">
-                  <Globe className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+               <div className="bg-accent/10 p-4 rounded-2xl border-2 border-dashed border-accent/20 flex items-start gap-4">
+                  <Globe className="h-6 w-6 text-primary mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-black text-primary uppercase">Public Voice Preview</p>
+                    <p className="text-xs font-black text-primary uppercase tracking-wider">Public Voice Context</p>
                     <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
-                      Upon saving, this advisory will appear at the top of the timeline on the public Advisories page and home screen ticker.
+                      This information is pushed to the public live ticker and the advisories timeline. Ensure instructions are clear and accurate before broadcasting.
                     </p>
                   </div>
                </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t gap-2 shrink-0 bg-secondary/5">
-             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 font-bold rounded-xl h-12">Cancel</Button>
+          <DialogFooter className="p-6 border-t gap-3 shrink-0 bg-secondary/10">
+             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 font-bold rounded-xl h-14 border-2">Cancel</Button>
              <Button 
                type="button"
                onClick={handleSave} 
                disabled={!isFormValid}
                className={cn(
-                 "flex-1 text-white font-black uppercase text-xs tracking-widest rounded-xl h-12 shadow-lg transition-all",
-                 isFormValid ? "bg-primary hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"
+                 "flex-1 text-white font-black uppercase text-xs tracking-[0.2em] rounded-xl h-14 shadow-xl transition-all",
+                 isFormValid ? "bg-primary hover:scale-[1.02] active:scale-[0.98]" : "bg-muted text-muted-foreground cursor-not-allowed"
                )}
              >
                {editingAdvisory ? "Update Broadcast" : "Start Broadcast"}
