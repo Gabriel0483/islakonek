@@ -81,7 +81,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
   "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
   "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff"],
-  "Desk Agent": ["boarding", "desk"],
+  "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
   "Finance/Accounting": ["fares", "bookings", "sales"]
 };
