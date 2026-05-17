@@ -21,7 +21,8 @@ import {
   UserCheck,
   Check,
   X,
-  LayoutGrid
+  LayoutGrid,
+  Info
 } from "lucide-react";
 import { collection, doc, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -288,6 +289,18 @@ export default function StaffManagementPage() {
           
           <ScrollArea className="max-h-[70vh]">
             <div className="p-6 space-y-8">
+              {!editingStaff && (
+                <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3">
+                   <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                   <div>
+                     <p className="text-xs font-black text-blue-800 uppercase mb-1">Account Activation Required</p>
+                     <p className="text-[10px] text-blue-700 leading-relaxed">
+                       After registration, the staff member must sign up at <span className="font-bold underline">/signup</span> using this specific email to set their own password and activate their dashboard access.
+                     </p>
+                   </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Full Name</Label>
