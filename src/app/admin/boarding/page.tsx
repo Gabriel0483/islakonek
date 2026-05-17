@@ -25,7 +25,7 @@ import {
   Info,
   User
 } from "lucide-react";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, writeBatch } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { AdminNav } from "@/components/admin-nav";
@@ -224,6 +224,32 @@ export default function BoardingPage() {
   const handleUpdateVoyageStatus = (newStatus: string) => {
     if (!db || !currentVoyage) return;
     const voyageRef = doc(db, "voyages", currentVoyage.id);
+
+    // AUTOMATIC NO-SHOW MARKING
+    // When status moves to 'Departed', mark all remaining 'Confirmed' passengers as 'Suspended'
+    if (newStatus === 'Departed' && bookings && selectedScheduleId !== 'all') {
+      const noShows = bookings.filter(b => 
+        b.scheduleId === selectedScheduleId && 
+        b.travelDate === todayPHT && 
+        b.status === 'Confirmed'
+      );
+
+      if (noShows.length > 0) {
+        const batch = writeBatch(db);
+        noShows.forEach(b => {
+          const bRef = doc(db, "bookings", b.id);
+          batch.update(bRef, {
+            status: "Suspended",
+            remarks: "Auto-flagged: No-show (Vessel Departed)",
+            updatedAt: new Date().toISOString()
+          });
+        });
+        batch.commit().catch(() => {
+          // Internal fail-safe, the UI will reflect status changes on next sync
+        });
+      }
+    }
+
     updateDocumentNonBlocking(voyageRef, {
       status: newStatus,
       updatedAt: new Date().toISOString()
