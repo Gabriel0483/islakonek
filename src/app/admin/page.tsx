@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { 
   ArrowRight,
   LayoutGrid,
@@ -18,21 +18,28 @@ import {
   CalendarDays,
   Ticket,
   ClipboardList,
-  UserCircle,
   TrendingUp,
   Radio,
-  Users
+  Users,
+  ShieldCheck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { AdminNav } from "@/components/admin-nav";
+import { collection } from "firebase/firestore";
 
 export default function AdminDashboard() {
   const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
 
+  const staffRef = useMemoFirebase(() => db ? collection(db, "staff") : null, [db]);
+  const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
+
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
+  const myStaffRecord = allStaff?.find(s => s.email === user?.email);
+  const isAuthorizedStaff = isSuperAdmin || (myStaffRecord && myStaffRecord.status === 'Active');
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -40,7 +47,7 @@ export default function AdminDashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading) {
+  if (isUserLoading || (isStaffLoading && !isSuperAdmin)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-accent" />
@@ -48,24 +55,23 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isSuperAdmin) {
+  if (!isAuthorizedStaff) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-secondary/20 p-4">
         <Card className="max-w-md w-full text-center p-8 border-none shadow-xl">
           <div className="bg-destructive/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock className="h-8 w-8 text-destructive" />
           </div>
-          <CardTitle className="text-2xl font-bold mb-2">Restricted Access</CardTitle>
+          <CardTitle className="text-2xl font-bold mb-2">Restricted Area</CardTitle>
           <CardDescription className="text-base mb-8">
-            This portal is reserved for the designated SuperAdmin. 
-            Please contact the administrator if you believe this is an error.
+            Access denied. You must be an active staff member or administrator to view this portal.
           </CardDescription>
           <div className="space-y-3">
             <Link href="/" className="block">
               <Button variant="outline" className="w-full">Return to Public Site</Button>
             </Link>
             <Link href="/login/admin" className="block">
-              <Button variant="link" className="text-xs text-muted-foreground">Sign in with a staff account</Button>
+              <Button variant="link" className="text-xs text-muted-foreground" onClick={() => window.location.reload()}>Try another account</Button>
             </Link>
           </div>
         </Card>
@@ -80,7 +86,8 @@ export default function AdminDashboard() {
       icon: Radio,
       link: "/admin/voyages",
       color: "text-accent",
-      count: "Real-time"
+      count: "Real-time",
+      roles: ["SuperAdmin", "Operations Manager", "Port Officer"]
     },
     {
       title: "Sales Overview",
@@ -88,7 +95,8 @@ export default function AdminDashboard() {
       icon: TrendingUp,
       link: "/admin/sales-overview",
       color: "text-green-600",
-      count: "Finance Stats"
+      count: "Finance Stats",
+      roles: ["SuperAdmin", "Operations Manager", "Finance/Accounting"]
     },
     {
       title: "Operational Overview",
@@ -96,7 +104,8 @@ export default function AdminDashboard() {
       icon: Activity,
       link: "/admin/operational-overview",
       color: "text-blue-500",
-      count: "Operational Stats"
+      count: "Operational Stats",
+      roles: ["SuperAdmin", "Operations Manager", "Port Officer"]
     },
     {
       title: "Boarding Mode",
@@ -104,7 +113,8 @@ export default function AdminDashboard() {
       icon: Scan,
       link: "/admin/boarding",
       color: "text-accent",
-      count: "Boarding"
+      count: "Boarding",
+      roles: ["SuperAdmin", "Operations Manager", "Port Officer", "Desk Agent", "Crew"]
     },
     {
       title: "Desk Bookings",
@@ -112,7 +122,8 @@ export default function AdminDashboard() {
       icon: Ticket,
       link: "/admin/bookings",
       color: "text-green-600",
-      count: "Issue New"
+      count: "Issue New",
+      roles: ["SuperAdmin", "Operations Manager", "Port Officer", "Desk Agent"]
     },
     {
       title: "Manage Bookings",
@@ -120,7 +131,8 @@ export default function AdminDashboard() {
       icon: ClipboardList,
       link: "/admin/manage-bookings",
       color: "text-indigo-600",
-      count: "Manifest"
+      count: "Manifest",
+      roles: ["SuperAdmin", "Operations Manager", "Finance/Accounting"]
     },
     {
       title: "Staff Management",
@@ -128,7 +140,8 @@ export default function AdminDashboard() {
       icon: Users,
       link: "/admin/staff",
       color: "text-primary",
-      count: "Personnel"
+      count: "Personnel",
+      roles: ["SuperAdmin", "Operations Manager", "Port Officer"]
     },
     {
       title: "Port Registry",
@@ -136,7 +149,8 @@ export default function AdminDashboard() {
       icon: MapPin,
       link: "/admin/ports",
       color: "text-blue-500",
-      count: "Terminals"
+      count: "Terminals",
+      roles: ["SuperAdmin"]
     },
     {
       title: "Route Management",
@@ -144,7 +158,8 @@ export default function AdminDashboard() {
       icon: Waypoints,
       link: "/admin/routes",
       color: "text-accent",
-      count: "Connections"
+      count: "Connections",
+      roles: ["SuperAdmin", "Operations Manager"]
     },
     {
       title: "Fare Management",
@@ -152,7 +167,8 @@ export default function AdminDashboard() {
       icon: Banknote,
       link: "/admin/fares",
       color: "text-green-500",
-      count: "Pricing"
+      count: "Pricing",
+      roles: ["SuperAdmin", "Finance/Accounting"]
     },
     {
       title: "Fleet & Maintenance",
@@ -160,7 +176,8 @@ export default function AdminDashboard() {
       icon: Wrench,
       link: "/admin/fleet",
       color: "text-orange-500",
-      count: "Vessels"
+      count: "Vessels",
+      roles: ["SuperAdmin", "Operations Manager"]
     },
     {
       title: "Trip Schedules",
@@ -168,30 +185,36 @@ export default function AdminDashboard() {
       icon: CalendarDays,
       link: "/admin/schedules",
       color: "text-primary",
-      count: "Timetables"
+      count: "Timetables",
+      roles: ["SuperAdmin", "Operations Manager", "Port Officer"]
     }
   ];
 
+  const currentRole = isSuperAdmin ? "SuperAdmin" : (myStaffRecord?.role || "Restricted");
+  const visibleModules = managementModules.filter(m => m.roles.includes(currentRole));
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
       <main className="flex-1 flex flex-col gap-8 p-6 container mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Admin Dashboard</h1>
-          <div className="flex items-center gap-2">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase mr-2 hidden sm:block">SuperAdmin: <span className="text-primary">{user?.email}</span></div>
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="System Online" />
+          <div className="space-y-1">
+             <h1 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Terminal Command</h1>
+             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                <ShieldCheck className="h-3 w-3 text-green-500" /> Authorized Role: <span className="text-primary">{currentRole}</span>
+             </div>
           </div>
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="System Online" />
         </div>
 
         <section className="space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <LayoutGrid className="h-5 w-5 text-accent" />
-            <h2 className="text-xl font-bold font-headline">Command Center</h2>
+            <h2 className="text-xl font-bold font-headline">Operational Modules</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {managementModules.map((module, i) => (
+            {visibleModules.map((module, i) => (
               <Link href={module.link} key={`module-${i}`}>
                 <Card className="h-full border-none shadow-sm bg-white hover:ring-2 hover:ring-accent/50 transition-all group relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-3 opacity-5">
@@ -221,24 +244,19 @@ export default function AdminDashboard() {
         </section>
 
         <section className="pb-12">
-          <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden p-8 flex items-center">
+          <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden p-8 flex items-center rounded-3xl">
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Activity className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
             </div>
             <div className="relative z-10 space-y-4 max-w-2xl">
-              <h2 className="text-3xl font-black font-headline tracking-tight uppercase">Maritime Command</h2>
+              <h2 className="text-3xl font-black font-headline tracking-tight uppercase">Security Notice</h2>
               <p className="text-lg text-primary-foreground/80 leading-relaxed">
-                Manage your fleet, terminals, and manifests in real-time. System alerts and operational statistics are consolidated in the <strong>Operational Overview</strong> module.
+                Your administrative privileges are governed by your organizational hierarchy. Some modules may be restricted to ensure operational compliance and data privacy.
               </p>
               <div className="flex gap-4">
                 <Link href="/admin/voyages">
-                  <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4">
-                    Voyage Control
-                  </Button>
-                </Link>
-                <Link href="/admin/operational-overview">
-                  <Button variant="outline" className="bg-white/10 text-white border-white/20 font-bold hover:bg-white/20 mt-4">
-                    Operational Overview
+                  <Button className="bg-accent text-primary font-bold hover:bg-accent/90 mt-4 rounded-xl px-8 h-12 shadow-lg">
+                    Real-time Board
                   </Button>
                 </Link>
               </div>

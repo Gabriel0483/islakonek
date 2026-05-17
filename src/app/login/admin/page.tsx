@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,27 +7,37 @@ import { Mail, Lock, Loader2, ArrowRight, ShieldCheck, LayoutDashboard } from "l
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
 import { Label } from "@/components/ui/label";
+import { collection } from "firebase/firestore";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const db = useFirestore();
   const { user, isUserLoading } = useUser();
+  
+  const staffRef = useMemoFirebase(() => db ? collection(db, "staff") : null, [db]);
+  const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      if (user.email === 'rielmagpantay@gmail.com') {
+    if (!isUserLoading && !isStaffLoading && user) {
+      const isSuperAdmin = user.email === 'rielmagpantay@gmail.com';
+      const isStaffMember = allStaff?.some(s => s.email === user.email && s.status === 'Active');
+      
+      if (isSuperAdmin || isStaffMember) {
         router.push("/admin");
       } else {
+        // Not staff, push to public home
         router.push("/");
       }
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, isStaffLoading, allStaff, router]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +51,7 @@ export default function AdminLoginPage() {
     }, 2000);
   };
 
-  if (isUserLoading || user) {
+  if (isUserLoading || (isStaffLoading && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-accent" />
@@ -50,28 +61,28 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary/95 p-4 font-body">
-      <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden bg-white">
-        <div className="h-2 bg-primary" />
+      <Card className="w-full max-w-md border-none shadow-2xl overflow-hidden bg-white rounded-3xl">
+        <div className="h-2 bg-accent" />
         <CardHeader className="space-y-1 text-center pt-8">
           <div className="bg-primary w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
             <LayoutDashboard className="h-7 w-7 text-white" />
           </div>
-          <CardTitle className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Administrative Access</CardTitle>
+          <CardTitle className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Staff Portal</CardTitle>
           <CardDescription>
-            Isla Konek Internal Operations Portal
+            Authorized Maritime Personnel Access
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8">
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Staff Email</Label>
+              <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Professional Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="email" 
                   type="email" 
-                  placeholder="admin@islakonek.com" 
-                  className="pl-10 h-12 bg-secondary/20 border-none focus-visible:ring-primary"
+                  placeholder="name@islakonek.com" 
+                  className="pl-10 h-12 bg-secondary/20 border-none focus-visible:ring-primary rounded-xl"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -79,13 +90,13 @@ export default function AdminLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Security Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="password" 
                   type="password" 
-                  className="pl-10 h-12 bg-secondary/20 border-none focus-visible:ring-primary"
+                  className="pl-10 h-12 bg-secondary/20 border-none focus-visible:ring-primary rounded-xl"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -94,23 +105,23 @@ export default function AdminLoginPage() {
             </div>
             <Button 
               type="submit" 
-              className="w-full h-12 bg-primary text-white font-black text-lg hover:bg-primary/90 mt-4 group shadow-lg"
+              className="w-full h-12 bg-primary text-white font-black text-lg hover:bg-primary/90 mt-4 group shadow-lg rounded-xl"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
-                  Verify Credentials <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  Enter Dashboard <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </Button>
           </form>
 
-          <div className="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200 flex gap-3 items-start">
-            <ShieldCheck className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
-            <p className="text-[10px] leading-relaxed text-yellow-800 font-medium">
-              Restricted Area. Authorized staff only. All login attempts are recorded for terminal security audit logs.
+          <div className="mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3 items-start">
+            <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+            <p className="text-[10px] leading-relaxed text-blue-800 font-medium">
+              Hierarchical access applies. All terminal operations and data modifications are logged for audit compliance.
             </p>
           </div>
         </CardContent>
