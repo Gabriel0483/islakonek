@@ -22,7 +22,8 @@ import {
   Check,
   X,
   LayoutGrid,
-  Info
+  Info,
+  Anchor
 } from "lucide-react";
 import { collection, doc, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -62,6 +63,12 @@ const STAFF_ROLES = [
   "Desk Agent",
   "Crew",
   "Finance/Accounting"
+];
+
+const CREW_SPECIALTIES = [
+  "Captain",
+  "Engineer",
+  "Deckhand"
 ];
 
 const MODULE_LIST = [
@@ -120,6 +127,7 @@ export default function StaffManagementPage() {
     fullName: "",
     email: "",
     role: "",
+    crewRole: "",
     phoneNumber: "",
     status: "Active",
     assignedPortId: "",
@@ -141,6 +149,7 @@ export default function StaffManagementPage() {
         fullName: member.fullName,
         email: member.email,
         role: member.role,
+        crewRole: member.crewRole || "",
         phoneNumber: member.phoneNumber || "",
         status: member.status || "Active",
         assignedPortId: member.assignedPortId || "",
@@ -153,6 +162,7 @@ export default function StaffManagementPage() {
         fullName: "",
         email: "",
         role: defaultRole,
+        crewRole: "",
         phoneNumber: "",
         status: "Active",
         assignedPortId: "",
@@ -166,6 +176,7 @@ export default function StaffManagementPage() {
     setFormData({
       ...formData,
       role: role,
+      crewRole: role === 'Crew' ? (formData.crewRole || "Deckhand") : "",
       authorizedModules: ROLE_PERMISSIONS[role] || []
     });
   };
@@ -200,14 +211,20 @@ export default function StaffManagementPage() {
 
   const getPortName = (id: string) => ports?.find(p => p.id === id)?.name || "Unassigned";
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
+  const getRoleBadge = (member: any) => {
+    switch (member.role) {
       case 'Operations Manager': return <Badge className="bg-primary text-white">OP-MGR</Badge>;
       case 'Port Officer': return <Badge className="bg-blue-600 text-white">PORT-OFF</Badge>;
       case 'Desk Agent': return <Badge className="bg-green-600 text-white">DESK-AGT</Badge>;
-      case 'Crew': return <Badge className="bg-accent text-primary">CREW</Badge>;
+      case 'Crew': 
+        return (
+          <div className="flex gap-1.5 items-center">
+            <Badge className="bg-accent text-primary">CREW</Badge>
+            {member.crewRole && <Badge variant="outline" className="text-[10px] font-black uppercase text-accent border-accent/30">{member.crewRole}</Badge>}
+          </div>
+        );
       case 'Finance/Accounting': return <Badge className="bg-indigo-600 text-white">FINANCE</Badge>;
-      default: return <Badge variant="outline">{role}</Badge>;
+      default: return <Badge variant="outline">{member.role}</Badge>;
     }
   };
 
@@ -227,7 +244,7 @@ export default function StaffManagementPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
-      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-0 z-40">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-16 z-40">
         <div className="flex items-center gap-2">
            <Users className="h-5 w-5 text-accent" />
            <h1 className="text-lg font-bold font-headline text-primary uppercase tracking-tight">Personnel Registry</h1>
@@ -278,7 +295,7 @@ export default function StaffManagementPage() {
                     <CardTitle className="text-base font-bold text-primary flex items-center gap-2">
                        {member.fullName} {member.status === 'Active' ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <XCircle className="h-3.5 w-3.5 text-destructive" />}
                     </CardTitle>
-                    <div className="flex items-center gap-2 mt-1">{getRoleBadge(member.role)}</div>
+                    <div className="flex items-center gap-2 mt-1">{getRoleBadge(member)}</div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-5 pt-0 space-y-4">
@@ -339,6 +356,19 @@ export default function StaffManagementPage() {
                      <SelectContent>{managedRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}</SelectContent>
                    </Select>
                 </div>
+                {formData.role === 'Crew' && (
+                  <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                    <Label className="text-[10px] font-black uppercase text-accent tracking-widest flex items-center gap-1">
+                      <Anchor className="h-3 w-3" /> Crew Specialty
+                    </Label>
+                    <Select value={formData.crewRole} onValueChange={(val) => setFormData({...formData, crewRole: val})}>
+                      <SelectTrigger className="h-10 border-accent/30"><SelectValue placeholder="Select Specialty" /></SelectTrigger>
+                      <SelectContent>
+                        {CREW_SPECIALTIES.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Port Assignment</Label>
                    <Select value={formData.assignedPortId} onValueChange={(val) => setFormData({...formData, assignedPortId: val})}>
