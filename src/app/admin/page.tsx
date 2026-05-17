@@ -20,7 +20,8 @@ import {
   ClipboardList,
   UserCircle,
   TrendingUp,
-  Radio
+  Radio,
+  Users
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser } from "@/firebase";
@@ -122,12 +123,12 @@ export default function AdminDashboard() {
       count: "Manifest"
     },
     {
-      title: "Admin Profile",
-      description: "Manage your personal account and administrative roster.",
-      icon: UserCircle,
-      link: "/profile",
+      title: "Staff Management",
+      description: "Manage operations managers, port officers, agents, and crew.",
+      icon: Users,
+      link: "/admin/staff",
       color: "text-primary",
-      count: "Personal"
+      count: "Personnel"
     },
     {
       title: "Port Registry",

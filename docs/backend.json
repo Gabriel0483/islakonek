@@ -256,6 +256,8 @@
         "displayName": { "type": "string" },
         "email": { "type": "string" },
         "phoneNumber": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "emergencyContact": { "type": "string" },
         "familyMembers": {
           "type": "array",
           "items": {
@@ -272,6 +274,24 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid"]
+    },
+    "Staff": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Staff",
+      "type": "object",
+      "description": "Represents an internal staff member of the maritime operation.",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["Operations Manager", "Port Officer", "Desk Agent", "Crew", "Finance/Accounting"] },
+        "phoneNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "assignedPortId": { "type": "string", "description": "ID of the port this staff member is primarily assigned to." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "fullName", "email", "role", "status"]
     }
   },
   "auth": {
@@ -370,6 +390,16 @@
             "$ref": "#/backend/entities/UserProfile"
           },
           "description": "Stores individual user profile data."
+        }
+      },
+      {
+        "path": "/staff/{staffId}",
+        "definition": {
+          "entityName": "Staff",
+          "schema": {
+            "$ref": "#/backend/entities/Staff"
+          },
+          "description": "Internal staff registry managed by SuperAdmin."
         }
       }
     ]

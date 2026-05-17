@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -19,7 +20,8 @@ import {
   LogOut,
   User,
   TrendingUp,
-  Radio
+  Radio,
+  Users
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -54,6 +56,7 @@ const configItems = [
   { label: "Fares", icon: Banknote, href: "/admin/fares" },
   { label: "Fleet", icon: Wrench, href: "/admin/fleet" },
   { label: "Schedules", icon: CalendarDays, href: "/admin/schedules" },
+  { label: "Staff", icon: Users, href: "/admin/staff" },
 ];
 
 export function AdminNav() {

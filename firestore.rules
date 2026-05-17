@@ -1,8 +1,8 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 3.8
- * Update: Added VoyageStatus management for real-time voyage instance control.
+ * Version: 3.9
+ * Update: Added Staff management for SuperAdmin operations.
  */
 
 rules_version = '2';
@@ -15,7 +15,7 @@ service cloud.firestore {
              request.auth.token.email == 'rielmagpantay@gmail.com';
     }
 
-    // Ports, Routes, Fares, Vessels, Maintenance, Schedules, Voyages: Public read, Admin write
+    // Ports, Routes, Fares, Vessels, Maintenance, Schedules, Voyages, Staff: Public read, Admin write
     match /ports/{portId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /routes/{routeId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /fares/{fareId} { allow read: if true; allow write: if isSuperAdmin(); }
@@ -23,6 +23,7 @@ service cloud.firestore {
     match /maintenance/{recordId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /schedules/{scheduleId} { allow read: if true; allow write: if isSuperAdmin(); }
     match /voyages/{voyageId} { allow read: if true; allow write: if isSuperAdmin(); }
+    match /staff/{staffId} { allow read: if true; allow write: if isSuperAdmin(); }
 
     // Bookings: Open for MVP desk/public operations (in production should be restricted)
     match /bookings/{bookingId} {
