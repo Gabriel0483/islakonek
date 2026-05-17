@@ -18,7 +18,10 @@ import {
   XCircle,
   Filter,
   Lock,
-  UserCheck
+  UserCheck,
+  Check,
+  X,
+  LayoutGrid
 } from "lucide-react";
 import { collection, doc, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -59,10 +62,30 @@ const STAFF_ROLES = [
   "Finance/Accounting"
 ];
 
-/**
- * Hierarchy Configuration:
- * Defines which roles a manager is responsible for.
- */
+const MODULE_LIST = [
+  { id: "voyages", label: "Voyage Control" },
+  { id: "boarding", label: "Boarding Mode" },
+  { id: "desk", label: "Desk Bookings" },
+  { id: "bookings", label: "Manage Bookings" },
+  { id: "sales", label: "Sales Overview" },
+  { id: "ops", label: "Operational Overview" },
+  { id: "ports", label: "Port Registry" },
+  { id: "routes", label: "Route Management" },
+  { id: "fares", label: "Fare Management" },
+  { id: "fleet", label: "Fleet & Maintenance" },
+  { id: "schedules", label: "Trip Schedules" },
+  { id: "staff", label: "Staff Management" },
+];
+
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "routes", "fleet", "schedules", "staff"],
+  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff"],
+  "Desk Agent": ["boarding", "desk"],
+  "Crew": ["boarding"],
+  "Finance/Accounting": ["fares", "bookings", "sales"]
+};
+
 const HIERARCHY_MAP: Record<string, string[]> = {
   "SuperAdmin": STAFF_ROLES,
   "Operations Manager": ["Port Officer", "Finance/Accounting"],
@@ -73,20 +96,12 @@ export default function StaffManagementPage() {
   const db = useFirestore();
   const { user } = useUser();
   
-  const staffCollection = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "staff");
-  }, [db]);
-
-  const portsCollection = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "ports");
-  }, [db]);
+  const staffRef = useMemoFirebase(() => db ? collection(db, "staff") : null, [db]);
+  const portsRef = useMemoFirebase(() => db ? collection(db, "ports") : null, [db]);
   
-  const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffCollection);
-  const { data: ports } = useCollection(portsCollection);
+  const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
+  const { data: ports } = useCollection(portsRef);
 
-  // Determine current user's role
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
   const myStaffRecord = allStaff?.find(s => s.email === user?.email);
   const currentRole = isSuperAdmin ? "SuperAdmin" : (myStaffRecord?.role || "Restricted");
@@ -108,20 +123,11 @@ export default function StaffManagementPage() {
     assignedPortId: ""
   });
 
-  // Filter staff based on hierarchy and search
   const filteredStaff = allStaff?.filter(member => {
-    // 1. Visibility Check: Only show people I am responsible for (unless SuperAdmin)
     const isManaged = isSuperAdmin || managedRoles.includes(member.role);
     if (!isManaged) return false;
-
-    // 2. Search Check
-    const matchesSearch = 
-      member.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      member.email.toLowerCase().includes(search.toLowerCase());
-    
-    // 3. Role Filter
+    const matchesSearch = member.fullName.toLowerCase().includes(search.toLowerCase()) || member.email.toLowerCase().includes(search.toLowerCase());
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
-    
     return matchesSearch && matchesRole;
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
@@ -152,28 +158,20 @@ export default function StaffManagementPage() {
 
   const handleSave = () => {
     if (!db || !formData.fullName || !formData.email) return;
-    
     const timestamp = new Date().toISOString();
-    const payload = {
-      ...formData,
-      updatedAt: timestamp
-    };
-
+    const payload = { ...formData, updatedAt: timestamp };
     if (editingStaff) {
-      const staffRef = doc(db, "staff", editingStaff.id);
-      updateDocumentNonBlocking(staffRef, payload);
+      updateDocumentNonBlocking(doc(db, "staff", editingStaff.id), payload);
     } else {
       const newId = Math.random().toString(36).substr(2, 9).toUpperCase();
-      const staffRef = doc(db, "staff", newId);
-      setDocumentNonBlocking(staffRef, { ...payload, id: newId, createdAt: timestamp }, { merge: true });
+      setDocumentNonBlocking(doc(db, "staff", newId), { ...payload, id: newId, createdAt: timestamp }, { merge: true });
     }
     setIsDialogOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to remove this staff member from the registry?")) {
-      const staffRef = doc(db, "staff", id);
-      deleteDocumentNonBlocking(staffRef);
+    if (confirm("Are you sure you want to remove this staff member?")) {
+      deleteDocumentNonBlocking(doc(db, "staff", id));
     }
   };
 
@@ -195,13 +193,9 @@ export default function StaffManagementPage() {
       <div className="min-h-screen bg-background flex flex-col">
         <AdminNav />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <div className="bg-destructive/10 p-4 rounded-full mb-4">
-             <Lock className="h-10 w-10 text-destructive" />
-          </div>
+          <div className="bg-destructive/10 p-4 rounded-full mb-4"><Lock className="h-10 w-10 text-destructive" /></div>
           <h2 className="text-xl font-bold text-primary mb-2 uppercase tracking-tight">Access Restricted</h2>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Staff Management is only accessible to SuperAdmins and authorized Department Managers.
-          </p>
+          <p className="text-sm text-muted-foreground">Staff Management is for SuperAdmins and authorized Managers only.</p>
         </div>
       </div>
     );
@@ -213,53 +207,31 @@ export default function StaffManagementPage() {
       <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-0 z-40">
         <div className="flex items-center gap-2">
            <Users className="h-5 w-5 text-accent" />
-           <h1 className="text-lg font-bold font-headline text-primary uppercase tracking-tight">
-             Personnel Registry
-           </h1>
-           <Badge variant="outline" className="hidden sm:flex text-[10px] ml-2 border-primary/20 text-primary uppercase font-black">
-             Access: {currentRole}
-           </Badge>
+           <h1 className="text-lg font-bold font-headline text-primary uppercase tracking-tight">Personnel Registry</h1>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90 h-10 px-4">
+        <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold h-10 px-4">
           <Plus className="h-4 w-4 mr-2" /> Add Staff Member
         </Button>
       </header>
 
       <main className="p-4 sm:p-6 space-y-6 container mx-auto">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-secondary/50 space-y-4">
-           <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
-              <Filter className="h-3.5 w-3.5 text-accent" /> Management Filters
-           </div>
+        <div className="bg-white p-4 rounded-xl shadow-sm border space-y-4">
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="relative">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Search Identity</Label>
                 <Search className="absolute left-3 top-[34px] h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Name or email..." 
-                  className="pl-10 h-10 bg-secondary/10 border-none text-sm"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <Input placeholder="Name or email..." className="pl-10 h-10 bg-secondary/10 border-none text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
-
               <div>
-                <Label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Responsibility Filter</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Role Filter</Label>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                   <SelectTrigger className="h-10 bg-secondary/10 border-none text-sm">
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="All Managed Roles" />
-                      </div>
-                   </SelectTrigger>
+                   <SelectTrigger className="h-10 bg-secondary/10 border-none text-sm"><SelectValue placeholder="All Managed Roles" /></SelectTrigger>
                    <SelectContent>
                       <SelectItem value="all">All Managed Roles</SelectItem>
-                      {managedRoles.map(role => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
+                      {managedRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
                    </SelectContent>
                 </Select>
               </div>
-
               <div className="flex items-end">
                 <div className="bg-secondary/20 px-3 py-2 rounded-lg w-full flex items-center justify-between">
                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Managed Personnel</span>
@@ -272,185 +244,106 @@ export default function StaffManagementPage() {
         {isStaffLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-accent" />
-            <p className="text-sm text-muted-foreground uppercase tracking-widest">Accessing Roster...</p>
           </div>
-        ) : filteredStaff && filteredStaff.length > 0 ? (
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredStaff.map((member) => (
+            {filteredStaff?.map((member) => (
               <Card key={member.id} className="border-none shadow-sm hover:ring-2 hover:ring-primary/10 transition-all bg-white relative overflow-hidden group">
-                <div className={cn(
-                  "absolute top-0 left-0 w-1 h-full",
-                  member.status === 'Active' ? "bg-green-500" : "bg-destructive"
-                )} />
-                
-                <CardHeader className="pb-3 p-5">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base font-bold text-primary flex items-center gap-2">
-                         {member.fullName}
-                         {member.status === 'Active' ? (
-                           <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                         ) : (
-                           <XCircle className="h-3.5 w-3.5 text-destructive" />
-                         )}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                         {getRoleBadge(member.role)}
-                         <span className="text-[10px] font-mono text-muted-foreground">ID: {member.id}</span>
-                      </div>
-                    </div>
+                <div className={cn("absolute top-0 left-0 w-1 h-full", member.status === 'Active' ? "bg-green-500" : "bg-destructive")} />
+                <CardHeader className="p-5 pb-3">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-bold text-primary flex items-center gap-2">
+                       {member.fullName} {member.status === 'Active' ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <XCircle className="h-3.5 w-3.5 text-destructive" />}
+                    </CardTitle>
+                    <div className="flex items-center gap-2 mt-1">{getRoleBadge(member.role)}</div>
                   </div>
                 </CardHeader>
-                
                 <CardContent className="p-5 pt-0 space-y-4">
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5" /> {member.email}
-                    </div>
-                    {member.phoneNumber && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-3.5 w-3.5" /> {member.phoneNumber}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" /> {getPortName(member.assignedPortId)}
-                    </div>
+                  <div className="space-y-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {member.email}</div>
+                    <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {getPortName(member.assignedPortId)}</div>
                   </div>
-
                   <div className="flex justify-end gap-2 pt-3 border-t">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(member)} className="h-8 px-2 text-[10px] font-black uppercase text-primary hover:bg-primary/5">
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(member.id)} className="h-8 px-2 text-[10px] font-black uppercase text-destructive hover:bg-red-50">
-                      <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Remove
-                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(member)} className="h-8 text-[10px] font-black uppercase text-primary">Edit</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(member.id)} className="h-8 text-[10px] font-black uppercase text-destructive">Remove</Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-        ) : (
-          <div className="text-center py-24 border-2 border-dashed rounded-3xl bg-white opacity-40 flex flex-col items-center">
-            <Users className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-bold uppercase tracking-tight">No managed records found</h3>
-            <p className="text-sm mt-2">Manage personnel based on your administrative scope.</p>
-          </div>
         )}
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-primary text-primary-foreground">
             <div className="flex items-center gap-3">
-               <div className="p-2 bg-white/20 rounded-xl">
-                  <UserCheck className="h-6 w-6" />
-               </div>
+               <div className="p-2 bg-white/20 rounded-xl"><UserCheck className="h-6 w-6" /></div>
                <div>
-                 <DialogTitle className="text-xl font-black uppercase tracking-tight">
-                   {editingStaff ? "Update Staff Profile" : "Register Personnel"}
-                 </DialogTitle>
-                 <DialogDescription className="text-primary-foreground/70 text-xs">
-                   Management scope: {currentRole}
-                 </DialogDescription>
+                 <DialogTitle className="text-xl font-black uppercase tracking-tight">{editingStaff ? "Update Staff Profile" : "Register Personnel"}</DialogTitle>
+                 <DialogDescription className="text-primary-foreground/70 text-xs">Hierarchy scope: {currentRole}</DialogDescription>
                </div>
             </div>
           </DialogHeader>
           
           <ScrollArea className="max-h-[70vh]">
-            <div className="p-6 space-y-6">
-              <div className="space-y-4">
-                 <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Legal Full Name</Label>
-                    <Input 
-                      value={formData.fullName} 
-                      onChange={(e) => setFormData({...formData, fullName: e.target.value})} 
-                      placeholder="e.g. Juan Dela Cruz"
-                      className="h-11 text-sm border-2"
-                    />
-                 </div>
-
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Staff Email</Label>
-                       <Input 
-                         type="email"
-                         value={formData.email} 
-                         onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                         placeholder="staff@islakonek.com"
-                         className="h-11 text-sm border-2"
-                         disabled={!!editingStaff}
-                       />
-                    </div>
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mobile Number</Label>
-                       <Input 
-                         value={formData.phoneNumber} 
-                         onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} 
-                         placeholder="09XXXXXXXXX"
-                         className="h-11 text-sm border-2"
-                       />
-                    </div>
-                 </div>
-
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Operational Role</Label>
-                       <Select 
-                         value={formData.role} 
-                         onValueChange={(val) => setFormData({...formData, role: val})}
-                       >
-                         <SelectTrigger className="h-11 border-2">
-                           <SelectValue placeholder="Choose a Role" />
-                         </SelectTrigger>
-                         <SelectContent>
-                           {managedRoles.map(role => (
-                             <SelectItem key={role} value={role}>{role}</SelectItem>
-                           ))}
-                         </SelectContent>
-                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Current Status</Label>
-                       <Select 
-                         value={formData.status} 
-                         onValueChange={(val) => setFormData({...formData, status: val})}
-                       >
-                         <SelectTrigger className="h-11 border-2">
-                           <SelectValue />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="Active">Active Duty</SelectItem>
-                           <SelectItem value="Inactive">On Leave / Inactive</SelectItem>
-                         </SelectContent>
-                       </Select>
-                    </div>
-                 </div>
-
-                 <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Primary Terminal Assignment</Label>
-                    <Select 
-                      value={formData.assignedPortId} 
-                      onValueChange={(val) => setFormData({...formData, assignedPortId: val})}
-                    >
-                      <SelectTrigger className="h-11 border-2">
-                        <SelectValue placeholder="Floating / Multi-Port" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Unassigned / Floating</SelectItem>
-                        {ports?.map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                 </div>
+            <div className="p-6 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                   <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Full Name</Label>
+                   <Input value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} className="h-10 text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                   <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Email Address</Label>
+                   <Input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="h-10 text-sm" disabled={!!editingStaff} />
+                </div>
+                <div className="space-y-1.5">
+                   <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Operational Role</Label>
+                   <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
+                     <SelectTrigger className="h-10"><SelectValue placeholder="Select Role" /></SelectTrigger>
+                     <SelectContent>{managedRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}</SelectContent>
+                   </Select>
+                </div>
+                <div className="space-y-1.5">
+                   <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Port Assignment</Label>
+                   <Select value={formData.assignedPortId} onValueChange={(val) => setFormData({...formData, assignedPortId: val})}>
+                     <SelectTrigger className="h-10"><SelectValue placeholder="Floating" /></SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="none">Unassigned / Floating</SelectItem>
+                       {ports?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                     </SelectContent>
+                   </Select>
+                </div>
               </div>
+
+              {/* MODULE ACCESS PREVIEW */}
+              {formData.role && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-center gap-2 border-b pb-2">
+                    <LayoutGrid className="h-4 w-4 text-accent" />
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Authorized System Modules</Label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-secondary/10 p-4 rounded-xl border border-secondary">
+                    {MODULE_LIST.map((mod) => {
+                      const hasAccess = ROLE_PERMISSIONS[formData.role]?.includes(mod.id);
+                      return (
+                        <div key={mod.id} className="flex items-center justify-between">
+                           <span className={cn("text-[11px] font-bold", hasAccess ? "text-primary" : "text-muted-foreground/40")}>{mod.label}</span>
+                           {hasAccess ? <Check className="h-3.5 w-3.5 text-green-600" /> : <X className="h-3.5 w-3.5 text-muted-foreground/20" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[9px] text-muted-foreground italic">* Modules are automatically pre-selected based on organizational role permissions.</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
 
           <DialogFooter className="p-6 border-t bg-secondary/5 gap-2">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 font-bold">Cancel</Button>
-            <Button onClick={handleSave} className="flex-1 bg-primary text-white font-black uppercase tracking-wider text-xs h-10 shadow-lg">
-              {editingStaff ? "Apply Updates" : "Finalize Registration"}
+            <Button onClick={handleSave} className="flex-1 bg-primary text-white font-black uppercase text-xs h-10 shadow-lg">
+              {editingStaff ? "Apply Updates" : "Register Staff"}
             </Button>
           </DialogFooter>
         </DialogContent>
