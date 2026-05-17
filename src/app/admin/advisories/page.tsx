@@ -243,7 +243,7 @@ export default function AdvisoriesManagementPage() {
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden flex flex-col max-h-[95vh]">
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden flex flex-col max-h-[90vh]">
           <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">
              <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-xl">
