@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -22,7 +21,8 @@ import {
   TrendingUp,
   Radio,
   Users,
-  Megaphone
+  Megaphone,
+  Globe
 } from "lucide-react";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -134,12 +134,21 @@ export function AdminNav() {
         </div>
         
         <div className="flex items-center gap-2">
+           <Link href="/" className="hidden sm:block">
+             <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-3 font-bold text-xs gap-2">
+               <Globe className="h-4 w-4" /> Public Site
+             </Button>
+           </Link>
+
            <div className="lg:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-10 w-10"><Menu className="h-6 w-6" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 max-h-[85vh] overflow-y-auto">
+                  <DropdownMenuLabel>Navigation</DropdownMenuLabel>
+                  <DropdownMenuItem asChild><Link href="/" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Public Site</Link></DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuLabel>Modules</DropdownMenuLabel>
                   {filteredMenuItems.map(item => <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="flex items-center gap-2"><item.icon className="h-4 w-4" /> {item.label}</Link></DropdownMenuItem>)}
                   <DropdownMenuSeparator />
@@ -151,6 +160,7 @@ export function AdminNav() {
                 </DropdownMenuContent>
               </DropdownMenu>
            </div>
+           
            <div className="hidden lg:flex items-center border-l border-white/20 pl-4 ml-2 gap-2">
              <Link href="/profile"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider"><User className="h-3 w-3 mr-1.5" /> Admin Profile</Button></Link>
              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider"><LogOut className="h-3 w-3 mr-1.5" /> Out</Button>

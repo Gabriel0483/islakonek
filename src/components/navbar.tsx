@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ship, LayoutDashboard, Menu, User, LogOut, Radio, UserCircle, Megaphone } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut, Radio, UserCircle, Megaphone, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -56,7 +55,7 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-6">
-          {isSuperAdmin && (
+          {user && (
             <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5">
               <LayoutDashboard className="h-4 w-4" />
               Admin Portal
@@ -89,11 +88,9 @@ export function Navbar() {
                     </DropdownMenuItem>
                   )}
 
-                  {isSuperAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="cursor-pointer font-bold text-accent">Go to Admin Hub</Link>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className="cursor-pointer font-bold text-accent">Go to Admin Hub</Link>
+                  </DropdownMenuItem>
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
@@ -125,7 +122,7 @@ export function Navbar() {
               <DropdownMenuItem asChild>
                 <Link href="/advisories">Advisories</Link>
               </DropdownMenuItem>
-              {isSuperAdmin && (
+              {user && (
                 <DropdownMenuItem asChild>
                   <Link href="/admin">Admin Portal</Link>
                 </DropdownMenuItem>
