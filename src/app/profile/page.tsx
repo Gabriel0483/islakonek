@@ -186,8 +186,8 @@ export default function ProfilePage() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl space-y-8">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-black font-headline text-primary uppercase tracking-tight">Identity & Credentials</h1>
-            <p className="text-muted-foreground text-sm">Manage your passenger profile and view administrative status.</p>
+            <h1 className="text-3xl font-black font-headline text-primary uppercase tracking-tight">Admin Profile</h1>
+            <p className="text-muted-foreground text-sm">Manage your admin profile and view professional status.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {isSuperAdmin && (
@@ -244,7 +244,7 @@ export default function ProfilePage() {
               <div className="h-2 bg-accent" />
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2 text-primary">
-                  <User className="h-5 w-5 text-accent" /> Passenger Info
+                  <User className="h-5 w-5 text-accent" /> Account Info
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 pt-2">
@@ -283,7 +283,7 @@ export default function ProfilePage() {
                       className="w-full h-10 font-bold text-xs uppercase tracking-wider mt-2 hover:bg-accent hover:text-primary transition-colors"
                       onClick={() => setIsProfileEditing(true)}
                     >
-                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Personal Details
+                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Admin Details
                     </Button>
                   </>
                 ) : (

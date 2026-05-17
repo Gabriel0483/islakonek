@@ -74,7 +74,7 @@ export function Navbar() {
                   
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="cursor-pointer flex items-center gap-2">
-                      <UserCircle className="h-4 w-4 text-muted-foreground" /> Manage Profile
+                      <UserCircle className="h-4 w-4 text-muted-foreground" /> Admin Profile
                     </Link>
                   </DropdownMenuItem>
                   
@@ -126,7 +126,7 @@ export function Navbar() {
               {user ? (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">Manage Profile</Link>
+                    <Link href="/profile">Admin Profile</Link>
                   </DropdownMenuItem>
                   {!isSuperAdmin && (
                     <DropdownMenuItem asChild>
