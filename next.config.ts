@@ -38,11 +38,13 @@ const nextConfig: NextConfig = {
   },
   // Fix for cross-origin workstation preview issues and server action origin validation
   experimental: {
-    allowedDevOrigins: [
-      '6000-firebase-studio-1777924168732.cluster-tafiw3cv6fduct4hlcc5knh5fo.cloudworkstations.dev',
-      '*.cloudworkstations.dev',
-      'localhost:9002'
-    ],
+    serverActions: {
+      allowedOrigins: [
+        '6000-firebase-studio-1777924168732.cluster-tafiw3cv6fduct4hlcc5knh5fo.cloudworkstations.dev',
+        '*.cloudworkstations.dev',
+        'localhost:9002'
+      ],
+    },
   },
 };
 
