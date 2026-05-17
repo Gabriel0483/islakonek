@@ -22,10 +22,11 @@ import {
   AlertCircle,
   BarChart,
   ClipboardCheck,
-  Info
+  Info,
+  User
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { AdminNav } from "@/components/admin-nav";
 import { Button } from "@/components/ui/button";
@@ -48,9 +49,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 export default function BoardingPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const [todayPHT, setTodayPHT] = useState("");
   const [currentTimePHT, setCurrentTimePHT] = useState("");
   const [search, setSearch] = useState("");
@@ -98,10 +101,21 @@ export default function BoardingPage() {
     return collection(db, "voyages");
   }, [db]);
 
+  const staffRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return collection(db, "staff");
+  }, [db, user]);
+
   const { data: routes } = useCollection(routesRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
   const { data: voyages } = useCollection(voyagesRef);
+  const { data: allStaff } = useCollection(staffRef);
+
+  const currentStaffProfile = useMemo(() => {
+    if (!allStaff || !user) return null;
+    return allStaff.find(s => s.email === user.email);
+  }, [allStaff, user]);
 
   const activeTodaySchedules = useMemo(() => {
     if (!schedules || !todayPHT) return [];
@@ -137,7 +151,8 @@ export default function BoardingPage() {
         headcountVerified: false,
         vesselClear: false,
         logbookFinalized: false
-      }
+      },
+      auditLogs: {}
     };
   }, [voyages, selectedScheduleId, todayPHT]);
 
@@ -180,12 +195,28 @@ export default function BoardingPage() {
       ...(currentVoyage.compliance || {}), 
       [field]: value 
     };
+
+    const staffIdentity = currentStaffProfile ? `${currentStaffProfile.fullName} (${currentStaffProfile.role})` : (user?.email || "Unknown Auditor");
+    
+    // Only update audit log if checking (true)
+    const updatedAuditLogs = {
+       ...(currentVoyage.auditLogs || {})
+    };
+    if (value) {
+       updatedAuditLogs[field] = {
+          verifiedBy: staffIdentity,
+          verifiedAt: new Date().toISOString()
+       };
+    } else {
+       delete updatedAuditLogs[field];
+    }
     
     setDocumentNonBlocking(voyageRef, {
       id: currentVoyage.id,
       scheduleId: selectedScheduleId,
       travelDate: todayPHT,
       compliance: updatedCompliance,
+      auditLogs: updatedAuditLogs,
       updatedAt: new Date().toISOString()
     }, { merge: true });
   };
@@ -234,6 +265,16 @@ export default function BoardingPage() {
     const boarded = filteredBookings.filter(b => b.status === "Used").length;
     return { total, boarded, pending: total - boarded };
   }, [filteredBookings]);
+
+  const AuditLabel = ({ field }: { field: string }) => {
+    const audit = currentVoyage?.auditLogs?.[field];
+    if (!audit) return null;
+    return (
+       <div className="flex items-center gap-1.5 text-[7.5px] font-black text-primary/40 uppercase mt-0.5 ml-7 group-hover:text-primary transition-colors">
+          <User className="h-2 w-2" /> Verified by {audit.verifiedBy.split(' (')[0]} @ {format(new Date(audit.verifiedAt), "HH:mm")}
+       </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
@@ -318,8 +359,8 @@ export default function BoardingPage() {
                         <ShieldCheck className="h-6 w-6" />
                       </div>
                       <div>
-                        <h3 className="font-black uppercase tracking-tight text-sm">Maritime Safety & Compliance</h3>
-                        <p className="text-[10px] opacity-70">Regulatory protocols required to advance voyage state.</p>
+                        <h3 className="font-black uppercase tracking-tight text-sm">Safety Audit & Compliance</h3>
+                        <p className="text-[10px] opacity-70">Regulatory sign-offs required for voyage advancement.</p>
                       </div>
                    </div>
                    <Badge className={cn("uppercase font-black text-[10px]", 
@@ -336,36 +377,42 @@ export default function BoardingPage() {
                         <Badge variant="outline" className="h-5 px-1.5 font-black bg-white">01</Badge>
                         <span className="text-[11px] font-black uppercase text-primary">Pre-Boarding</span>
                       </div>
-                      <div className="space-y-3">
-                         <div className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                               <Checkbox 
-                                 id="sanitation" 
-                                 checked={currentVoyage?.compliance?.sanitationChecked} 
-                                 onCheckedChange={(checked) => handleUpdateCompliance('sanitationChecked', !!checked)}
-                                 disabled={currentVoyage?.status !== 'Scheduled'}
-                               />
-                               <div className="grid gap-0.5">
-                                 <label htmlFor="sanitation" className="text-xs font-black cursor-pointer uppercase">Deck Sanitation</label>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">Passenger areas cleaned & disinfected.</p>
+                      <div className="space-y-4">
+                         <div className="flex flex-col group">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    id="sanitation" 
+                                    checked={currentVoyage?.compliance?.sanitationChecked} 
+                                    onCheckedChange={(checked) => handleUpdateCompliance('sanitationChecked', !!checked)}
+                                    disabled={currentVoyage?.status !== 'Scheduled'}
+                                  />
+                                  <div className="grid gap-0.5">
+                                    <label htmlFor="sanitation" className="text-xs font-black cursor-pointer uppercase">Deck Sanitation</label>
+                                    <p className="text-[9px] text-muted-foreground leading-tight">Passenger areas cleaned & disinfected.</p>
+                                  </div>
                                </div>
+                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Verification of cleaning logs per health standards.</TooltipContent></Tooltip>
                             </div>
-                            <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Verification of cleaning logs per health standards.</TooltipContent></Tooltip>
+                            <AuditLabel field="sanitationChecked" />
                          </div>
-                         <div className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                               <Checkbox 
-                                 id="safetygear" 
-                                 checked={currentVoyage?.compliance?.safetyGearChecked} 
-                                 onCheckedChange={(checked) => handleUpdateCompliance('safetyGearChecked', !!checked)}
-                                 disabled={currentVoyage?.status !== 'Scheduled'}
-                               />
-                               <div className="grid gap-0.5">
-                                 <label htmlFor="safetygear" className="text-xs font-black cursor-pointer uppercase">LSA/FFA Ready</label>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">Life jackets & extinguishers inspected.</p>
+                         <div className="flex flex-col group">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    id="safetygear" 
+                                    checked={currentVoyage?.compliance?.safetyGearChecked} 
+                                    onCheckedChange={(checked) => handleUpdateCompliance('safetyGearChecked', !!checked)}
+                                    disabled={currentVoyage?.status !== 'Scheduled'}
+                                  />
+                                  <div className="grid gap-0.5">
+                                    <label htmlFor="safetygear" className="text-xs font-black cursor-pointer uppercase">LSA/FFA Ready</label>
+                                    <p className="text-[9px] text-muted-foreground leading-tight">Life jackets & extinguishers inspected.</p>
+                                  </div>
                                </div>
+                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Verification that all life-saving appliances are accessible.</TooltipContent></Tooltip>
                             </div>
-                            <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Verification that all life-saving appliances are accessible.</TooltipContent></Tooltip>
+                            <AuditLabel field="safetyGearChecked" />
                          </div>
                       </div>
                       <Button 
@@ -385,36 +432,42 @@ export default function BoardingPage() {
                         <Badge variant="outline" className="h-5 px-1.5 font-black bg-white">02</Badge>
                         <span className="text-[11px] font-black uppercase text-primary">Pre-Departure</span>
                       </div>
-                      <div className="space-y-3">
-                         <div className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                               <Checkbox 
-                                 id="headcount" 
-                                 checked={currentVoyage?.compliance?.headcountVerified} 
-                                 onCheckedChange={(checked) => handleUpdateCompliance('headcountVerified', !!checked)}
-                                 disabled={currentVoyage?.status !== 'On-time'}
-                               />
-                               <div className="grid gap-0.5">
-                                 <label htmlFor="headcount" className="text-xs font-black cursor-pointer uppercase">Manifest Sync</label>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">Physical headcount matches manifest.</p>
+                      <div className="space-y-4">
+                         <div className="flex flex-col group">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    id="headcount" 
+                                    checked={currentVoyage?.compliance?.headcountVerified} 
+                                    onCheckedChange={(checked) => handleUpdateCompliance('headcountVerified', !!checked)}
+                                    disabled={currentVoyage?.status !== 'On-time'}
+                                  />
+                                  <div className="grid gap-0.5">
+                                    <label htmlFor="headcount" className="text-xs font-black cursor-pointer uppercase">Manifest Sync</label>
+                                    <p className="text-[9px] text-muted-foreground leading-tight">Physical headcount matches manifest.</p>
+                                  </div>
                                </div>
+                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Mandatory PCG regulation for vessel clearance.</TooltipContent></Tooltip>
                             </div>
-                            <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Mandatory PCG regulation for vessel clearance.</TooltipContent></Tooltip>
+                            <AuditLabel field="headcountVerified" />
                          </div>
-                         <div className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                               <Checkbox 
-                                 id="stability" 
-                                 checked={currentVoyage?.compliance?.stabilityConfirmed} 
-                                 onCheckedChange={(checked) => handleUpdateCompliance('stabilityConfirmed', !!checked)}
-                                 disabled={currentVoyage?.status !== 'On-time'}
-                               />
-                               <div className="grid gap-0.5">
-                                 <label htmlFor="stability" className="text-xs font-black cursor-pointer uppercase">Stability / Trim</label>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">Cargo/passenger balance confirmed.</p>
+                         <div className="flex flex-col group">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    id="stability" 
+                                    checked={currentVoyage?.compliance?.stabilityConfirmed} 
+                                    onCheckedChange={(checked) => handleUpdateCompliance('stabilityConfirmed', !!checked)}
+                                    disabled={currentVoyage?.status !== 'On-time'}
+                                  />
+                                  <div className="grid gap-0.5">
+                                    <label htmlFor="stability" className="text-xs font-black cursor-pointer uppercase">Stability / Trim</label>
+                                    <p className="text-[9px] text-muted-foreground leading-tight">Cargo/passenger balance confirmed.</p>
+                                  </div>
                                </div>
+                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Confirmation of safe draft and load distribution.</TooltipContent></Tooltip>
                             </div>
-                            <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Confirmation of safe draft and load distribution.</TooltipContent></Tooltip>
+                            <AuditLabel field="stabilityConfirmed" />
                          </div>
                       </div>
                       <Button 
@@ -435,36 +488,42 @@ export default function BoardingPage() {
                         <Badge variant="outline" className="h-5 px-1.5 font-black bg-white">03</Badge>
                         <span className="text-[11px] font-black uppercase text-primary">Post-Arrival</span>
                       </div>
-                      <div className="space-y-3">
-                         <div className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                               <Checkbox 
-                                 id="vesselclear" 
-                                 checked={currentVoyage?.compliance?.vesselClear} 
-                                 onCheckedChange={(checked) => handleUpdateCompliance('vesselClear', !!checked)}
-                                 disabled={currentVoyage?.status !== 'Departed'}
-                               />
-                               <div className="grid gap-0.5">
-                                 <label htmlFor="vesselclear" className="text-xs font-black cursor-pointer uppercase">Interior Sweep</label>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">Vessel checked for left-behind items.</p>
+                      <div className="space-y-4">
+                         <div className="flex flex-col group">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    id="vesselclear" 
+                                    checked={currentVoyage?.compliance?.vesselClear} 
+                                    onCheckedChange={(checked) => handleUpdateCompliance('vesselClear', !!checked)}
+                                    disabled={currentVoyage?.status !== 'Departed'}
+                                  />
+                                  <div className="grid gap-0.5">
+                                    <label htmlFor="vesselclear" className="text-xs font-black cursor-pointer uppercase">Interior Sweep</label>
+                                    <p className="text-[9px] text-muted-foreground leading-tight">Vessel checked for left-behind items.</p>
+                                  </div>
                                </div>
+                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Verification that all passengers have disembarked safely.</TooltipContent></Tooltip>
                             </div>
-                            <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Verification that all passengers have disembarked safely.</TooltipContent></Tooltip>
+                            <AuditLabel field="vesselClear" />
                          </div>
-                         <div className="flex items-center justify-between group">
-                            <div className="flex items-center gap-3">
-                               <Checkbox 
-                                 id="logbook" 
-                                 checked={currentVoyage?.compliance?.logbookFinalized} 
-                                 onCheckedChange={(checked) => handleUpdateCompliance('logbookFinalized', !!checked)}
-                                 disabled={currentVoyage?.status !== 'Departed'}
-                               />
-                               <div className="grid gap-0.5">
-                                 <label htmlFor="logbook" className="text-xs font-black cursor-pointer uppercase">Log Completion</label>
-                                 <p className="text-[9px] text-muted-foreground leading-tight">Voyage report finalized for registry.</p>
+                         <div className="flex flex-col group">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    id="logbook" 
+                                    checked={currentVoyage?.compliance?.logbookFinalized} 
+                                    onCheckedChange={(checked) => handleUpdateCompliance('logbookFinalized', !!checked)}
+                                    disabled={currentVoyage?.status !== 'Departed'}
+                                  />
+                                  <div className="grid gap-0.5">
+                                    <label htmlFor="logbook" className="text-xs font-black cursor-pointer uppercase">Log Completion</label>
+                                    <p className="text-[9px] text-muted-foreground leading-tight">Voyage report finalized for registry.</p>
+                                  </div>
                                </div>
+                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Official Master's Log entry for technical/voyage records.</TooltipContent></Tooltip>
                             </div>
-                            <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Official Master's Log entry for technical/voyage records.</TooltipContent></Tooltip>
+                            <AuditLabel field="logbookFinalized" />
                          </div>
                       </div>
                       <Button 
@@ -534,7 +593,7 @@ export default function BoardingPage() {
                         </div>
                         <h4 className="font-black uppercase tracking-tight text-primary text-lg mb-2">Operational Lock</h4>
                         <p className="text-xs text-muted-foreground leading-relaxed text-center">
-                           Passenger boarding is locked until **Sanitation** and **Safety Gear** protocols are verified and the **"Start Boarding"** signal is broadcast.
+                           Passenger boarding is locked until **Deck Sanitation** and **Safety Gear** protocols are verified and the **"Start Boarding"** signal is broadcast.
                         </p>
                      </div>
                   </div>

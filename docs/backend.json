@@ -223,6 +223,17 @@
             "logbookFinalized": { "type": "boolean", "default": false }
           }
         },
+        "auditLogs": {
+          "type": "object",
+          "description": "Stores verification metadata for compliance checks.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "verifiedBy": { "type": "string" },
+              "verifiedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "scheduleId", "travelDate", "status"]
