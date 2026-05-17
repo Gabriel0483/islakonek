@@ -220,7 +220,18 @@
             "stabilityConfirmed": { "type": "boolean", "default": false },
             "headcountVerified": { "type": "boolean", "default": false },
             "vesselClear": { "type": "boolean", "default": false },
-            "logbookFinalized": { "type": "boolean", "default": false }
+            "logbookFinalized": { "type": "boolean", "default": false },
+            "manifestCleared": { "type": "boolean", "default": false }
+          }
+        },
+        "clearance": {
+          "type": "object",
+          "properties": {
+            "captainName": { "type": "string" },
+            "captainLicense": { "type": "string" },
+            "coastGuardOfficer": { "type": "string" },
+            "coastGuardRank": { "type": "string" },
+            "clearedAt": { "type": "string", "format": "date-time" }
           }
         },
         "auditLogs": {

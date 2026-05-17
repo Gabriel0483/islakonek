@@ -23,7 +23,10 @@ import {
   BarChart,
   ClipboardCheck,
   Info,
-  User
+  User,
+  PenTool,
+  ShieldAlert,
+  Printer
 } from "lucide-react";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -48,6 +51,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -59,6 +71,14 @@ export default function BoardingPage() {
   const [search, setSearch] = useState("");
   const [selectedRouteId, setSelectedRouteId] = useState<string>("all");
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("all");
+  const [isClearanceDialogOpen, setIsClearanceDialogOpen] = useState(false);
+
+  const [clearanceForm, setClearanceForm] = useState({
+    captainName: "",
+    captainLicense: "",
+    coastGuardOfficer: "",
+    coastGuardRank: ""
+  });
 
   useEffect(() => {
     const updateTime = () => {
@@ -150,7 +170,8 @@ export default function BoardingPage() {
         stabilityConfirmed: false,
         headcountVerified: false,
         vesselClear: false,
-        logbookFinalized: false
+        logbookFinalized: false,
+        manifestCleared: false
       },
       auditLogs: {}
     };
@@ -185,7 +206,7 @@ export default function BoardingPage() {
   }, [bookings, todayPHT, selectedScheduleId, selectedRouteId, search]);
 
   const isPreBoardingOk = currentVoyage?.compliance?.sanitationChecked && currentVoyage?.compliance?.safetyGearChecked;
-  const isPreDepartureOk = currentVoyage?.compliance?.headcountVerified && currentVoyage?.compliance?.stabilityConfirmed;
+  const isPreDepartureOk = currentVoyage?.compliance?.headcountVerified && currentVoyage?.compliance?.stabilityConfirmed && currentVoyage?.compliance?.manifestCleared;
   const isPostArrivalOk = currentVoyage?.compliance?.vesselClear && currentVoyage?.compliance?.logbookFinalized;
 
   const handleUpdateCompliance = (field: string, value: boolean) => {
@@ -198,7 +219,6 @@ export default function BoardingPage() {
 
     const staffIdentity = currentStaffProfile ? `${currentStaffProfile.fullName} (${currentStaffProfile.role})` : (user?.email || "Unknown Auditor");
     
-    // Only update audit log if checking (true)
     const updatedAuditLogs = {
        ...(currentVoyage.auditLogs || {})
     };
@@ -221,12 +241,42 @@ export default function BoardingPage() {
     }, { merge: true });
   };
 
+  const handleSaveClearance = () => {
+    if (!db || !currentVoyage) return;
+    const voyageRef = doc(db, "voyages", currentVoyage.id);
+
+    const updatedCompliance = { 
+      ...(currentVoyage.compliance || {}), 
+      manifestCleared: true 
+    };
+
+    const staffIdentity = currentStaffProfile ? `${currentStaffProfile.fullName} (${currentStaffProfile.role})` : (user?.email || "Clearance Desk");
+
+    const updatedAuditLogs = {
+       ...(currentVoyage.auditLogs || {}),
+       manifestCleared: {
+          verifiedBy: `CAPTAIN ${clearanceForm.captainName} & OFFICER ${clearanceForm.coastGuardOfficer}`,
+          verifiedAt: new Date().toISOString()
+       }
+    };
+
+    setDocumentNonBlocking(voyageRef, {
+      compliance: updatedCompliance,
+      clearance: {
+        ...clearanceForm,
+        clearedAt: new Date().toISOString()
+      },
+      auditLogs: updatedAuditLogs,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    setIsClearanceDialogOpen(false);
+  };
+
   const handleUpdateVoyageStatus = (newStatus: string) => {
     if (!db || !currentVoyage) return;
     const voyageRef = doc(db, "voyages", currentVoyage.id);
 
-    // AUTOMATIC NO-SHOW MARKING
-    // When status moves to 'Departed', mark all remaining 'Confirmed' passengers as 'Suspended'
     if (newStatus === 'Departed' && bookings && selectedScheduleId !== 'all') {
       const noShows = bookings.filter(b => 
         b.scheduleId === selectedScheduleId && 
@@ -244,9 +294,7 @@ export default function BoardingPage() {
             updatedAt: new Date().toISOString()
           });
         });
-        batch.commit().catch(() => {
-          // Internal fail-safe, the UI will reflect status changes on next sync
-        });
+        batch.commit().catch(() => {});
       }
     }
 
@@ -375,7 +423,6 @@ export default function BoardingPage() {
           </Card>
 
           <div className="lg:col-span-3 space-y-6">
-            {/* COMPLIANCE CHECKLIST CONSOLE */}
             <TooltipProvider>
             {selectedScheduleId !== "all" && (
               <Card className="border-none shadow-md overflow-hidden bg-white animate-in slide-in-from-top-4 duration-500">
@@ -473,7 +520,6 @@ export default function BoardingPage() {
                                     <p className="text-[9px] text-muted-foreground leading-tight">Physical headcount matches manifest.</p>
                                   </div>
                                </div>
-                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Mandatory PCG regulation for vessel clearance.</TooltipContent></Tooltip>
                             </div>
                             <AuditLabel field="headcountVerified" />
                          </div>
@@ -491,9 +537,34 @@ export default function BoardingPage() {
                                     <p className="text-[9px] text-muted-foreground leading-tight">Cargo/passenger balance confirmed.</p>
                                   </div>
                                </div>
-                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Confirmation of safe draft and load distribution.</TooltipContent></Tooltip>
                             </div>
                             <AuditLabel field="stabilityConfirmed" />
+                         </div>
+                         <div className="flex flex-col group">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <Checkbox 
+                                    id="manifestcleared" 
+                                    checked={currentVoyage?.compliance?.manifestCleared} 
+                                    disabled
+                                  />
+                                  <div className="grid gap-0.5">
+                                    <label htmlFor="manifestcleared" className="text-xs font-black uppercase opacity-50">Regulatory Clearance</label>
+                                    <p className="text-[9px] text-muted-foreground leading-tight">Master & PCG Sign-off.</p>
+                                  </div>
+                               </div>
+                               {!currentVoyage?.compliance?.manifestCleared && currentVoyage?.status === 'On-time' && (
+                                 <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 text-[8px] font-black uppercase text-accent hover:text-accent ml-7 border border-accent/20"
+                                  onClick={() => setIsClearanceDialogOpen(true)}
+                                 >
+                                   <PenTool className="h-2 w-2 mr-1" /> Get Clearance
+                                 </Button>
+                               )}
+                            </div>
+                            <AuditLabel field="manifestCleared" />
                          </div>
                       </div>
                       <Button 
@@ -529,7 +600,6 @@ export default function BoardingPage() {
                                     <p className="text-[9px] text-muted-foreground leading-tight">Vessel checked for left-behind items.</p>
                                   </div>
                                </div>
-                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Verification that all passengers have disembarked safely.</TooltipContent></Tooltip>
                             </div>
                             <AuditLabel field="vesselClear" />
                          </div>
@@ -547,7 +617,6 @@ export default function BoardingPage() {
                                     <p className="text-[9px] text-muted-foreground leading-tight">Voyage report finalized for registry.</p>
                                   </div>
                                </div>
-                               <Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/50" /></TooltipTrigger><TooltipContent className="text-[10px]">Official Master's Log entry for technical/voyage records.</TooltipContent></Tooltip>
                             </div>
                             <AuditLabel field="logbookFinalized" />
                          </div>
@@ -598,19 +667,25 @@ export default function BoardingPage() {
                         : getTripInfo(selectedScheduleId).code}
                     </CardDescription>
                   </div>
-                  <div className="relative w-full md:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search by name or ticket ID..." 
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-10 bg-white h-10 text-sm"
-                    />
+                  <div className="relative w-full md:w-80 flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search manifest..." 
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-10 bg-white h-10 text-sm"
+                      />
+                    </div>
+                    {currentVoyage?.compliance?.manifestCleared && (
+                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" title="Print Final Manifest">
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0 relative">
-                {/* GLOBAL LOCK OVERLAY */}
                 {selectedScheduleId !== "all" && !isPreBoardingOk && (
                   <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-[1px] flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-300">
                      <div className="bg-white p-6 rounded-3xl shadow-2xl border-2 border-accent/20 flex flex-col items-center max-w-sm">
@@ -726,6 +801,89 @@ export default function BoardingPage() {
           </div>
         </div>
       </main>
+
+      <Dialog open={isClearanceDialogOpen} onOpenChange={setIsClearanceDialogOpen}>
+        <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-accent text-primary">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-xl">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-black uppercase tracking-tight">Vessel Clearance Sign-off</DialogTitle>
+                <DialogDescription className="text-primary/70 font-bold text-xs">Official Port Authority Manifest Approval</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-6 space-y-8">
+             <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                  <PenTool className="h-3 w-3" /> Master's Declaration
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-secondary/10 p-4 rounded-2xl border-2 border-dashed">
+                   <div className="space-y-1.5">
+                      <Label className="text-[9px] font-bold uppercase text-primary">Captain's Full Name</Label>
+                      <Input 
+                        placeholder="Master Mariner Name" 
+                        value={clearanceForm.captainName}
+                        onChange={(e) => setClearanceForm({...clearanceForm, captainName: e.target.value.toUpperCase()})}
+                        className="bg-white text-xs font-bold h-9"
+                      />
+                   </div>
+                   <div className="space-y-1.5">
+                      <Label className="text-[9px] font-bold uppercase text-primary">License/PRC ID</Label>
+                      <Input 
+                        placeholder="ID No." 
+                        value={clearanceForm.captainLicense}
+                        onChange={(e) => setClearanceForm({...clearanceForm, captainLicense: e.target.value.toUpperCase()})}
+                        className="bg-white text-xs font-bold h-9"
+                      />
+                   </div>
+                </div>
+             </div>
+
+             <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                  <ShieldCheck className="h-3 w-3 text-blue-600" /> Coast Guard Clearance
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-blue-50/50 p-4 rounded-2xl border-2 border-blue-100">
+                   <div className="space-y-1.5">
+                      <Label className="text-[9px] font-bold uppercase text-blue-800">Officer-in-Charge</Label>
+                      <Input 
+                        placeholder="PCG Officer Name" 
+                        value={clearanceForm.coastGuardOfficer}
+                        onChange={(e) => setClearanceForm({...clearanceForm, coastGuardOfficer: e.target.value.toUpperCase()})}
+                        className="bg-white text-xs font-bold h-9"
+                      />
+                   </div>
+                   <div className="space-y-1.5">
+                      <Label className="text-[9px] font-bold uppercase text-blue-800">Officer Rank</Label>
+                      <Input 
+                        placeholder="e.g. Ensign / Lieutenant" 
+                        value={clearanceForm.coastGuardRank}
+                        onChange={(e) => setClearanceForm({...clearanceForm, coastGuardRank: e.target.value.toUpperCase()})}
+                        className="bg-white text-xs font-bold h-9"
+                      />
+                   </div>
+                </div>
+             </div>
+
+             <p className="text-[9px] text-muted-foreground italic leading-relaxed text-center px-4">
+               By submitting this clearance, you verify that the physical headcount matches the passenger manifest and all vessel stability requirements are satisfied per PCG regulations.
+             </p>
+          </div>
+          <DialogFooter className="p-6 border-t bg-secondary/5 gap-2">
+            <Button variant="outline" onClick={() => setIsClearanceDialogOpen(false)} className="flex-1 font-bold">Cancel</Button>
+            <Button 
+              className="flex-1 bg-primary text-white font-black uppercase text-xs" 
+              onClick={handleSaveClearance}
+              disabled={!clearanceForm.captainName || !clearanceForm.coastGuardOfficer}
+            >
+              Authorize Departure
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
