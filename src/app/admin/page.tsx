@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -103,7 +104,13 @@ export default function AdminDashboard() {
   ];
 
   const currentRole = isSuperAdmin ? "SuperAdmin" : (myStaffRecord?.role || "Restricted");
-  const visibleModules = managementModules.filter(m => ROLE_PERMISSIONS[currentRole]?.includes(m.id));
+  
+  // Prioritize custom authorizedModules list if it exists in the staff record
+  const permissions = isSuperAdmin 
+    ? ROLE_PERMISSIONS["SuperAdmin"] 
+    : (myStaffRecord?.authorizedModules || ROLE_PERMISSIONS[currentRole] || []);
+
+  const visibleModules = managementModules.filter(m => permissions.includes(m.id));
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">

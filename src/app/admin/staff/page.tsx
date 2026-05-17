@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Users, 
   Plus, 
@@ -52,6 +53,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 const STAFF_ROLES = [
@@ -96,7 +98,6 @@ export default function StaffManagementPage() {
   const db = useFirestore();
   const { user } = useUser();
   
-  // Defer collection reads until auth is confirmed
   const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const portsRef = useMemoFirebase(() => (db && user) ? collection(db, "ports") : null, [db, user]);
   
@@ -121,7 +122,8 @@ export default function StaffManagementPage() {
     role: "",
     phoneNumber: "",
     status: "Active",
-    assignedPortId: ""
+    assignedPortId: "",
+    authorizedModules: [] as string[]
   });
 
   const filteredStaff = allStaff?.filter(member => {
@@ -141,20 +143,40 @@ export default function StaffManagementPage() {
         role: member.role,
         phoneNumber: member.phoneNumber || "",
         status: member.status || "Active",
-        assignedPortId: member.assignedPortId || ""
+        assignedPortId: member.assignedPortId || "",
+        authorizedModules: member.authorizedModules || ROLE_PERMISSIONS[member.role] || []
       });
     } else {
+      const defaultRole = managedRoles[0] || "";
       setEditingStaff(null);
       setFormData({
         fullName: "",
         email: "",
-        role: managedRoles[0] || "",
+        role: defaultRole,
         phoneNumber: "",
         status: "Active",
-        assignedPortId: ""
+        assignedPortId: "",
+        authorizedModules: ROLE_PERMISSIONS[defaultRole] || []
       });
     }
     setIsDialogOpen(true);
+  };
+
+  const handleRoleChange = (role: string) => {
+    setFormData({
+      ...formData,
+      role: role,
+      authorizedModules: ROLE_PERMISSIONS[role] || []
+    });
+  };
+
+  const handleToggleModule = (moduleId: string) => {
+    const current = [...formData.authorizedModules];
+    if (current.includes(moduleId)) {
+      setFormData({ ...formData, authorizedModules: current.filter(id => id !== moduleId) });
+    } else {
+      setFormData({ ...formData, authorizedModules: [...current, moduleId] });
+    }
   };
 
   const handleSave = () => {
@@ -312,7 +334,7 @@ export default function StaffManagementPage() {
                 </div>
                 <div className="space-y-1.5">
                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Operational Role</Label>
-                   <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
+                   <Select value={formData.role} onValueChange={handleRoleChange}>
                      <SelectTrigger className="h-10"><SelectValue placeholder="Select Role" /></SelectTrigger>
                      <SelectContent>{managedRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}</SelectContent>
                    </Select>
@@ -329,25 +351,39 @@ export default function StaffManagementPage() {
                 </div>
               </div>
 
-              {/* MODULE ACCESS PREVIEW */}
+              {/* MODULE ACCESS SELECTION */}
               {formData.role && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="flex items-center gap-2 border-b pb-2">
                     <LayoutGrid className="h-4 w-4 text-accent" />
-                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Authorized System Modules</Label>
+                    <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Custom Module Authorization</Label>
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-secondary/10 p-4 rounded-xl border border-secondary">
                     {MODULE_LIST.map((mod) => {
-                      const hasAccess = ROLE_PERMISSIONS[formData.role]?.includes(mod.id);
+                      const isChecked = formData.authorizedModules.includes(mod.id);
                       return (
-                        <div key={mod.id} className="flex items-center justify-between">
-                           <span className={cn("text-[11px] font-bold", hasAccess ? "text-primary" : "text-muted-foreground/40")}>{mod.label}</span>
-                           {hasAccess ? <Check className="h-3.5 w-3.5 text-green-600" /> : <X className="h-3.5 w-3.5 text-muted-foreground/20" />}
+                        <div key={mod.id} className="flex items-center justify-between group">
+                           <div className="flex items-center gap-2">
+                              <Checkbox 
+                                id={`mod-${mod.id}`} 
+                                checked={isChecked} 
+                                onCheckedChange={() => handleToggleModule(mod.id)}
+                              />
+                              <Label 
+                                htmlFor={`mod-${mod.id}`}
+                                className={cn("text-[11px] font-bold cursor-pointer", isChecked ? "text-primary" : "text-muted-foreground/60")}
+                              >
+                                {mod.label}
+                              </Label>
+                           </div>
+                           {isChecked && <Check className="h-3 w-3 text-green-600" />}
                         </div>
                       );
                     })}
                   </div>
-                  <p className="text-[9px] text-muted-foreground italic">* Modules are automatically pre-selected based on organizational role permissions.</p>
+                  <p className="text-[9px] text-muted-foreground italic leading-relaxed">
+                    * Modules are pre-selected based on role defaults. You can manually adjust access by ticking/unticking individual modules.
+                  </p>
                 </div>
               )}
             </div>

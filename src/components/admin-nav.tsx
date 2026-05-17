@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -81,7 +82,11 @@ export function AdminNav() {
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
   const myStaffRecord = allStaff?.find(s => s.email === user?.email);
   const currentRole = isSuperAdmin ? "SuperAdmin" : (myStaffRecord?.role || "Guest");
-  const permissions = ROLE_PERMISSIONS[currentRole] || [];
+  
+  // Prioritize custom authorizedModules list if it exists in the staff record
+  const permissions = isSuperAdmin 
+    ? ROLE_PERMISSIONS["SuperAdmin"] 
+    : (myStaffRecord?.authorizedModules || ROLE_PERMISSIONS[currentRole] || []);
 
   const handleLogout = async () => {
     if (auth) {
