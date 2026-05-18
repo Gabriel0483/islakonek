@@ -40,7 +40,6 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: [
-        '6000-firebase-studio-1777924168732.cluster-tafiw3cv6fduct4hlcc5knh5fo.cloudworkstations.dev',
         '*.cloudworkstations.dev',
         'localhost:9002'
       ],
