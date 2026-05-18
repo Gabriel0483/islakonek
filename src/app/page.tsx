@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, Calendar, Ship, MapPin } from "lucide-react";
 import { collection } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 export default function Home() {
   const router = useRouter();
   const db = useFirestore();
+  const { user } = useUser();
   const [year, setYear] = useState<number | null>(null);
   const [dateLimits, setDateLimits] = useState({ min: "", max: "" });
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
@@ -33,13 +34,20 @@ export default function Home() {
   }, [db]);
   const { data: ports } = useCollection(portsRef);
 
+  // Check if current user is staff to show/hide Staff Portal link
+  const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
+  const { data: allStaff } = useCollection(staffRef);
+
+  const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
+  const isAuthorizedStaff = isSuperAdmin || allStaff?.some(s => s.email === user?.email && s.status === 'Active');
+  const showStaffLink = !user || isAuthorizedStaff;
+
   const [searchData, setSearchData] = useState({
     date: "",
     originPortId: ""
   });
 
   useEffect(() => {
-    // Get Philippine Time (UTC+8)
     const getPHTDate = () => {
       const now = new Date();
       const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -163,7 +171,9 @@ export default function Home() {
               <h4 className="font-bold mb-4 uppercase text-xs tracking-widest text-primary">Quick Links</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/advisories" className="hover:text-accent font-medium">Public Advisories</Link></li>
-                <li><Link href="/admin" className="hover:text-accent font-medium">Staff Portal</Link></li>
+                {showStaffLink && (
+                  <li><Link href="/admin" className="hover:text-accent font-medium">Staff Portal</Link></li>
+                )}
               </ul>
             </div>
             <div>

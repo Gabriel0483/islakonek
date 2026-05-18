@@ -12,12 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
-import { useUser, useAuth } from "@/firebase";
+import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
+import { collection } from "firebase/firestore";
 
 export function Navbar() {
   const { user } = useUser();
   const auth = useAuth();
+  const db = useFirestore();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -28,6 +30,11 @@ export function Navbar() {
   };
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
+
+  // Check if current user is authorized staff
+  const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
+  const { data: allStaff } = useCollection(staffRef);
+  const isAuthorizedStaff = isSuperAdmin || allStaff?.some(s => s.email === user?.email && s.status === 'Active');
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -51,7 +58,7 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-6">
-          {user && (
+          {user && isAuthorizedStaff && (
             <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5 text-primary font-bold">
               <LayoutDashboard className="h-4 w-4" />
               Admin Dashboard
@@ -84,9 +91,11 @@ export function Navbar() {
                     </DropdownMenuItem>
                   )}
 
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="cursor-pointer font-bold text-accent">Go to Admin Hub</Link>
-                  </DropdownMenuItem>
+                  {isAuthorizedStaff && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="cursor-pointer font-bold text-accent">Go to Admin Hub</Link>
+                    </DropdownMenuItem>
+                  )}
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
@@ -118,7 +127,7 @@ export function Navbar() {
               <DropdownMenuItem asChild>
                 <Link href="/advisories">Public Advisories</Link>
               </DropdownMenuItem>
-              {user && (
+              {user && isAuthorizedStaff && (
                 <DropdownMenuItem asChild>
                   <Link href="/admin">Admin Dashboard</Link>
                 </DropdownMenuItem>
