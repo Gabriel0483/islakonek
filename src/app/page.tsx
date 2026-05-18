@@ -162,9 +162,7 @@ export default function Home() {
             <div>
               <h4 className="font-bold mb-4 uppercase text-xs tracking-widest text-primary">Quick Links</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/trips" className="hover:text-accent font-medium">Search Trips</Link></li>
                 <li><Link href="/advisories" className="hover:text-accent font-medium">Public Advisories</Link></li>
-                <li><Link href="/voyages" className="hover:text-accent font-medium">Live Vessel Status</Link></li>
                 <li><Link href="/admin" className="hover:text-accent font-medium">Staff Portal</Link></li>
               </ul>
             </div>
