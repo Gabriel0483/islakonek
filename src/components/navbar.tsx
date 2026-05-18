@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ship, LayoutDashboard, Menu, User, LogOut, Radio, UserCircle, Megaphone, Home } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut, Radio, UserCircle, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,18 +47,14 @@ export function Navbar() {
               <Radio className="h-3.5 w-3.5 text-accent animate-pulse" />
               Live Status
             </Link>
-            <Link href="/advisories" className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-orange-600 flex items-center gap-1.5 transition-colors">
-              <Megaphone className="h-3.5 w-3.5" />
-              Advisories
-            </Link>
           </div>
         </div>
 
         <div className="hidden md:flex items-center gap-6">
           {user && (
-            <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5">
+            <Link href="/admin" className="text-sm font-medium hover:text-accent transition-colors flex items-center gap-1.5 text-primary font-bold">
               <LayoutDashboard className="h-4 w-4" />
-              Admin Portal
+              Admin Dashboard
             </Link>
           )}
           
@@ -120,11 +116,11 @@ export function Navbar() {
                 <Link href="/voyages">Live Status</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/advisories">Advisories</Link>
+                <Link href="/advisories">Public Advisories</Link>
               </DropdownMenuItem>
               {user && (
                 <DropdownMenuItem asChild>
-                  <Link href="/admin">Admin Portal</Link>
+                  <Link href="/admin">Admin Dashboard</Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

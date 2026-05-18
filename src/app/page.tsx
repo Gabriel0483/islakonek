@@ -27,7 +27,10 @@ export default function Home() {
   const [dateLimits, setDateLimits] = useState({ min: "", max: "" });
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
   
-  const portsRef = useMemoFirebase(() => collection(db!, "ports"), [db]);
+  const portsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "ports");
+  }, [db]);
   const { data: ports } = useCollection(portsRef);
 
   const [searchData, setSearchData] = useState({
@@ -157,30 +160,33 @@ export default function Home() {
               </p>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Quick Links</h4>
+              <h4 className="font-bold mb-4 uppercase text-xs tracking-widest text-primary">Quick Links</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/trips" className="hover:text-accent">Search Trips</Link></li>
-                <li><Link href="/admin" className="hover:text-accent">Admin Portal</Link></li>
+                <li><Link href="/trips" className="hover:text-accent font-medium">Search Trips</Link></li>
+                <li><Link href="/advisories" className="hover:text-accent font-medium">Public Advisories</Link></li>
+                <li><Link href="/voyages" className="hover:text-accent font-medium">Live Vessel Status</Link></li>
+                <li><Link href="/admin" className="hover:text-accent font-medium">Staff Portal</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Support</h4>
+              <h4 className="font-bold mb-4 uppercase text-xs tracking-widest text-primary">Support</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/faq" className="hover:text-accent">Help Center</Link></li>
-                <li><Link href="/contact" className="hover:text-accent">Contact Us</Link></li>
+                <li><Link href="#" className="hover:text-accent font-medium">Help Center</Link></li>
+                <li><Link href="#" className="hover:text-accent font-medium">Contact Us</Link></li>
+                <li><Link href="#" className="hover:text-accent font-medium">Privacy Policy</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Stay Connected</h4>
-              <p className="text-sm text-muted-foreground mb-4">Sign up for updates on new routes and offers.</p>
+              <h4 className="font-bold mb-4 uppercase text-xs tracking-widest text-primary">Stay Connected</h4>
+              <p className="text-xs text-muted-foreground mb-4">Sign up for updates on new routes and weather alerts.</p>
               <div className="flex gap-2">
-                <Input placeholder="Email address" className="bg-secondary border-none" />
-                <Button className="bg-primary text-white">Subscribe</Button>
+                <Input placeholder="Email address" className="bg-secondary border-none h-10 text-xs" />
+                <Button className="bg-primary text-white h-10 px-4 text-xs font-bold">Join</Button>
               </div>
             </div>
           </div>
-          <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-            © {year} Isla Konek. All rights reserved.
+          <div className="mt-12 pt-8 border-t text-center text-xs text-muted-foreground">
+            © {year} Isla Konek Maritime Services. All rights reserved.
           </div>
         </div>
       </footer>
