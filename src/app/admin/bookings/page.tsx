@@ -757,7 +757,10 @@ export default function DeskBookingsPage() {
                                 checked={field.value} 
                                 onCheckedChange={(val) => {
                                   if (val) {
-                                    setIsPaymentCollectionAlertOpen(true);
+                                    // Always call field.onChange first to sync visual state
+                                    field.onChange(true);
+                                    // Defer to avoid lifecycle conflicts (flushSync) with nested dialogs/focus management
+                                    setTimeout(() => setIsPaymentCollectionAlertOpen(true), 0);
                                   } else {
                                     field.onChange(false);
                                   }
@@ -823,11 +826,14 @@ export default function DeskBookingsPage() {
              </div>
           </div>
           <DialogFooter className="p-6 border-t bg-secondary/5 gap-3">
-             <Button variant="outline" className="flex-1 font-bold" onClick={() => setIsPaymentCollectionAlertOpen(false)}>Not Yet</Button>
+             <Button variant="outline" className="flex-1 font-bold" onClick={() => {
+                form.setValue('isPaid', false);
+                setIsPaymentCollectionAlertOpen(false);
+             }}>Not Yet</Button>
              <Button 
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest"
                 onClick={() => {
-                   form.setValue('isPaid', true);
+                   // Status already set to true from switch, just close dialog
                    setIsPaymentCollectionAlertOpen(false);
                 }}
              >
