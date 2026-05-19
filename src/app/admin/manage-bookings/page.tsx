@@ -36,7 +36,8 @@ import {
   Wrench,
   ShieldAlert,
   X,
-  RotateCcw
+  RotateCcw,
+  History
 } from "lucide-react";
 import { 
   collection, 
@@ -90,6 +91,7 @@ import { Switch } from "@/components/ui/switch";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { subDays, format } from "date-fns";
 
 type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspended" | "Auto-cancelled" | "Refunded";
 
@@ -299,7 +301,7 @@ export default function ManageBookingsPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
   const [isPurgeDialogOpen, setIsPurgeDialogOpen] = useState(false);
-  const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(false);
+  const [isHistoryPurgeOpen, setIsHistoryPurgeOpen] = useState(false);
 
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -735,33 +737,32 @@ export default function ManageBookingsPage() {
     } finally { setIsActionProcessing(false); }
   };
 
-  const handleWipeAllBookings = async () => {
+  const handlePurgeHistory = async () => {
     if (!db || isActionProcessing) return;
     setIsActionProcessing(true);
     try {
-      const [bookingsSnap, voyagesSnap] = await Promise.all([
-        getDocs(collection(db, "bookings")),
-        getDocs(collection(db, "voyages"))
-      ]);
+      const cutoff = subDays(new Date(), 90);
+      const cutoffStr = format(cutoff, "yyyy-MM-dd");
+      
+      const q = query(collection(db, "bookings"), where("travelDate", "<", cutoffStr));
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        toast({ title: "No historical records", description: "No bookings found older than 90 days." });
+        setIsHistoryPurgeOpen(false);
+        setIsActionProcessing(false);
+        return;
+      }
 
       const batch = writeBatch(db);
-
-      bookingsSnap.docs.forEach(d => batch.delete(d.ref));
-      voyagesSnap.docs.forEach(d => {
-        batch.update(d.ref, {
-          bookedCount: 0,
-          waitlistCount: 0,
-          updatedAt: new Date().toISOString()
-        });
-      });
-
+      snap.docs.forEach(d => batch.delete(d.ref));
       await batch.commit();
 
-      setIsMaintenanceOpen(false);
-      toast({ title: "Manifest Purged", description: "All records deleted and atomic counters zeroed." });
+      setIsHistoryPurgeOpen(false);
+      toast({ title: "Purge Complete", description: `Removed ${snap.docs.length} historical records.` });
     } catch (e: any) {
       console.error("Purge Error:", e);
-      toast({ variant: "destructive", title: "Wipe Failed", description: e.message });
+      toast({ variant: "destructive", title: "Purge Failed", description: e.message });
     } finally { 
       setIsActionProcessing(false); 
     }
@@ -782,10 +783,10 @@ export default function ManageBookingsPage() {
             variant="ghost" 
             size="sm" 
             className="h-9 gap-2 font-bold text-muted-foreground hover:bg-secondary"
-            onClick={() => setIsMaintenanceOpen(true)}
+            onClick={() => setIsHistoryPurgeOpen(true)}
           >
-            <Wrench className="h-4 w-4" />
-            <span className="hidden sm:inline">System Maintenance</span>
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">Purge History</span>
           </Button>
           <Button 
             variant="outline" 
@@ -933,52 +934,52 @@ export default function ManageBookingsPage() {
       </main>
 
       {/* DIALOGS */}
-      <Dialog open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
+      <Dialog open={isHistoryPurgeOpen} onOpenChange={setIsHistoryPurgeOpen}>
         <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-destructive text-destructive-foreground">
              <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-xl">
-                  <ShieldAlert className="h-6 w-6" />
+                  <History className="h-6 w-6" />
                 </div>
                 <div>
-                   <DialogTitle className="text-xl font-black uppercase">System Maintenance</DialogTitle>
-                   <DialogDescription className="text-destructive-foreground/80 text-xs">Administrative data management tools.</DialogDescription>
+                   <DialogTitle className="text-xl font-black uppercase">Purge History</DialogTitle>
+                   <DialogDescription className="text-destructive-foreground/80 text-xs">Administrative data management.</DialogDescription>
                 </div>
              </div>
           </DialogHeader>
           <div className="p-8 space-y-6">
              <div className="space-y-4">
                 <h3 className="font-bold text-primary flex items-center gap-2">
-                   <Trash2 className="h-4 w-4 text-destructive" /> Database Cleanup
+                   <Trash2 className="h-4 w-4 text-destructive" /> Historical Cleanup
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Removing "legacy" bookings and resetting inventory counters is often required after testing phases.
+                  To maintain system performance, you can remove historical records that are already 90 days old or more.
                 </p>
                 <div className="p-4 bg-secondary/20 rounded-xl border border-dashed space-y-4">
                    <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-sm font-bold">Wipe All Bookings</p>
-                        <p className="text-[10px] text-muted-foreground">Delete all manifest records and zero inventory.</p>
+                        <p className="text-sm font-bold">Purge Old Bookings</p>
+                        <p className="text-[10px] text-muted-foreground">Target: 90+ days old records.</p>
                       </div>
                       <Button 
                         variant="destructive" 
                         size="sm" 
                         className="font-black uppercase text-[10px]"
                         onClick={() => {
-                          if (confirm("DANGER: This will permanently delete ALL existing bookings and reset every voyage counter to zero. This cannot be undone. Proceed?")) {
-                            handleWipeAllBookings();
+                          if (confirm("This will permanently delete all bookings older than 90 days. This action cannot be undone. Proceed?")) {
+                            handlePurgeHistory();
                           }
                         }}
                         disabled={isActionProcessing}
                       >
-                        {isActionProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "Purge All"}
+                        {isActionProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : "Purge Now"}
                       </Button>
                    </div>
                 </div>
              </div>
           </div>
           <DialogFooter className="p-6 border-t bg-secondary/5">
-             <Button variant="outline" className="w-full font-bold" onClick={() => setIsMaintenanceOpen(false)}>Close Maintenance</Button>
+             <Button variant="outline" className="w-full font-bold" onClick={() => setIsHistoryPurgeOpen(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
