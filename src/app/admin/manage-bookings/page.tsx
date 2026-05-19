@@ -35,7 +35,8 @@ import {
   Filter,
   Wrench,
   ShieldAlert,
-  X
+  X,
+  RotateCcw
 } from "lucide-react";
 import { 
   collection, 
@@ -185,6 +186,11 @@ const BookingRow = memo(({
             {(booking.status === 'Reserved' || booking.status === 'Waitlisted') && (
               <DropdownMenuItem onSelect={() => onStatus(booking, 'Confirmed')} className="text-green-600">
                 <CheckCircle2 className="h-4 w-4 mr-2" /> Mark as Paid
+              </DropdownMenuItem>
+            )}
+            {booking.status === 'Confirmed' && (
+              <DropdownMenuItem onSelect={() => onStatus(booking, 'Reserved')} className="text-orange-600">
+                <RotateCcw className="h-4 w-4 mr-2" /> Undo Payment
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={() => onRebook(booking)}>
@@ -421,6 +427,9 @@ export default function ManageBookingsPage() {
        penalty = booking.status === 'Suspended' ? (route?.noShowFee || 0) + (route?.cancellationFee || 0) : (route?.cancellationFee || 0);
     } else if (status === 'Suspended') {
        penalty = route?.noShowFee || 0;
+    } else if (status === 'Reserved') {
+       // Undo Payment: Administrative correction, no penalty
+       penalty = 0;
     }
     return penalty;
   }, [statusTarget, routes, statusActionData.isFeeWaived]);
@@ -477,6 +486,11 @@ export default function ManageBookingsPage() {
            sequenceToAssign = (voyageSnap.data().bookedCount || 0) + 1;
         }
 
+        // If reverting to Reserved (Undo Payment), clear the boarding sequence
+        if (newStatus === 'Reserved') {
+          sequenceToAssign = null;
+        }
+
         transaction.update(bookingRef, { 
           status: newStatus, 
           penaltyFees: penaltyAmount,
@@ -511,6 +525,7 @@ export default function ManageBookingsPage() {
       });
       
       if (newStatus === 'Confirmed') setIsBoardingPassOpen(true);
+      toast({ title: "Status Updated", description: `Booking #${booking.id} is now ${newStatus}.` });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Update Failed", description: e.message });
     } finally { setIsActionProcessing(false); }
@@ -1153,8 +1168,8 @@ export default function ManageBookingsPage() {
               </div>
               
               <div className="p-4 space-y-4">
-                <div className="flex justify-between items-start border-b border-dashed pb-3">
-                  <div className="flex-1 mr-2 overflow-hidden text-left">
+                <div className="flex justify-between items-start border-b border-dashed pb-3 text-left">
+                  <div className="flex-1 mr-2 overflow-hidden">
                     <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Passenger</p>
                     <p className="text-lg font-black text-primary uppercase truncate leading-tight">{selectedBooking?.passengerName}</p>
                   </div>
@@ -1164,8 +1179,8 @@ export default function ManageBookingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                  <div className="space-y-0.5 text-left">
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-left">
+                  <div className="space-y-0.5">
                     <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Trip Code</p>
                     <p className="font-black text-accent text-sm uppercase leading-none">{getTripCode(selectedBooking?.scheduleId)}</p>
                   </div>
@@ -1173,7 +1188,7 @@ export default function ManageBookingsPage() {
                     <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Departure</p>
                     <p className="font-bold text-xs text-primary leading-none">{getDeparture(selectedBooking?.scheduleId)}</p>
                   </div>
-                  <div className="col-span-2 space-y-0.5 bg-secondary/10 p-2 rounded-lg border border-secondary/50 text-left">
+                  <div className="col-span-2 space-y-0.5 bg-secondary/10 p-2 rounded-lg border border-secondary/50">
                     <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Date & Routing</p>
                     <p className="font-bold text-[10px] text-primary leading-tight">{selectedBooking?.travelDate} • {getRouteName(selectedBooking?.routeId)}</p>
                   </div>
