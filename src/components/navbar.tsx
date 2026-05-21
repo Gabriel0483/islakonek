@@ -85,13 +85,11 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   
-                  {!isSuperAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/my-bookings" className="cursor-pointer flex items-center gap-2">
-                        <Ticket className="h-4 w-4 text-muted-foreground" /> My Bookings
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/my-bookings" className="cursor-pointer flex items-center gap-2">
+                      <Ticket className="h-4 w-4 text-muted-foreground" /> My Bookings
+                    </Link>
+                  </DropdownMenuItem>
 
                   {isAuthorizedStaff && (
                     <DropdownMenuItem asChild>
@@ -140,11 +138,9 @@ export function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/profile">{isAuthorizedStaff ? 'Staff Profile' : 'My Profile'}</Link>
                   </DropdownMenuItem>
-                  {!isSuperAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/my-bookings">My Bookings</Link>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/my-bookings">My Bookings</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
                     Log Out
                   </DropdownMenuItem>

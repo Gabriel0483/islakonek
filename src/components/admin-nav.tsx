@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -153,6 +152,7 @@ export function AdminNav() {
                 <DropdownMenuContent align="end" className="w-56 max-h-[85vh] overflow-y-auto">
                   <DropdownMenuLabel>Navigation</DropdownMenuLabel>
                   <DropdownMenuItem asChild><Link href="/" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Public Site</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/my-bookings" className="flex items-center gap-2"><Ticket className="h-4 w-4" /> My Bookings</Link></DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Modules</DropdownMenuLabel>
                   {filteredMenuItems.map(item => <DropdownMenuItem key={item.href} asChild><Link href={item.href} className="flex items-center gap-2"><item.icon className="h-4 w-4" /> {item.label}</Link></DropdownMenuItem>)}
@@ -167,6 +167,7 @@ export function AdminNav() {
            </div>
            
            <div className="hidden lg:flex items-center border-l border-white/20 pl-4 ml-2 gap-2">
+             <Link href="/my-bookings"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider"><Ticket className="h-3 w-3 mr-1.5" /> My Bookings</Button></Link>
              <Link href="/profile"><Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider"><User className="h-3 w-3 mr-1.5" /> Admin Profile</Button></Link>
              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-white/10 h-8 px-2 font-bold text-[10px] uppercase tracking-wider"><LogOut className="h-3 w-3 mr-1.5" /> Out</Button>
            </div>
