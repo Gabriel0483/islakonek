@@ -38,7 +38,9 @@ import {
   ShieldAlert,
   X,
   RotateCcw,
-  History
+  History,
+  Building2,
+  Globe
 } from "lucide-react";
 import { 
   collection, 
@@ -89,6 +91,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -290,10 +293,16 @@ export default function ManageBookingsPage() {
     return collection(db, "fares");
   }, [db]);
 
+  const vesselsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "vessels");
+  }, [db]);
+
   const { data: routes } = useCollection(routesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
   const { data: schedules } = useCollection(schedulesRef);
   const { data: fares } = useCollection(faresRef);
+  const { data: vessels } = useCollection(vesselsRef);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
@@ -333,7 +342,7 @@ export default function ManageBookingsPage() {
     const searchLower = search.toLowerCase();
     
     return bookings.filter(b => {
-      const matchesSearch = !search || b.id?.toLowerCase().includes(searchLower);
+      const matchesSearch = !search || b.id?.toLowerCase().includes(searchLower) || b.passengerName?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
       if (filterDate && b.travelDate !== filterDate) return false;
       if (filterScheduleId !== "all" && b.scheduleId !== filterScheduleId) return false;
@@ -374,6 +383,11 @@ export default function ManageBookingsPage() {
   const getRouteName = useCallback((id: string) => routes?.find(r => r.id === id)?.name || "Unknown Route", [routes]);
   const getDeparture = useCallback((id: string) => schedules?.find(s => s.id === id)?.departureTime || "--:--", [schedules]);
   const getTripCode = useCallback((id: string) => schedules?.find(s => s.id === id)?.tripCode || "N/A", [schedules]);
+  const getVesselName = useCallback((scheduleId: string) => {
+    const schedule = schedules?.find(s => s.id === scheduleId);
+    if (!schedule) return "TBA";
+    return vessels?.find(v => v.id === schedule.vesselId)?.name || "TBA";
+  }, [schedules, vessels]);
 
   const handleOpenViewDetails = useCallback((booking: any) => {
     setSelectedBooking(booking);
@@ -830,7 +844,7 @@ export default function ManageBookingsPage() {
                 <Label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Booking Reference</Label>
                 <Search className="absolute left-3 top-[34px] h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="6-digit ID..." 
+                  placeholder="ID or Name..." 
                   className="pl-10 h-10 bg-secondary/10 border-none text-sm"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
@@ -1127,26 +1141,187 @@ export default function ManageBookingsPage() {
       </Dialog>
 
       <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[650px] p-0 overflow-hidden">
           {isViewDetailsOpen && (
-            <>
-              <DialogHeader className="p-4 sm:p-6 border-b bg-primary text-primary-foreground"><DialogTitle>Ticket Details</DialogTitle></DialogHeader>
-              <div className="p-6 space-y-4 text-sm">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><p className="text-muted-foreground text-[10px] uppercase font-black">Name</p><p className="font-bold">{selectedBooking?.passengerName}</p></div>
-                  <div><p className="text-muted-foreground text-[10px] uppercase font-black">Status</p><p className="font-bold">{selectedBooking?.status}</p></div>
+            <div className="flex flex-col h-[90vh] max-h-[90vh]">
+              <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                       <div className="p-2 bg-white/20 rounded-xl">
+                          <ClipboardList className="h-6 w-6" />
+                       </div>
+                       <div>
+                          <DialogTitle className="text-xl font-black uppercase tracking-tight">Full Booking Profile</DialogTitle>
+                          <DialogDescription className="text-primary-foreground/70 text-xs font-mono">Reference: #{selectedBooking?.id}</DialogDescription>
+                       </div>
+                    </div>
+                    <Badge className={cn("uppercase font-black text-[10px] px-3", 
+                      selectedBooking?.status === 'Confirmed' ? "bg-green-600" : 
+                      selectedBooking?.status === 'Reserved' ? "bg-blue-500" : "bg-orange-500")}>
+                      {selectedBooking?.status}
+                    </Badge>
+                 </div>
+              </DialogHeader>
+              
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-8">
+                   {/* PASSENGER IDENTITY */}
+                   <section className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
+                         <User className="h-3.5 w-3.5 text-accent" /> Passenger Identity
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Full Legal Name</Label>
+                            <p className="text-sm font-black text-primary uppercase">{selectedBooking?.passengerName}</p>
+                         </div>
+                         <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Date of Birth</Label>
+                            <p className="text-sm font-bold flex items-center gap-2">
+                               <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> {selectedBooking?.passengerDob}
+                            </p>
+                         </div>
+                         <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Primary Email</Label>
+                            <p className="text-sm font-bold flex items-center gap-2 truncate">
+                               <Mail className="h-3.5 w-3.5 text-muted-foreground" /> {selectedBooking?.passengerEmail || "N/A"}
+                            </p>
+                         </div>
+                         <div className="space-y-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact Number</Label>
+                            <p className="text-sm font-bold flex items-center gap-2">
+                               <Phone className="h-3.5 w-3.5 text-muted-foreground" /> {selectedBooking?.passengerContact}
+                            </p>
+                         </div>
+                         <div className="space-y-1 col-span-2">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Emergency Contact</Label>
+                            <p className="text-sm font-bold flex items-center gap-2">
+                               <Heart className="h-3.5 w-3.5 text-destructive" /> {selectedBooking?.emergencyContact}
+                            </p>
+                         </div>
+                      </div>
+                   </section>
+
+                   {/* VOYAGE ITINERARY */}
+                   <section className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
+                         <Ship className="h-3.5 w-3.5 text-accent" /> Voyage Itinerary
+                      </div>
+                      <div className="bg-secondary/10 p-4 rounded-2xl border-2 border-dashed space-y-4">
+                         <div className="grid grid-cols-2 gap-4">
+                            <div>
+                               <p className="text-[9px] font-black text-muted-foreground uppercase">Trip Code</p>
+                               <p className="text-sm font-black text-accent">{getTripCode(selectedBooking?.scheduleId)}</p>
+                            </div>
+                            <div className="text-right">
+                               <p className="text-[9px] font-black text-muted-foreground uppercase">Dept. Time</p>
+                               <p className="text-sm font-black text-primary">{getDeparture(selectedBooking?.scheduleId)}</p>
+                            </div>
+                         </div>
+                         <Separator className="bg-white" />
+                         <div className="space-y-2">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase">Routing Details</p>
+                            <div className="flex items-start gap-2">
+                               <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                               <p className="text-xs font-bold leading-tight">{getRouteName(selectedBooking?.routeId)}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                               <Calendar className="h-4 w-4 text-primary shrink-0" />
+                               <p className="text-xs font-bold">{selectedBooking?.travelDate}</p>
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                               <Badge variant="outline" className="text-[8px] font-black uppercase text-primary border-primary/20 bg-white">
+                                  Vessel: {getVesselName(selectedBooking?.scheduleId)}
+                               </Badge>
+                            </div>
+                         </div>
+                      </div>
+                   </section>
+
+                   {/* FINANCIAL LEDGER */}
+                   <section className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
+                         <Banknote className="h-3.5 w-3.5 text-accent" /> Financial Ledger
+                      </div>
+                      <div className="space-y-3">
+                         <div className="flex justify-between items-center text-sm p-2 rounded-lg hover:bg-secondary/20 transition-colors">
+                            <div className="flex flex-col">
+                               <span className="text-muted-foreground text-[10px] font-bold uppercase">Base Voyage Fare</span>
+                               <span className="font-bold text-primary">{selectedBooking?.segmentLabel || "Regular"} Segment</span>
+                            </div>
+                            <span className="font-black">₱{selectedBooking?.finalFare?.toLocaleString()}</span>
+                         </div>
+                         
+                         {selectedBooking?.penaltyFees > 0 && (
+                            <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-destructive/5 text-destructive">
+                               <div className="flex flex-col">
+                                  <span className="text-[10px] font-bold uppercase opacity-70">Applicable Fees / Penalties</span>
+                                  <span className="text-[10px] font-bold italic">Rebooking/No-show adjustments</span>
+                               </div>
+                               <span className="font-black">+ ₱{selectedBooking.penaltyFees.toLocaleString()}</span>
+                            </div>
+                         )}
+
+                         {selectedBooking?.isFeeWaived && (
+                            <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-100 rounded-xl">
+                               <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+                               <div>
+                                  <p className="text-[10px] font-black text-green-800 uppercase">Penalty Fees Waived</p>
+                                  <p className="text-[10px] text-green-700">Reason: {selectedBooking.waiveReason || "Operational Discretion"}</p>
+                               </div>
+                            </div>
+                         )}
+
+                         <div className="bg-primary p-4 rounded-2xl text-primary-foreground flex justify-between items-end mt-2">
+                            <div className="space-y-1">
+                               <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Total Transaction Value</p>
+                               {selectedBooking?.boardingSequenceNumber && (
+                                  <p className="text-[10px] font-black text-accent uppercase">Assigned Sequence: #{selectedBooking.boardingSequenceNumber}</p>
+                               )}
+                            </div>
+                            <p className="text-3xl font-black">₱{((selectedBooking?.finalFare || 0) + (selectedBooking?.penaltyFees || 0)).toLocaleString()}</p>
+                         </div>
+                      </div>
+                   </section>
+
+                   {/* OPERATIONAL METADATA */}
+                   <section className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
+                         <Info className="h-3.5 w-3.5 text-accent" /> Operational History
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-[10px]">
+                         <div className="p-3 bg-secondary/30 rounded-xl flex items-center gap-2">
+                            {selectedBooking?.bookingSource === 'Desk' ? <Building2 className="h-4 w-4 opacity-40" /> : <Globe className="h-4 w-4 opacity-40" />}
+                            <div>
+                               <p className="font-bold text-muted-foreground uppercase">Source</p>
+                               <p className="font-black text-primary uppercase">{selectedBooking?.bookingSource || "Public Web"}</p>
+                            </div>
+                         </div>
+                         <div className="p-3 bg-secondary/30 rounded-xl flex items-center gap-2">
+                            <Clock className="h-4 w-4 opacity-40" />
+                            <div>
+                               <p className="font-bold text-muted-foreground uppercase">Created At</p>
+                               <p className="font-black text-primary">{selectedBooking?.createdAt ? format(new Date(selectedBooking.createdAt), "MMM dd, HH:mm") : "---"}</p>
+                            </div>
+                         </div>
+                      </div>
+                      {selectedBooking?.remarks && (
+                         <div className="p-3 bg-orange-50 border-2 border-dashed border-orange-200 rounded-xl flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+                            <div>
+                               <p className="text-[9px] font-black text-orange-800 uppercase">Internal System Remark</p>
+                               <p className="text-[10px] text-orange-700 italic">{selectedBooking.remarks}</p>
+                            </div>
+                         </div>
+                      )}
+                   </section>
                 </div>
-                <div><p className="text-muted-foreground text-[10px] uppercase font-black">Route</p><p className="font-bold">{getRouteName(selectedBooking?.routeId)}</p></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><p className="text-muted-foreground text-[10px] uppercase font-black">Time</p><p className="font-bold">{getDeparture(selectedBooking?.scheduleId)}</p></div>
-                  <div><p className="text-muted-foreground text-[10px] uppercase font-black">Amount</p><p className="font-bold">₱{selectedBooking?.finalFare?.toLocaleString()}</p></div>
-                </div>
-                {selectedBooking?.boardingSequenceNumber && (
-                   <div className="col-span-2 pt-2 border-t"><p className="text-muted-foreground text-[10px] uppercase font-black">Boarding Sequence</p><p className="font-black text-accent text-lg">#{selectedBooking.boardingSequenceNumber}</p></div>
-                )}
-              </div>
-              <DialogFooter className="p-4 border-t"><Button className="w-full" onClick={() => setIsViewDetailsOpen(false)}>Close</Button></DialogFooter>
-            </>
+              </ScrollArea>
+
+              <DialogFooter className="p-6 border-t shrink-0 bg-secondary/5">
+                <Button className="w-full h-12 font-black uppercase text-xs tracking-widest shadow-lg" onClick={() => setIsViewDetailsOpen(false)}>Close Review</Button>
+              </DialogFooter>
+            </div>
           )}
         </DialogContent>
       </Dialog>
