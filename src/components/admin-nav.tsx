@@ -114,7 +114,7 @@ export function AdminNav() {
           
           <div className="hidden lg:flex items-center gap-1">
             <Link href="/admin" className={cn("flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-colors", pathname === "/admin" ? "bg-accent text-primary" : "hover:bg-white/10")}>
-              <LayoutDashboard className="h-4 w-4" /> Dashboard
+              <LayoutDashboard className="h-4 w-4" /> Admin Dashboard
             </Link>
             {filteredMenuItems.length > 0 && <div className="h-4 w-px bg-white/20 mx-2" />}
             {filteredMenuItems.map(item => (
@@ -151,6 +151,7 @@ export function AdminNav() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 max-h-[85vh] overflow-y-auto">
                   <DropdownMenuLabel>Navigation</DropdownMenuLabel>
+                  <DropdownMenuItem asChild><Link href="/admin" className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" /> Admin Dashboard</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/" className="flex items-center gap-2"><Globe className="h-4 w-4" /> Public Site</Link></DropdownMenuItem>
                   <DropdownMenuItem asChild><Link href="/my-bookings" className="flex items-center gap-2"><Ticket className="h-4 w-4" /> My Bookings</Link></DropdownMenuItem>
                   <DropdownMenuSeparator />
