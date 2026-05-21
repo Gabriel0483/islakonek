@@ -488,8 +488,8 @@ export default function ManageBookingsPage() {
            sequenceToAssign = (voyageSnap.data().bookedCount || 0) + 1;
         }
 
-        // If reverting to Reserved (Undo Payment), clear the boarding sequence
-        if (newStatus === 'Reserved') {
+        // If reverting to Reserved (Undo Payment) or moving to an inactive state, clear the boarding sequence
+        if (newStatus === 'Reserved' || isNowInactive || newStatus === 'Waitlisted') {
           sequenceToAssign = null;
         }
 
@@ -598,7 +598,7 @@ export default function ManageBookingsPage() {
           penaltyFees: fees,
           isFeeWaived: rebookingData.isFeeWaived,
           waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
-          boardingSequenceNumber: currentNewBooked + 1,
+          boardingSequenceNumber: currentNewBooked + 1, // Adaptive sequencing for the new trip
           updatedAt: new Date().toISOString()
         });
       });
