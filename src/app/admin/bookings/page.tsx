@@ -74,6 +74,7 @@ import { cn } from "@/lib/utils"
 
 const passengerSchema = z.object({
   id: z.string(),
+  userId: z.string().optional(),
   fullName: z.string().min(2, { message: "Full name is required." }),
   birthDate: z.string().min(1, { message: "Birth date is required." }),
   passengerContact: z.string().min(1, { message: "Mobile number is required." }),
@@ -144,6 +145,7 @@ export default function DeskBookingsPage() {
       scheduleId: "",
       passengers: [{ 
         id: nanoid(), 
+        userId: "",
         fullName: "", 
         birthDate: "", 
         passengerContact: "", 
@@ -232,6 +234,7 @@ export default function DeskBookingsPage() {
     form.setValue(`passengers.${index}.fullName`, user.displayName || "");
     form.setValue(`passengers.${index}.passengerEmail`, user.email || "");
     form.setValue(`passengers.${index}.passengerContact`, user.phoneNumber || "");
+    form.setValue(`passengers.${index}.userId`, user.id); // Linking to passenger account
     setLookupSearch('');
     setActiveLookupIndex(null);
   };
@@ -403,6 +406,7 @@ export default function DeskBookingsPage() {
           
           transaction.set(bookingRef, {
             id: passengerBookingId,
+            userId: p.userId || null, // Linking linked account if found
             routeId: data.routeId,
             scheduleId: data.scheduleId,
             travelDate: data.travelDate,
@@ -736,7 +740,7 @@ export default function DeskBookingsPage() {
                           </div>
                         );
                       })}
-                      <Button type="button" variant="outline" onClick={() => append({ id: nanoid(), fullName: "", birthDate: "", passengerContact: "", emergencyContact: "", passengerEmail: "", fareType: "" })} disabled={!watchScheduleId || inventoryStats?.isFull} className="w-full gap-2 border-2 border-dashed font-bold">
+                      <Button type="button" variant="outline" onClick={() => append({ id: nanoid(), userId: "", fullName: "", birthDate: "", passengerContact: "", emergencyContact: "", passengerEmail: "", fareType: "" })} disabled={!watchScheduleId || inventoryStats?.isFull} className="w-full gap-2 border-2 border-dashed font-bold">
                         <PlusCircle className="h-4 w-4" /> Add Another Passenger
                       </Button>
                     </div>

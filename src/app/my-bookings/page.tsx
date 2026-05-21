@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -17,7 +18,9 @@ import {
   Download,
   Printer,
   Info,
-  X
+  X,
+  CreditCard,
+  Building2
 } from "lucide-react";
 import { collection, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase";
@@ -97,6 +100,21 @@ export default function MyBookingsPage() {
     }
   };
 
+  const getSourceBadge = (source: string) => {
+    if (source === 'Desk') {
+       return (
+         <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary/60 flex items-center gap-1">
+           <Building2 className="h-2 w-2" /> Terminal Issued
+         </Badge>
+       );
+    }
+    return (
+      <Badge variant="outline" className="text-[8px] font-black uppercase border-accent/20 text-accent/60 flex items-center gap-1">
+        <Globe className="h-2 w-2" /> Web Booking
+      </Badge>
+    );
+  };
+
   if (isUserLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -162,13 +180,14 @@ export default function MyBookingsPage() {
                   <CardHeader className="p-4 sm:p-5 pb-2">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1 flex-1 min-w-0 mr-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                            <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest text-accent border-accent/20 h-4 px-1.5">
                              {trip.code}
                            </Badge>
                            <span className="text-[10px] font-mono font-bold text-muted-foreground">#{booking.id}</span>
+                           {getSourceBadge(booking.bookingSource)}
                         </div>
-                        <CardTitle className="text-base sm:text-lg font-bold text-primary truncate">
+                        <CardTitle className="text-base sm:text-lg font-bold text-primary truncate mt-1">
                           {booking.passengerName}
                         </CardTitle>
                       </div>

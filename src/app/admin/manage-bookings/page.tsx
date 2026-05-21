@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, memo, useCallback } from "react";
@@ -1155,7 +1156,11 @@ export default function ManageBookingsPage() {
           <DialogHeader>
             <div className="bg-destructive/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 className="h-6 w-6 text-destructive" /></div>
             <DialogTitle className="text-center">Permanent Removal</DialogTitle>
-            <DialogDescription className="text-center">Are you sure you want to delete Ticket <span className="font-bold">#{selectedBooking?.id}</span>?</DialogDescription>
+            <DialogDescription className="text-center">
+              Are you sure you want to delete Ticket <span className="font-bold">#{selectedBooking?.id}</span>?
+              <br /><br />
+              <span className="text-destructive font-bold uppercase text-[10px]">Warning:</span> This action is permanent and removes the record for both the terminal and the passenger.
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 mt-4">
             <Button variant="outline" className="flex-1" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
