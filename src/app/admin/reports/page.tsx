@@ -111,14 +111,13 @@ export default function SalesReportPage() {
       if (penalties > 0) {
          if (b.status === 'Suspended') acc.noShowFees += penalties;
          else if (b.rebookedFromId) acc.rebookingFees += penalties;
-         else if (b.status === 'Refunded' || b.status === 'Auto-cancelled') acc.cancellationFees += penalties;
-         else acc.otherFees += penalties;
+         else acc.cancellationFees += penalties;
       }
 
       return acc;
     }, { 
       gross: 0, net: 0, earned: 0, refunds: 0, 
-      rebookingFees: 0, noShowFees: 0, cancellationFees: 0, otherFees: 0 
+      rebookingFees: 0, noShowFees: 0, cancellationFees: 0
     });
   }, [reportData]);
 
@@ -275,7 +274,7 @@ export default function SalesReportPage() {
                <h2 className="text-sm font-black uppercase text-muted-foreground tracking-[0.2em] flex items-center gap-2">
                  <AlertCircle className="h-4 w-4" /> Penalty & Fee Analytics
                </h2>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-white p-4 rounded-2xl shadow-sm border border-secondary space-y-1">
                      <p className="text-[9px] font-black text-muted-foreground uppercase">Rebooking Fees</p>
                      <p className="text-xl font-black text-primary">₱{stats.rebookingFees.toLocaleString()}</p>
@@ -287,10 +286,6 @@ export default function SalesReportPage() {
                   <div className="bg-white p-4 rounded-2xl shadow-sm border border-secondary space-y-1">
                      <p className="text-[9px] font-black text-muted-foreground uppercase">Cancellation Fees</p>
                      <p className="text-xl font-black text-orange-600">₱{stats.cancellationFees.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-white p-4 rounded-2xl shadow-sm border border-secondary space-y-1">
-                     <p className="text-[9px] font-black text-muted-foreground uppercase">Administrative Fees</p>
-                     <p className="text-xl font-black text-blue-600">₱{stats.otherFees.toLocaleString()}</p>
                   </div>
                </div>
             </section>
