@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -119,8 +120,10 @@ export function TripItinerary({ booking }: TripItineraryProps) {
           <div className="p-3 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl flex flex-col items-center text-center gap-2">
             <AlertCircle className="h-6 w-6 text-blue-500" />
             <div>
-              <p className="text-[10px] font-black text-blue-800 uppercase leading-none">Payment Pending</p>
-              <p className="text-[8px] text-blue-600 font-medium leading-relaxed mt-1">Finalize transaction at desk to issue pass.</p>
+              <p className="text-[10px] font-black text-blue-800 uppercase leading-none">Check-in Required</p>
+              <p className="text-[8px] text-blue-600 font-medium leading-relaxed mt-1">
+                Reservations are held until 60 minutes before departure. Proceed to our terminal desks for payment and confirmation. Present a valid ID for passenger verification.
+              </p>
             </div>
           </div>
         )}

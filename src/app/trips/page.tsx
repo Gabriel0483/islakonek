@@ -772,7 +772,7 @@ function TripsContent() {
                         <p className="text-[9px] sm:text-[11px] mt-6 opacity-60 font-medium italic leading-tight max-w-sm">
                           {selectedSchedule?.isWaitlistOnly 
                             ? "* You are joining the waitlist queue. No payment is required at this stage. You will be notified once a seat is promoted to Reserved."
-                            : "* Reservations are held until 30 minutes before departure. Final payment collection occurs at the terminal issuance desk."}
+                            : "* Reservations are held until 60 minutes before departure. Proceed to our terminal desks for payment and confirmation. Present a valid ID for passenger verification."}
                         </p>
                       </div>
                       <div className="shrink-0 flex flex-col items-center gap-2">
