@@ -326,7 +326,7 @@ export default function MyBookingsPage() {
                    <div>
                      <p className="text-xs font-black text-blue-800 uppercase tracking-tight">Payment Verification Required</p>
                      <p className="text-[9px] font-medium text-blue-700 leading-relaxed max-w-[240px] mx-auto">
-                       Finalize payment at the terminal desk to activate your boarding pass.
+                       Finalize payment at the terminal desk within 60 minutes of departure to activate your pass.
                      </p>
                    </div>
                 </div>

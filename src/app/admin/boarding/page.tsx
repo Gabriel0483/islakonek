@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -66,9 +65,11 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useToast } from "@/hooks/use-toast";
 
 export default function BoardingPage() {
   const db = useFirestore();
+  const { toast } = useToast();
   const { user } = useUser();
   const [todayPHT, setTodayPHT] = useState("");
   const [currentTimePHT, setCurrentTimePHT] = useState("");
@@ -286,11 +287,12 @@ export default function BoardingPage() {
     if (!db || !currentVoyage) return;
     const voyageRef = doc(db, "voyages", currentVoyage.id);
 
+    // DEPARTURE LOGIC: Flag both Confirmed and Reserved no-shows
     if (newStatus === 'Departed' && bookings && selectedScheduleId !== 'all') {
       const noShows = bookings.filter(b => 
         b.scheduleId === selectedScheduleId && 
         b.travelDate === todayPHT && 
-        b.status === 'Confirmed'
+        (b.status === 'Confirmed' || b.status === 'Reserved')
       );
 
       if (noShows.length > 0) {
@@ -360,7 +362,6 @@ export default function BoardingPage() {
       
       const doc = new jsPDF();
       
-      // Header
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text("PHILIPPINE COAST GUARD PASSENGER MANIFEST", 105, 20, { align: "center" });
@@ -369,7 +370,6 @@ export default function BoardingPage() {
       doc.setFont("helvetica", "normal");
       doc.text("Official Maritime Voyage Document", 105, 26, { align: "center" });
 
-      // Voyage Info Section
       doc.setDrawColor(200, 200, 200);
       doc.line(14, 32, 196, 32);
 
@@ -395,7 +395,6 @@ export default function BoardingPage() {
 
       doc.line(14, 52, 196, 52);
 
-      // Passenger Table
       const manifestRows = filteredBookings.map(b => [
         b.boardingSequenceNumber || "N/A",
         b.passengerName.toUpperCase(),
@@ -422,7 +421,6 @@ export default function BoardingPage() {
         }
       });
 
-      // Clearance Section
       const finalY = (doc as any).lastAutoTable.finalY + 20;
       
       if (currentVoyage?.clearance) {
@@ -441,7 +439,6 @@ export default function BoardingPage() {
         doc.text(`Cleared At: ${format(new Date(currentVoyage.clearance.clearedAt), "MMM dd, HH:mm")}`, 110, finalY + 17);
       }
 
-      // Footer
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -578,7 +575,6 @@ export default function BoardingPage() {
                    </Badge>
                 </div>
                 <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                   {/* STAGE 1: PRE-BOARDING */}
                    <div className={cn("space-y-4 p-4 rounded-2xl border-2 transition-all", 
                       currentVoyage?.status === 'Scheduled' ? "border-accent bg-accent/5 ring-4 ring-accent/10" : "border-secondary opacity-50")}>
                       <div className="flex items-center gap-2 mb-2">
@@ -633,7 +629,6 @@ export default function BoardingPage() {
                       </Button>
                    </div>
 
-                   {/* STAGE 2: PRE-DEPARTURE */}
                    <div className={cn("space-y-4 p-4 rounded-2xl border-2 transition-all", 
                       currentVoyage?.status === 'On-time' ? "border-blue-500 bg-blue-50 ring-4 ring-blue-500/10" : "border-secondary opacity-50")}>
                       <div className="flex items-center gap-2 mb-2">
@@ -713,7 +708,6 @@ export default function BoardingPage() {
                       </Button>
                    </div>
 
-                   {/* STAGE 3: POST-ARRIVAL */}
                    <div className={cn("space-y-4 p-4 rounded-2xl border-2 transition-all", 
                       currentVoyage?.status === 'Departed' ? "border-indigo-600 bg-indigo-50 ring-4 ring-indigo-600/10" : "border-secondary opacity-50")}>
                       <div className="flex items-center gap-2 mb-2">

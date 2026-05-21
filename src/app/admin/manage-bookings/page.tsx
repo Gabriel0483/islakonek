@@ -358,6 +358,7 @@ export default function ManageBookingsPage() {
       const [curH, curM] = currentTimePHT.split(':').map(Number);
       const depTotal = depH * 60 + depM;
       const curTotal = curH * 60 + curM;
+      // Consistent with 60-minute hold policy
       return (depTotal - curTotal) <= 60;
     });
   }, [bookings, schedules, todayPHT, currentTimePHT]);
@@ -430,7 +431,6 @@ export default function ManageBookingsPage() {
     } else if (status === 'Suspended') {
        penalty = route?.noShowFee || 0;
     } else if (status === 'Reserved') {
-       // Undo Payment: Administrative correction, no penalty
        penalty = 0;
     }
     return penalty;
@@ -488,7 +488,6 @@ export default function ManageBookingsPage() {
            sequenceToAssign = (voyageSnap.data().bookedCount || 0) + 1;
         }
 
-        // If reverting to Reserved (Undo Payment) or moving to an inactive state, clear the boarding sequence
         if (newStatus === 'Reserved' || isNowInactive || newStatus === 'Waitlisted') {
           sequenceToAssign = null;
         }
@@ -574,7 +573,6 @@ export default function ManageBookingsPage() {
           if (wasActive) {
             transaction.update(oldVoyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
             
-            // AUTOMATED WAITLIST PROMOTION FOR OLD VOYAGE
             if (candidateDoc) {
               const freshCandidateSnap = await transaction.get(candidateDoc.ref);
               if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
@@ -614,7 +612,7 @@ export default function ManageBookingsPage() {
           penaltyFees: fees,
           isFeeWaived: rebookingData.isFeeWaived,
           waiveReason: rebookingData.isFeeWaived ? rebookingData.waiveReason : "",
-          boardingSequenceNumber: currentNewBooked + 1, // Adaptive sequencing for the new trip
+          boardingSequenceNumber: currentNewBooked + 1,
           updatedAt: new Date().toISOString()
         });
       });
@@ -727,7 +725,11 @@ export default function ManageBookingsPage() {
 
           if (!bSnap.exists() || bSnap.data().status !== 'Reserved') return;
           
-          transaction.update(bRef, { status: "Auto-cancelled", updatedAt: new Date().toISOString(), remarks: "Purged: Unpaid ghost reservation released 1hr before departure." });
+          transaction.update(bRef, { 
+            status: "Auto-cancelled", 
+            updatedAt: new Date().toISOString(), 
+            remarks: "Purged: Unpaid ghost reservation released 60 minutes before departure." 
+          });
           
           if (voyageSnap.exists()) {
             transaction.update(voyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
@@ -1010,6 +1012,7 @@ export default function ManageBookingsPage() {
           </DialogHeader>
           <div className="p-6 space-y-4">
             <p className="text-sm font-bold text-orange-800">Ready to release {ghostBookings.length} unpaid seats?</p>
+            <p className="text-xs text-muted-foreground">Reservations are held until 60 minutes before departure. Releasing these seats promotes waitlisted passengers.</p>
             <ScrollArea className="h-32 pr-4">
               {ghostBookings.map(b => (
                 <div key={b.id} className="flex justify-between items-center text-xs p-2 bg-white rounded border border-orange-100 mb-2">
