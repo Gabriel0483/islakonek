@@ -551,6 +551,8 @@ export default function ManageBookingsPage() {
     const oldVoyageId = `${selectedBooking.scheduleId}_${selectedBooking.travelDate}`;
     const newVoyageId = `${rebookingData.newScheduleId}_${rebookingData.newTravelDate}`;
 
+    let candidateDoc = await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate);
+
     try {
       await runTransaction(db, async (transaction) => {
         const bookingRef = doc(db, "bookings", bookingId);
@@ -571,6 +573,20 @@ export default function ManageBookingsPage() {
         if (oldVoyageSnap.exists()) {
           if (wasActive) {
             transaction.update(oldVoyageRef, { bookedCount: increment(-1), updatedAt: new Date().toISOString() });
+            
+            // AUTOMATED WAITLIST PROMOTION FOR OLD VOYAGE
+            if (candidateDoc) {
+              const freshCandidateSnap = await transaction.get(candidateDoc.ref);
+              if (freshCandidateSnap.exists() && freshCandidateSnap.data().status === 'Waitlisted') {
+                transaction.update(candidateDoc.ref, {
+                  status: "Reserved",
+                  boardingSequenceNumber: null,
+                  remarks: "Auto-promoted from Waitlist (System: Vacated by Rebooking)",
+                  updatedAt: new Date().toISOString()
+                });
+                transaction.update(oldVoyageRef, { bookedCount: increment(1), waitlistCount: increment(-1) });
+              }
+            }
           } else if (wasWaitlisted) {
             transaction.update(oldVoyageRef, { waitlistCount: increment(-1), updatedAt: new Date().toISOString() });
           }
@@ -774,7 +790,7 @@ export default function ManageBookingsPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
-      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-16 z-40">
         <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
           <ClipboardList className="h-5 w-5 text-accent" /> Manage Bookings
         </h1>
