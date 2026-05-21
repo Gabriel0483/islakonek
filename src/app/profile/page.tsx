@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -91,6 +90,7 @@ export default function ProfilePage() {
   }, [allShifts, myStaffRecord]);
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
+  const isAuthorizedStaff = isSuperAdmin || (myStaffRecord && myStaffRecord.status === 'Active');
 
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -220,7 +220,7 @@ export default function ProfilePage() {
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-black font-headline text-primary uppercase tracking-tight">Profile Dashboard</h1>
-            <p className="text-muted-foreground text-sm">Manage your personal info and professional rotations.</p>
+            <p className="text-muted-foreground text-sm">Manage your personal info and travel roster.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {isSuperAdmin && (
@@ -320,7 +320,7 @@ export default function ProfilePage() {
                       className="w-full h-10 font-bold text-xs uppercase tracking-wider mt-2 hover:bg-accent hover:text-primary transition-colors"
                       onClick={() => setIsProfileEditing(true)}
                     >
-                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Admin Details
+                      <Pencil className="h-3.5 w-3.5 mr-2" /> Edit Profile Details
                     </Button>
                   </>
                 ) : (

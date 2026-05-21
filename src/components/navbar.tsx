@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ship, LayoutDashboard, Menu, User, LogOut, Radio, UserCircle, Home } from "lucide-react";
+import { Ship, LayoutDashboard, Menu, User, LogOut, Radio, UserCircle, Home, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -81,13 +81,15 @@ export function Navbar() {
                   
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="cursor-pointer flex items-center gap-2">
-                      <UserCircle className="h-4 w-4 text-muted-foreground" /> Admin Profile
+                      <UserCircle className="h-4 w-4 text-muted-foreground" /> {isAuthorizedStaff ? 'Staff Profile' : 'My Profile'}
                     </Link>
                   </DropdownMenuItem>
                   
                   {!isSuperAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/my-bookings" className="cursor-pointer">My Bookings</Link>
+                      <Link href="/my-bookings" className="cursor-pointer flex items-center gap-2">
+                        <Ticket className="h-4 w-4 text-muted-foreground" /> My Bookings
+                      </Link>
                     </DropdownMenuItem>
                   )}
 
@@ -136,7 +138,7 @@ export function Navbar() {
               {user ? (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">Admin Profile</Link>
+                    <Link href="/profile">{isAuthorizedStaff ? 'Staff Profile' : 'My Profile'}</Link>
                   </DropdownMenuItem>
                   {!isSuperAdmin && (
                     <DropdownMenuItem asChild>
