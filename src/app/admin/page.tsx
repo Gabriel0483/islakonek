@@ -23,7 +23,8 @@ import {
   Users,
   ShieldCheck,
   Megaphone,
-  CalendarClock
+  CalendarClock,
+  BarChart3
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -33,12 +34,12 @@ import { collection } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
   "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories", "staff-schedules"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
-  "Finance/Accounting": ["fares", "bookings", "sales"]
+  "Finance/Accounting": ["fares", "bookings", "sales", "reports"]
 };
 
 export default function AdminDashboard() {
@@ -90,6 +91,7 @@ export default function AdminDashboard() {
 
   const managementModules = [
     { id: "voyages", title: "Voyage Control", description: "Real-time status management.", icon: Radio, link: "/admin/voyages", color: "text-accent" },
+    { id: "reports", title: "Sales Reports", description: "Deep financial and volume analytics.", icon: BarChart3, link: "/admin/reports", color: "text-primary" },
     { id: "staff-schedules", title: "Personnel Scheduling", description: "Desk Agent and Crew shift management.", icon: CalendarClock, link: "/admin/staff-schedules", color: "text-primary" },
     { id: "sales", title: "Sales Overview", description: "Revenue and route volume analysis.", icon: TrendingUp, link: "/admin/sales-overview", color: "text-green-600" },
     { id: "ops", title: "Operational Overview", description: "System status and infrastructure alerts.", icon: Activity, link: "/admin/operational-overview", color: "text-blue-500" },

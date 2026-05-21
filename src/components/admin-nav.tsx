@@ -24,7 +24,8 @@ import {
   Users,
   Megaphone,
   Globe,
-  CalendarClock
+  CalendarClock,
+  BarChart3
 } from "lucide-react";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -42,12 +43,12 @@ import { signOut } from "firebase/auth";
 import { collection } from "firebase/firestore";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
   "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories", "staff-schedules"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
-  "Finance/Accounting": ["fares", "bookings", "sales"]
+  "Finance/Accounting": ["fares", "bookings", "sales", "reports"]
 };
 
 const menuItems = [
@@ -59,6 +60,7 @@ const menuItems = [
 
 const analyticItems = [
   { id: "sales", label: "Sales", icon: TrendingUp, href: "/admin/sales-overview" },
+  { id: "reports", label: "Reports", icon: BarChart3, href: "/admin/reports" },
   { id: "ops", label: "Ops", icon: Activity, href: "/admin/operational-overview" },
   { id: "advisories", label: "Advisories", icon: Megaphone, href: "/admin/advisories" },
 ];
