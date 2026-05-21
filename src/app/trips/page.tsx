@@ -36,7 +36,12 @@ import {
   XCircle,
   Radio,
   BarChart,
-  UserPlus
+  UserPlus,
+  MapPin,
+  MapPinned,
+  Zap,
+  Flame,
+  ArrowRight
 } from "lucide-react";
 import { collection, doc, query, where, runTransaction, increment } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from "@/firebase";
@@ -189,10 +194,15 @@ function TripsContent() {
       const capacity = schedule.passengerCapacity || vessel?.passengerCapacity || 0;
       const waitlistLimit = schedule.waitlistLimit || 0;
 
+      const originPort = ports?.find(p => p.id === route?.originPortId);
+      const destPort = ports?.find(p => p.id === route?.destinationPortId);
+
       return {
         ...schedule,
         route,
         vessel,
+        originPort,
+        destPort,
         voyageInfo,
         capacity,
         usedSeats,
@@ -202,7 +212,8 @@ function TripsContent() {
         waitlistSpotsRemaining: Math.max(0, waitlistLimit - waitlistedCount),
         isWaitlistOnly: usedSeats >= capacity && waitlistedCount < waitlistLimit,
         isFull: usedSeats >= capacity && waitlistedCount >= waitlistLimit,
-        fillPercentage: capacity > 0 ? Math.min(100, (usedSeats / capacity) * 100) : 0
+        fillPercentage: capacity > 0 ? Math.min(100, (usedSeats / capacity) * 100) : 0,
+        isHighDemand: capacity > 0 && Math.max(0, capacity - usedSeats) < 10 && Math.max(0, capacity - usedSeats) > 0
       };
     });
   }, [schedules, routes, vessels, ports, voyageStatuses, searchQuery, selectedOriginPort, searchDate, isMounted, phtState, targetDate]);
@@ -294,7 +305,6 @@ function TripsContent() {
           throw new Error("This trip is fully booked including waitlist.");
         }
 
-        // Update counters
         if (!voyageSnap.exists()) {
           transaction.set(voyageRef, {
             id: voyageId,
@@ -313,7 +323,7 @@ function TripsContent() {
           });
         }
 
-        passengers.forEach((p, idx) => {
+        passengers.forEach((p) => {
           const selectedFare = fares?.find(f => f.id === p.fareId);
           const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
           const bookingRef = doc(collection(db, "bookings"), newId);
@@ -418,13 +428,16 @@ function TripsContent() {
                    handleBookNow(trip);
                 }}
               >
+                {trip.isHighDemand && (
+                  <div className="absolute top-0 left-0 w-full h-1 bg-orange-500 animate-pulse z-10" />
+                )}
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="flex-1 space-y-4 w-full">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-3">
                           <Badge variant="outline" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-accent border-accent/20 bg-accent/5">
-                            {trip.vessel?.type || "Standard"}
+                            {trip.vessel?.type === 'RoRo' ? 'RoRo (Vehicles OK)' : trip.vessel?.type === 'FastCraft' ? 'FastCraft (Express)' : trip.vessel?.type || "Standard"}
                           </Badge>
                           {trip.voyageInfo?.status && getStatusBadge(trip.voyageInfo.status)}
                           <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black text-primary/50 uppercase">
@@ -437,6 +450,10 @@ function TripsContent() {
                              <Badge variant="destructive" className="text-[9px] font-black uppercase">Voyage Full</Badge>
                            ) : trip.isWaitlistOnly ? (
                              <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase">Waitlist Open</Badge>
+                           ) : trip.isHighDemand ? (
+                             <Badge className="bg-orange-100 text-orange-700 border-orange-200 font-black text-[9px] uppercase animate-pulse">
+                               <Flame className="h-3 w-3 mr-1" /> High Demand
+                             </Badge>
                            ) : (
                              <Badge className="bg-green-600 text-white text-[9px] font-black uppercase">Seats Available</Badge>
                            )}
@@ -444,23 +461,29 @@ function TripsContent() {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-4 sm:gap-8">
-                        <div className="space-y-0.5 sm:space-y-1">
-                          <div className="text-sm sm:text-xs font-bold text-muted-foreground uppercase tracking-widest">Departure</div>
-                          <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
-                            {trip.route?.name?.split(' - ')[0]}
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-1">
+                             <MapPin className="h-3 w-3" /> Origin Port
                           </div>
-                          <div className="text-sm sm:text-lg font-bold flex items-center gap-1.5 text-accent">
+                          <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
+                            {trip.originPort?.name}
+                          </div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">{trip.originPort?.cityMunicipality}, {trip.originPort?.province}</p>
+                          <div className="text-sm sm:text-lg font-bold flex items-center gap-1.5 text-accent pt-1">
                             <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {trip.departureTime}
                           </div>
                         </div>
                         
-                        <div className="space-y-0.5 sm:space-y-1 md:text-right">
-                          <div className="text-sm sm:text-xs font-bold text-muted-foreground uppercase tracking-widest">Arrival</div>
-                          <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
-                            {trip.route?.name?.split(' - ')[1]}
+                        <div className="space-y-1 md:text-right">
+                          <div className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-1 md:justify-end">
+                             Arrival Port <MapPinned className="h-3 w-3" />
                           </div>
+                          <div className="text-base sm:text-xl font-black text-primary truncate uppercase tracking-tight">
+                            {trip.destPort?.name}
+                          </div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase">{trip.destPort?.cityMunicipality}, {trip.destPort?.province}</p>
                           {trip.arrivalTime && (
-                            <div className="text-sm sm:text-lg font-bold flex items-center gap-1.5 text-accent md:justify-end">
+                            <div className="text-sm sm:text-lg font-bold flex items-center gap-1.5 text-accent md:justify-end pt-1">
                               <span className="text-[10px] font-black uppercase mr-1">ETA</span> {trip.arrivalTime}
                             </div>
                           )}
@@ -470,18 +493,23 @@ function TripsContent() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-end">
                            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
-                              <BarChart className="h-3 w-3" /> Atomic Seat Inventory
+                              <BarChart className="h-3 w-3" /> Current Inventory
                            </div>
                            <div className="text-[10px] sm:text-xs font-black text-primary">
                              {trip.isWaitlistOnly 
                                ? `${trip.waitlistSpotsRemaining} Waitlist spots left` 
-                               : `${trip.availability} / ${trip.capacity} Seats remaining`}
+                               : trip.availability === 0 ? "No active seats" : `${trip.availability} Seats remaining`}
                            </div>
                         </div>
-                        <Progress value={trip.fillPercentage} className="h-1.5 bg-secondary" />
+                        <Progress value={trip.fillPercentage} className={cn("h-1.5 bg-secondary", trip.isHighDemand && "[&>div]:bg-orange-500")} />
+                        {trip.isWaitlistOnly && (
+                           <p className="text-[9px] font-bold text-orange-600 uppercase flex items-center gap-1">
+                             <Info className="h-2.5 w-2.5" /> FCFS Promotion Likelihood: {trip.waitlistUsed < 5 ? "High" : "Moderate"}
+                           </p>
+                        )}
                       </div>
 
-                      <div className="pt-2 flex flex-wrap items-center justify-between gap-4 sm:gap-6 text-[11px] sm:text-xs text-muted-foreground border-t border-dashed">
+                      <div className="pt-3 flex flex-wrap items-center justify-between gap-4 sm:gap-6 text-[11px] sm:text-xs text-muted-foreground border-t border-dashed">
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1.5">
                             <Ship className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
@@ -490,7 +518,7 @@ function TripsContent() {
                           <div className="flex items-center gap-1.5">
                             <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary/40" />
                             <span className="font-bold uppercase tracking-tight">
-                              {trip.capacity} Capacity
+                              {trip.capacity} Seats
                             </span>
                           </div>
                         </div>
@@ -529,6 +557,19 @@ function TripsContent() {
                 <Ticket className="h-5 w-5 sm:h-6 sm:w-6 text-accent" /> {selectedSchedule?.isWaitlistOnly ? 'Waitlist Registration' : 'Voyage Reservation'}
               </DialogTitle>
             </div>
+            
+            {/* STICKY TRIP INFO IN DIALOG */}
+            <div className="bg-primary/5 p-3 rounded-xl border-2 border-dashed flex justify-between items-center mb-4">
+               <div>
+                  <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Selected Voyage</p>
+                  <p className="text-xs font-black text-primary uppercase">{selectedSchedule?.tripCode} • {selectedSchedule?.route?.name}</p>
+               </div>
+               <div className="text-right">
+                  <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Time</p>
+                  <p className="text-xs font-black text-accent">{selectedSchedule?.departureTime}</p>
+               </div>
+            </div>
+
             <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 no-scrollbar">
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <div className={cn("h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors", 
