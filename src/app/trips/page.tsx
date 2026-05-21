@@ -343,7 +343,7 @@ function TripsContent() {
       setIsBookingOpen(false);
       setBookingStep(1);
       setPassengers([{ passengerName: "", passengerDob: "", passengerEmail: user?.email || "", passengerContact: "", emergencyContact: "", fareId: "" }]);
-      alert(`Successfully processed ${passengers.length} booking request(s)!`);
+      alert(selectedSchedule.isWaitlistOnly ? "Waitlist request submitted successfully!" : `Successfully processed ${passengers.length} reservation request(s)!`);
     } catch (e: any) {
       alert("Booking failed: " + e.message);
     } finally {
@@ -436,7 +436,7 @@ function TripsContent() {
                            {trip.isFull ? (
                              <Badge variant="destructive" className="text-[9px] font-black uppercase">Voyage Full</Badge>
                            ) : trip.isWaitlistOnly ? (
-                             <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase">Waitlist Active</Badge>
+                             <Badge className="bg-orange-500 text-white text-[9px] font-black uppercase">Waitlist Open</Badge>
                            ) : (
                              <Badge className="bg-green-600 text-white text-[9px] font-black uppercase">Seats Available</Badge>
                            )}
@@ -557,9 +557,9 @@ function TripsContent() {
                     <div className="bg-orange-50 border-2 border-orange-200 p-4 rounded-2xl flex items-start gap-3">
                       <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5 shrink-0" />
                       <div>
-                        <p className="text-xs sm:text-sm font-black text-orange-800 uppercase">Waitlist Active</p>
+                        <p className="text-xs sm:text-sm font-black text-orange-800 uppercase">Waitlist Open</p>
                         <p className="text-[10px] sm:text-xs text-orange-700 leading-relaxed">
-                          Primary capacity has been reached. You are joining the queue for <span className="font-bold">{selectedSchedule.waitlistSpotsRemaining} remaining</span> waitlist slots.
+                          Primary capacity has been reached. You are joining the queue for <span className="font-bold">{selectedSchedule.waitlistSpotsRemaining} remaining</span> waitlist slots. **No immediate payment required.**
                         </p>
                       </div>
                     </div>
@@ -723,7 +723,7 @@ function TripsContent() {
                         <Label className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase">Status</Label>
                         <div className="mt-1">
                            {selectedSchedule?.isWaitlistOnly 
-                             ? <Badge className="bg-orange-500 text-white uppercase text-[8px] font-black">Waitlist Only</Badge>
+                             ? <Badge className="bg-orange-500 text-white uppercase text-[8px] font-black">Waitlist Entry</Badge>
                              : <Badge className="bg-green-600 text-white uppercase text-[8px] font-black">Seat Reserved</Badge>}
                         </div>
                       </div>
@@ -770,7 +770,9 @@ function TripsContent() {
                         <p className="text-[10px] opacity-70 uppercase font-black tracking-[0.3em] mb-2">Total Payable Amount</p>
                         <p className="text-4xl sm:text-6xl font-black">₱{isMounted ? totalGroupFare.toLocaleString() : "---"}</p>
                         <p className="text-[9px] sm:text-[11px] mt-6 opacity-60 font-medium italic leading-tight max-w-sm">
-                          * Reservations are held until 30 minutes before departure. Final payment collection occurs at the terminal issuance desk.
+                          {selectedSchedule?.isWaitlistOnly 
+                            ? "* You are joining the waitlist queue. No payment is required at this stage. You will be notified once a seat is promoted to Reserved."
+                            : "* Reservations are held until 30 minutes before departure. Final payment collection occurs at the terminal issuance desk."}
                         </p>
                       </div>
                       <div className="shrink-0 flex flex-col items-center gap-2">
@@ -812,7 +814,7 @@ function TripsContent() {
                   selectedSchedule?.isWaitlistOnly ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-accent text-primary hover:bg-accent/90')}
               >
                 {isReserving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Check className="h-5 w-5 ml-1 sm:ml-2" />}
-                {selectedSchedule?.isWaitlistOnly ? 'Confirm Waitlist' : 'Complete Booking'}
+                {selectedSchedule?.isWaitlistOnly ? 'Join Waitlist' : 'Complete Booking'}
               </Button>
             )}
           </DialogFooter>

@@ -24,7 +24,9 @@ import {
   ShieldCheck,
   Megaphone,
   CalendarClock,
-  BarChart3
+  BarChart3,
+  ListOrdered,
+  AlertTriangle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -48,11 +50,19 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
+  const bookingsRef = useMemoFirebase(() => db ? collection(db, "bookings") : null, [db]);
+  
   const { data: allStaff, isLoading: isStaffLoading } = useCollection(staffRef);
+  const { data: bookings } = useCollection(bookingsRef);
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
   const myStaffRecord = allStaff?.find(s => s.email === user?.email);
   const isAuthorizedStaff = isSuperAdmin || (myStaffRecord && myStaffRecord.status === 'Active');
+
+  const waitlistBurden = useMemo(() => {
+    if (!bookings) return 0;
+    return bookings.filter(b => b.status === 'Waitlisted').length;
+  }, [bookings]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -119,14 +129,36 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
       <main className="flex-1 flex flex-col gap-8 p-6 container mx-auto">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
              <h1 className="text-2xl font-black font-headline text-primary uppercase tracking-tight">Terminal Command</h1>
              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                 <ShieldCheck className="h-3 w-3 text-green-500" /> Authorized Role: <span className="text-primary">{currentRole}</span>
              </div>
           </div>
-          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+          
+          {/* WAITLIST BURDEN INDICATOR */}
+          <div className={cn(
+            "px-6 py-3 rounded-2xl border-2 flex items-center gap-4 transition-all animate-in fade-in slide-in-from-top-2",
+            waitlistBurden > 0 ? "bg-orange-50 border-orange-200 ring-4 ring-orange-500/10" : "bg-white border-secondary/50"
+          )}>
+            <div className={cn("p-2 rounded-xl", waitlistBurden > 0 ? "bg-orange-500 text-white" : "bg-secondary text-muted-foreground")}>
+              <ListOrdered className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Waitlist Burden</p>
+              <div className="flex items-center gap-2">
+                <p className={cn("text-xl font-black", waitlistBurden > 0 ? "text-orange-600" : "text-primary")}>
+                  {waitlistBurden} <span className="text-xs font-bold opacity-60">Passengers</span>
+                </p>
+                {waitlistBurden > 10 && (
+                  <div className="flex items-center gap-1 text-[9px] font-black text-destructive uppercase bg-destructive/10 px-2 py-0.5 rounded-full">
+                    <AlertTriangle className="h-3 w-3" /> Deploy Extra Vessel
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <section className="space-y-6">
