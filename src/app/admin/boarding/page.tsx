@@ -26,7 +26,9 @@ import {
   User,
   PenTool,
   ShieldAlert,
-  Printer
+  Printer,
+  FileText,
+  Download
 } from "lucide-react";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -62,6 +64,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function BoardingPage() {
   const db = useFirestore();
@@ -72,6 +76,7 @@ export default function BoardingPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<string>("all");
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("all");
   const [isClearanceDialogOpen, setIsClearanceDialogOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const [clearanceForm, setClearanceForm] = useState({
     captainName: "",
@@ -126,11 +131,17 @@ export default function BoardingPage() {
     return collection(db, "staff");
   }, [db, user]);
 
+  const vesselsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "vessels");
+  }, [db]);
+
   const { data: routes } = useCollection(routesRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
   const { data: voyages } = useCollection(voyagesRef);
   const { data: allStaff } = useCollection(staffRef);
+  const { data: vessels } = useCollection(vesselsRef);
 
   const currentStaffProfile = useMemo(() => {
     if (!allStaff || !user) return null;
@@ -250,8 +261,6 @@ export default function BoardingPage() {
       manifestCleared: true 
     };
 
-    const staffIdentity = currentStaffProfile ? `${currentStaffProfile.fullName} (${currentStaffProfile.role})` : (user?.email || "Clearance Desk");
-
     const updatedAuditLogs = {
        ...(currentVoyage.auditLogs || {}),
        manifestCleared: {
@@ -322,6 +331,132 @@ export default function BoardingPage() {
       boardedAt: null,
       updatedAt: new Date().toISOString()
     });
+  };
+
+  const calculateAge = (dob: string) => {
+    if (!dob) return "N/A";
+    try {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age.toString();
+    } catch {
+      return "N/A";
+    }
+  };
+
+  const generateManifestPDF = async () => {
+    if (selectedScheduleId === 'all') return;
+    setIsGeneratingPdf(true);
+
+    try {
+      const schedule = schedules?.find(s => s.id === selectedScheduleId);
+      const route = routes?.find(r => r.id === schedule?.routeId);
+      const vessel = vessels?.find(v => v.id === (currentVoyage?.vesselId || schedule?.vesselId));
+      
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("PHILIPPINE COAST GUARD PASSENGER MANIFEST", 105, 20, { align: "center" });
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text("Official Maritime Voyage Document", 105, 26, { align: "center" });
+
+      // Voyage Info Section
+      doc.setDrawColor(200, 200, 200);
+      doc.line(14, 32, 196, 32);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`VESSEL NAME:`, 14, 40);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${vessel?.name || "TBA"}`, 45, 40);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`TRIP CODE:`, 110, 40);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${schedule?.tripCode || "N/A"}`, 135, 40);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`ROUTE:`, 14, 46);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${route?.name || "Unknown"}`, 45, 46);
+
+      doc.setFont("helvetica", "bold");
+      doc.text(`DATE/TIME:`, 110, 46);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${todayPHT} @ ${schedule?.departureTime || "--:--"}`, 135, 46);
+
+      doc.line(14, 52, 196, 52);
+
+      // Passenger Table
+      const manifestRows = filteredBookings.map(b => [
+        b.boardingSequenceNumber || "N/A",
+        b.passengerName.toUpperCase(),
+        calculateAge(b.passengerDob),
+        b.segmentLabel || "REGULAR",
+        b.status === 'Used' ? "BOARDED" : "CONFIRMED",
+        b.id
+      ]);
+
+      autoTable(doc, {
+        startY: 60,
+        head: [['SEQ', 'PASSENGER NAME', 'AGE', 'SEGMENT', 'STATUS', 'TICKET ID']],
+        body: manifestRows,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59], fontSize: 9 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 15 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 15 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 30 }
+        }
+      });
+
+      // Clearance Section
+      const finalY = (doc as any).lastAutoTable.finalY + 20;
+      
+      if (currentVoyage?.clearance) {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("MASTER / CAPTAIN SIGN-OFF", 14, finalY);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Name: ${currentVoyage.clearance.captainName}`, 14, finalY + 7);
+        doc.text(`License No: ${currentVoyage.clearance.captainLicense}`, 14, finalY + 12);
+
+        doc.setFont("helvetica", "bold");
+        doc.text("PCG OFFICER CLEARANCE", 110, finalY);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Name: ${currentVoyage.clearance.coastGuardOfficer}`, 110, finalY + 7);
+        doc.text(`Rank: ${currentVoyage.clearance.coastGuardRank}`, 110, finalY + 12);
+        doc.text(`Cleared At: ${format(new Date(currentVoyage.clearance.clearedAt), "MMM dd, HH:mm")}`, 110, finalY + 17);
+      }
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(`Page ${i} of ${pageCount} | Generated by Isla Konek Cloud Management | System Timestamp: ${new Date().toLocaleString()}`, 105, 285, { align: "center" });
+      }
+
+      doc.save(`MANIFEST_${schedule?.tripCode || "VOYAGE"}_${todayPHT}.pdf`);
+      toast({ title: "Manifest Downloaded", description: "The official PCG manifest PDF has been generated." });
+    } catch (error: any) {
+      console.error(error);
+      toast({ variant: "destructive", title: "PDF Generation Failed", description: error.message });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const getTripInfo = (scheduleId: string) => {
@@ -677,9 +812,16 @@ export default function BoardingPage() {
                         className="pl-10 bg-white h-10 text-sm"
                       />
                     </div>
-                    {currentVoyage?.compliance?.manifestCleared && (
-                      <Button variant="outline" size="icon" className="h-10 w-10 shrink-0" title="Print Final Manifest">
-                        <Printer className="h-4 w-4" />
+                    {currentVoyage?.compliance?.manifestCleared && selectedScheduleId !== 'all' && (
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 shrink-0 bg-primary text-white hover:bg-primary/90" 
+                        title="Download PCG Manifest"
+                        onClick={generateManifestPDF}
+                        disabled={isGeneratingPdf}
+                      >
+                        {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                       </Button>
                     )}
                   </div>
