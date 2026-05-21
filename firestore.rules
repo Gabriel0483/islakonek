@@ -1,8 +1,9 @@
 
+
 /**
  * FIRESTORE SECURITY RULES
- * Version: 5.0
- * Update: Implemented Advisory Module and Public Read Access.
+ * Version: 6.0
+ * Update: Implemented Staff Scheduling Permissions.
  */
 
 rules_version = '2';
@@ -39,6 +40,12 @@ service cloud.firestore {
       allow write: if isSuperAdmin() || 
                     (request.resource.data.role in ['Port Officer', 'Finance/Accounting']) || 
                     (request.resource.data.role in ['Desk Agent', 'Crew']); 
+    }
+
+    // Staff Schedules: Managed by higher ops
+    match /staff_schedules/{scheduleId} {
+      allow read: if isStaff();
+      allow write: if isStaff();
     }
 
     // Bookings: Open for MVP operations

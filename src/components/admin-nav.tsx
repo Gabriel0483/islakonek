@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -22,7 +23,8 @@ import {
   Radio,
   Users,
   Megaphone,
-  Globe
+  Globe,
+  CalendarClock
 } from "lucide-react";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -40,9 +42,9 @@ import { signOut } from "firebase/auth";
 import { collection } from "firebase/firestore";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories"],
-  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules"],
+  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories", "staff-schedules"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
   "Finance/Accounting": ["fares", "bookings", "sales"]
@@ -62,6 +64,7 @@ const analyticItems = [
 ];
 
 const configItems = [
+  { id: "staff-schedules", label: "Scheduling", icon: CalendarClock, href: "/admin/staff-schedules" },
   { id: "ports", label: "Ports", icon: MapPin, href: "/admin/ports" },
   { id: "routes", label: "Routes", icon: Waypoints, href: "/admin/routes" },
   { id: "fares", label: "Fares", icon: Banknote, href: "/admin/fares" },

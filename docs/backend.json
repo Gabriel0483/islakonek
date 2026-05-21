@@ -329,6 +329,29 @@
       },
       "required": ["id", "fullName", "email", "role", "status"]
     },
+    "StaffSchedule": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StaffSchedule",
+      "type": "object",
+      "description": "Daily work shifts and assignments for desk agents and crew members.",
+      "properties": {
+        "id": { "type": "string" },
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "role": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "startTime": { "type": "string", "description": "HH:mm" },
+        "endTime": { "type": "string", "description": "HH:mm" },
+        "assignmentType": { "type": "string", "enum": ["Port", "Vessel"] },
+        "assignmentId": { "type": "string" },
+        "assignmentName": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["Scheduled", "Ongoing", "Completed", "Absent", "Cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "staffId", "date", "startTime", "endTime", "assignmentType", "assignmentId", "status"]
+    },
     "Advisory": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Advisory",
@@ -453,6 +476,16 @@
             "$ref": "#/backend/entities/Staff"
           },
           "description": "Internal staff registry managed by SuperAdmin."
+        }
+      },
+      {
+        "path": "/staff_schedules/{scheduleId}",
+        "definition": {
+          "entityName": "StaffSchedule",
+          "schema": {
+            "$ref": "#/backend/entities/StaffSchedule"
+          },
+          "description": "Shift records for maritime personnel."
         }
       },
       {
