@@ -252,7 +252,9 @@ function TripsContent() {
       ...updated[index],
       passengerName: profile.displayName || "",
       passengerEmail: profile.email || "",
-      passengerContact: profile.phoneNumber || ""
+      passengerContact: profile.phoneNumber || "",
+      passengerDob: profile.birthDate || "",
+      emergencyContact: profile.emergencyContact || ""
     };
     setPassengers(updated);
   };
