@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, Suspense } from "react";
@@ -407,7 +406,7 @@ function TripsContent() {
           </div>
 
           <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground py-2 border-b uppercase font-bold tracking-wider">
-            <p>Displaying <span className="text-primary font-black">{filteredTrips.length}</span> Active Connections</p>
+            <p>Displaying <span className="text-primary font-black">{filteredTrips.length}</span> Active Trips</p>
           </div>
 
           <div className="space-y-4">
