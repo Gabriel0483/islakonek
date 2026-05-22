@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Plus, 
   Pencil, 
@@ -11,7 +11,13 @@ import {
   ArrowRight,
   UserCheck,
   X,
-  AlertCircle
+  AlertCircle,
+  Timer,
+  Anchor,
+  Navigation,
+  MapPinned,
+  Coins,
+  CheckCircle2
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -42,6 +48,8 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 export default function RoutesPage() {
   const db = useFirestore();
@@ -82,9 +90,12 @@ export default function RoutesPage() {
 
   const [newSegment, setNewSegment] = useState({ label: "" });
 
-  const filteredRoutes = routes?.filter(route => 
-    route.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredRoutes = useMemo(() => {
+    if (!routes) return [];
+    return routes.filter(route => 
+      route.name.toLowerCase().includes(search.toLowerCase())
+    ).sort((a, b) => a.name.localeCompare(b.name));
+  }, [routes, search]);
 
   const handleOpenDialog = (route: any = null) => {
     if (route) {
@@ -119,7 +130,7 @@ export default function RoutesPage() {
 
   const handleAddSegment = () => {
     if (!newSegment.label) return;
-    const segments = [...formData.passengerSegments, { ...newSegment, id: Math.random().toString(36).substring(2, 9) }];
+    const segments = [...formData.passengerSegments, { ...newSegment, id: Math.random().toString(36).substring(2, 9).toUpperCase() }];
     setFormData({ ...formData, passengerSegments: segments });
     setNewSegment({ label: "" });
   };
@@ -130,7 +141,13 @@ export default function RoutesPage() {
   };
 
   const handleSave = () => {
-    if (!db) return;
+    if (!db || !formData.originPortId || !formData.destinationPortId) return;
+
+    // Operational Validation: Prevent circular routes
+    if (formData.originPortId === formData.destinationPortId) {
+      alert("Validation Error: Origin and Destination ports cannot be the same.");
+      return;
+    }
     
     const timestamp = new Date().toISOString();
     const payload = {
@@ -149,7 +166,7 @@ export default function RoutesPage() {
         updatedAt: timestamp
       });
     } else {
-      const newId = Math.random().toString(36).substring(2, 11);
+      const newId = Math.random().toString(36).substring(2, 11).toUpperCase();
       const routeRef = doc(db, "routes", newId);
       setDocumentNonBlocking(routeRef, {
         ...payload,
@@ -162,269 +179,342 @@ export default function RoutesPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this route?")) {
+    if (confirm("Are you sure you want to permanently delete this route? Schedules relying on this route may become inactive.")) {
       const routeRef = doc(db, "routes", id);
       deleteDocumentNonBlocking(routeRef);
     }
   };
 
-  const getPortName = (id: string) => ports?.find(p => p.id === id)?.name || "Unknown Port";
+  const getPortInfo = (id: string) => {
+    const port = ports?.find(p => p.id === id);
+    return {
+      name: port?.name || "Unknown Port",
+      code: port?.code || "TBA",
+      province: port?.province || ""
+    };
+  };
+
+  const formatDuration = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
 
   const isLoading = isPortsLoading || isRoutesLoading;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-16 z-40">
         <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
           <Waypoints className="h-5 w-5 text-accent" />
           Route Management
         </h1>
+        <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-black uppercase text-xs tracking-widest h-10 px-6 shadow-sm">
+          <Plus className="h-4 w-4 mr-2" /> Establish Route
+        </Button>
       </header>
 
-      <main className="p-6 space-y-6 container mx-auto">
+      <main className="p-4 sm:p-6 space-y-6 container mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="relative flex-1 w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search routes by name..." 
-              className="pl-10 h-12 bg-white border-none shadow-sm"
+              placeholder="Search shipping lanes..." 
+              className="pl-10 h-11 bg-white border-none shadow-sm text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button onClick={() => handleOpenDialog()} className="bg-accent text-primary font-bold hover:bg-accent/90 h-12 px-6">
-            <Plus className="h-4 w-4 mr-2" /> Create New Route
-          </Button>
+          <div className="bg-primary/5 px-4 py-2 rounded-xl border border-primary/10 flex items-center gap-3">
+             <Navigation className="h-4 w-4 text-primary" />
+             <p className="text-[10px] font-black uppercase text-primary tracking-widest">
+               Active Network: {routes?.length || 0} Routes Configured
+             </p>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-accent" />
-            <p className="text-sm text-muted-foreground">Synchronizing maritime routes...</p>
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-accent" />
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Mapping Shipping Lanes...</p>
           </div>
-        ) : filteredRoutes && filteredRoutes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredRoutes.map((route) => (
-              <Card key={route.id} className="border-none shadow-sm hover:shadow-md transition-shadow bg-white">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg font-bold text-primary">{route.name}</CardTitle>
-                      <CardDescription className="flex items-center gap-2 text-sm font-medium">
-                        {getPortName(route.originPortId)} 
-                        <ArrowRight className="h-3 w-3 text-accent" /> 
-                        {getPortName(route.destinationPortId)}
-                      </CardDescription>
+        ) : filteredRoutes.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {filteredRoutes.map((route) => {
+              const origin = getPortInfo(route.originPortId);
+              const dest = getPortInfo(route.destinationPortId);
+              return (
+                <Card key={route.id} className="border-none shadow-sm hover:shadow-md transition-all relative overflow-hidden bg-white group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-accent/20 group-hover:bg-accent transition-colors" />
+                  
+                  <CardHeader className="pb-4">
+                    <div className="flex justify-between items-start">
+                       <div className="space-y-1 flex-1">
+                          <CardTitle className="text-lg font-black text-primary uppercase tracking-tight leading-none mb-4">
+                             {route.name}
+                          </CardTitle>
+                          
+                          <div className="flex items-center gap-4">
+                             <div className="flex-1 space-y-1">
+                                <div className="flex items-center gap-2">
+                                   <Badge variant="outline" className="text-[9px] font-black tracking-tighter h-4 px-1">{origin.code}</Badge>
+                                   <p className="text-xs font-bold uppercase truncate">{origin.name}</p>
+                                </div>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase ml-11">{origin.province}</p>
+                             </div>
+                             <ArrowRight className="h-4 w-4 text-accent shrink-0" />
+                             <div className="flex-1 space-y-1">
+                                <div className="flex items-center gap-2">
+                                   <Badge variant="outline" className="text-[9px] font-black tracking-tighter h-4 px-1">{dest.code}</Badge>
+                                   <p className="text-xs font-bold uppercase truncate">{dest.name}</p>
+                                </div>
+                                <p className="text-[9px] font-bold text-muted-foreground uppercase ml-11">{dest.province}</p>
+                             </div>
+                          </div>
+                       </div>
+                       <div className="text-right ml-4">
+                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Base Price</p>
+                          <p className="text-2xl font-black text-primary">₱{isMounted ? route.basePrice?.toLocaleString() : "---"}</p>
+                       </div>
                     </div>
-                    <div className="bg-secondary px-3 py-1 rounded-full text-xs font-bold text-primary">
-                      ₱{isMounted ? route.basePrice?.toLocaleString() : "---"}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-2 py-2">
-                     <div className="p-2 rounded bg-red-50 border border-red-100 text-center">
-                        <p className="text-[9px] uppercase font-bold text-red-600">Rebook</p>
-                        <p className="text-xs font-black">₱{route.rebookingFee || 0}</p>
-                     </div>
-                     <div className="p-2 rounded bg-orange-50 border border-orange-100 text-center">
-                        <p className="text-[9px] uppercase font-bold text-orange-600">Cancel</p>
-                        <p className="text-xs font-black">₱{route.cancellationFee || 0}</p>
-                     </div>
-                     <div className="p-2 rounded bg-slate-50 border border-slate-200 text-center">
-                        <p className="text-[9px] uppercase font-bold text-slate-600">No-Show</p>
-                        <p className="text-xs font-black">₱{route.noShowFee || 0}</p>
-                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className="flex flex-wrap gap-2">
-                    {route.passengerSegments?.map((seg: any) => (
-                      <Badge key={seg.id} variant="outline" className="text-[10px] bg-accent/5 border-accent/20">
-                        {seg.label}
-                      </Badge>
-                    ))}
-                  </div>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                       <div className="bg-secondary/20 p-2.5 rounded-xl space-y-0.5 border border-transparent hover:border-accent/20 transition-all">
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-wider">Duration</p>
+                          <p className="text-xs font-black text-primary flex items-center gap-1.5">
+                             <Timer className="h-3 w-3 text-accent" /> {formatDuration(route.estimatedDurationMinutes)}
+                          </p>
+                       </div>
+                       <div className="bg-red-50/50 p-2.5 rounded-xl space-y-0.5 border border-red-100">
+                          <p className="text-[8px] font-black text-red-600/60 uppercase tracking-wider">Rebook Fee</p>
+                          <p className="text-xs font-black text-red-600 flex items-center gap-1.5">
+                             <Coins className="h-3 w-3" /> ₱{route.rebookingFee || 0}
+                          </p>
+                       </div>
+                       <div className="bg-orange-50/50 p-2.5 rounded-xl space-y-0.5 border border-orange-100">
+                          <p className="text-[8px] font-black text-orange-600/60 uppercase tracking-wider">Cancel Fee</p>
+                          <p className="text-xs font-black text-orange-600 flex items-center gap-1.5">
+                             <Coins className="h-3 w-3" /> ₱{route.cancellationFee || 0}
+                          </p>
+                       </div>
+                       <div className="bg-secondary/10 p-2.5 rounded-xl space-y-0.5 border border-secondary">
+                          <p className="text-[8px] font-black text-muted-foreground uppercase tracking-wider">No-Show</p>
+                          <p className="text-xs font-black text-primary flex items-center gap-1.5 opacity-60">
+                             <Coins className="h-3 w-3" /> ₱{route.noShowFee || 0}
+                          </p>
+                       </div>
+                    </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t">
-                     <span className="text-xs text-muted-foreground">
-                       Duration: {Math.floor(route.estimatedDurationMinutes / 60)}h {route.estimatedDurationMinutes % 60}m
-                     </span>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(route)} className="h-8 w-8 p-0">
-                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    <div className="flex items-center gap-2 flex-wrap min-h-[24px]">
+                       <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mr-1">Demographics:</span>
+                       {route.passengerSegments?.length > 0 ? route.passengerSegments.map((seg: any) => (
+                         <Badge key={seg.id} variant="outline" className="text-[8px] font-black uppercase bg-accent/5 border-accent/20 px-1.5 h-4">
+                           {seg.label}
+                         </Badge>
+                       )) : (
+                         <span className="text-[8px] font-bold text-muted-foreground italic">None Defined</span>
+                       )}
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-3 border-t border-dashed">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(route)} className="h-8 text-[10px] font-black uppercase text-primary hover:bg-primary/5">
+                        <Pencil className="h-3.5 w-3.5 mr-1.5" /> Configure
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(route.id)} className="h-8 w-8 p-0 text-destructive">
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(route.id)} className="h-8 text-[10px] font-black uppercase text-destructive hover:bg-destructive/5">
+                        <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-50 bg-secondary/10">
-            <Waypoints className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-bold">No routes defined</h3>
-            <p className="text-muted-foreground">Establish your first shipping route connecting two ports.</p>
+          <div className="text-center py-32 border-2 border-dashed rounded-3xl opacity-40 flex flex-col items-center bg-white">
+            <Waypoints className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-black text-primary uppercase tracking-tight">No Routes Defined</h3>
+            <p className="text-sm mt-2 max-w-xs mx-auto">Establish your first shipping lane by connecting two registered terminals.</p>
           </div>
         )}
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{editingRoute ? "Edit Route" : "Create New Route"}</DialogTitle>
-            <DialogDescription>
-              Define journey details, passenger demographics, and penalty fees.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden flex flex-col h-[90vh] max-h-[90vh]">
+          <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">
+             <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl">
+                   <Waypoints className="h-6 w-6" />
+                </div>
+                <div>
+                   <DialogTitle className="text-xl font-black uppercase tracking-tight">{editingRoute ? "Modify Route" : "Establish New Route"}</DialogTitle>
+                   <DialogDescription className="text-primary-foreground/70 text-xs">Configure pathing, duration, and financial rules.</DialogDescription>
+                </div>
+             </div>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-4">
-            <div className="grid gap-6 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Route Name</Label>
-                <Input 
-                  id="name" 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  placeholder="e.g. Manila - Cebu Express"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Origin Port</Label>
-                  <Select 
-                    value={formData.originPortId} 
-                    onValueChange={(val) => setFormData({...formData, originPortId: val})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Origin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ports?.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Destination Port</Label>
-                  <Select 
-                    value={formData.destinationPortId} 
-                    onValueChange={(val) => setFormData({...formData, destinationPortId: val})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Destination" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ports?.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="basePrice">Base Fare (₱)</Label>
-                  <Input 
-                    id="basePrice" 
-                    type="number"
-                    value={formData.basePrice} 
-                    onChange={(e) => setFormData({...formData, basePrice: e.target.value})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (Minutes)</Label>
-                  <Input 
-                    id="duration" 
-                    type="number"
-                    value={formData.estimatedDurationMinutes} 
-                    onChange={(e) => setFormData({...formData, estimatedDurationMinutes: e.target.value})} 
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4 border pt-4 p-4 rounded-lg bg-red-50/30">
-                <div className="flex items-center gap-2 text-destructive mb-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <Label className="font-bold">Penalty Configurations (₱)</Label>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="rebook" className="text-[10px] uppercase text-muted-foreground font-bold">Rebooking Fee</Label>
-                    <Input 
-                      id="rebook" 
-                      type="number"
-                      value={formData.rebookingFee} 
-                      onChange={(e) => setFormData({...formData, rebookingFee: e.target.value})} 
-                      className="bg-white"
-                    />
+          
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-8">
+               {/* ROUTE IDENTITY */}
+               <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                     <Navigation className="h-4 w-4 text-accent" />
+                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Routing Path</Label>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cancel" className="text-[10px] uppercase text-muted-foreground font-bold">Cancellation Fee</Label>
-                    <Input 
-                      id="cancel" 
-                      type="number"
-                      value={formData.cancellationFee} 
-                      onChange={(e) => setFormData({...formData, cancellationFee: e.target.value})} 
-                      className="bg-white"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-secondary/5 p-5 rounded-2xl border-2 border-dashed border-secondary/50">
+                     <div className="space-y-1.5">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Departure Terminal</Label>
+                        <Select 
+                          value={formData.originPortId} 
+                          onValueChange={(val) => setFormData({...formData, originPortId: val})}
+                        >
+                          <SelectTrigger className="h-11 font-bold bg-white">
+                            <SelectValue placeholder="Select Origin" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ports?.map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                     </div>
+                     <div className="space-y-1.5">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Arrival Terminal</Label>
+                        <Select 
+                          value={formData.destinationPortId} 
+                          onValueChange={(val) => setFormData({...formData, destinationPortId: val})}
+                        >
+                          <SelectTrigger className="h-11 font-bold bg-white">
+                            <SelectValue placeholder="Select Destination" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ports?.map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name} ({p.code})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                     </div>
+                     <div className="md:col-span-2 space-y-1.5">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Official Route Name</Label>
+                        <Input 
+                          value={formData.name} 
+                          onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                          placeholder="e.g. Batangas - Calapan FastCraft"
+                          className="h-11 font-bold bg-white"
+                        />
+                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="noshow" className="text-[10px] uppercase text-muted-foreground font-bold">No-Show Fee</Label>
-                    <Input 
-                      id="noshow" 
-                      type="number"
-                      value={formData.noShowFee} 
-                      onChange={(e) => setFormData({...formData, noShowFee: e.target.value})} 
-                      className="bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
+               </div>
 
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-accent" />
-                  <Label className="font-bold">Passenger Demographics</Label>
-                </div>
-                
-                <div className="bg-secondary/30 p-4 rounded-lg space-y-4">
-                  <div className="grid grid-cols-3 gap-3 items-end">
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-[10px] uppercase text-muted-foreground">Demographic Label</Label>
-                      <Input 
-                        placeholder="e.g. Student" 
-                        value={newSegment.label}
-                        onChange={(e) => setNewSegment({...newSegment, label: e.target.value})}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <Button onClick={handleAddSegment} className="h-8 bg-primary text-white">Add</Button>
+               {/* PERFORMANCE & BASE PRICE */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
+                        <Coins className="h-3.5 w-3.5 text-accent" /> Base Journey Fare (₱)
+                     </Label>
+                     <Input 
+                        type="number"
+                        value={formData.basePrice} 
+                        onChange={(e) => setFormData({...formData, basePrice: e.target.value})} 
+                        className="h-11 font-black text-lg"
+                     />
                   </div>
+                  <div className="space-y-1.5">
+                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-1.5">
+                        <Timer className="h-3.5 w-3.5 text-accent" /> Journey Time (Minutes)
+                     </Label>
+                     <Input 
+                        type="number"
+                        value={formData.estimatedDurationMinutes} 
+                        onChange={(e) => setFormData({...formData, estimatedDurationMinutes: e.target.value})} 
+                        className="h-11 font-black text-lg"
+                     />
+                  </div>
+               </div>
 
-                  <div className="space-y-2">
-                    {formData.passengerSegments.map((seg: any) => (
-                      <div key={seg.id} className="flex items-center justify-between bg-white p-2 rounded border text-sm">
-                        <span>{seg.label}</span>
-                        <Button variant="ghost" size="sm" onClick={() => handleRemoveSegment(seg.id)} className="h-6 w-6 p-0 text-destructive">
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
+               <Separator />
+
+               {/* PENALTY CONFIGURATION */}
+               <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                     <AlertCircle className="h-4 w-4 text-destructive" />
+                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Financial Penalty Rules (₱)</Label>
                   </div>
-                </div>
-              </div>
+                  <div className="grid grid-cols-3 gap-4 bg-red-50/30 p-4 rounded-2xl border border-red-100">
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-red-600/70">Rebooking</Label>
+                        <Input 
+                          type="number"
+                          value={formData.rebookingFee} 
+                          onChange={(e) => setFormData({...formData, rebookingFee: e.target.value})} 
+                          className="h-9 font-bold bg-white border-red-200"
+                        />
+                     </div>
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-orange-600/70">Cancellation</Label>
+                        <Input 
+                          type="number"
+                          value={formData.cancellationFee} 
+                          onChange={(e) => setFormData({...formData, cancellationFee: e.target.value})} 
+                          className="h-9 font-bold bg-white border-orange-200"
+                        />
+                     </div>
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-muted-foreground">No-Show</Label>
+                        <Input 
+                          type="number"
+                          value={formData.noShowFee} 
+                          onChange={(e) => setFormData({...formData, noShowFee: e.target.value})} 
+                          className="h-9 font-bold bg-white border-secondary"
+                        />
+                     </div>
+                  </div>
+               </div>
+
+               {/* PASSENGER SEGMENTS */}
+               <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                     <UserCheck className="h-4 w-4 text-accent" />
+                     <Label className="text-[10px] font-black uppercase text-primary tracking-widest">Demographic Segments</Label>
+                  </div>
+                  <div className="bg-secondary/10 p-5 rounded-2xl space-y-5">
+                     <div className="flex gap-3">
+                        <Input 
+                           placeholder="Add segment (e.g. Student, Senior)..." 
+                           value={newSegment.label}
+                           onChange={(e) => setNewSegment({...newSegment, label: e.target.value})}
+                           className="h-10 bg-white"
+                           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSegment())}
+                        />
+                        <Button onClick={handleAddSegment} className="h-10 px-6 font-bold uppercase text-xs">Add</Button>
+                     </div>
+                     <div className="flex flex-wrap gap-2">
+                        {formData.passengerSegments.length > 0 ? formData.passengerSegments.map((seg: any) => (
+                           <Badge key={seg.id} variant="secondary" className="pl-3 pr-1 py-1.5 gap-2 text-[10px] font-bold uppercase bg-white border-2">
+                              {seg.label}
+                              <button onClick={() => handleRemoveSegment(seg.id)} className="h-5 w-5 rounded-full hover:bg-red-50 text-destructive flex items-center justify-center">
+                                 <X className="h-3 w-3" />
+                              </button>
+                           </Badge>
+                        )) : (
+                           <p className="text-[10px] text-muted-foreground italic py-2">No segments defined. Base price will apply to everyone.</p>
+                        )}
+                     </div>
+                  </div>
+               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} className="bg-primary text-white">
-              {editingRoute ? "Save Changes" : "Create Route"}
+
+          <DialogFooter className="p-6 border-t bg-secondary/10 gap-3 shrink-0">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 font-bold h-12 rounded-xl">Cancel</Button>
+            <Button 
+               onClick={handleSave} 
+               disabled={!formData.name || !formData.originPortId || !formData.destinationPortId}
+               className="flex-1 bg-primary text-white font-black uppercase text-xs h-12 rounded-xl shadow-lg tracking-widest"
+            >
+               {editingRoute ? "Save Configurations" : "Establish Route"}
             </Button>
           </DialogFooter>
         </DialogContent>
