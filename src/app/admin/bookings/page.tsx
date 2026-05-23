@@ -131,12 +131,14 @@ export default function DeskBookingsPage() {
   const faresRef = useMemoFirebase(() => firestore ? collection(firestore, 'fares') : null, [firestore]);
   const usersRef = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const voyagesRef = useMemoFirebase(() => firestore ? collection(firestore, 'voyages') : null, [firestore]);
+  const bookingsRef = useMemoFirebase(() => firestore ? collection(firestore, 'bookings') : null, [firestore]);
 
   const { data: allSchedules, isLoading: isLoadingSchedules } = useCollection(schedulesRef);
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesRef);
   const { data: allFares, isLoading: isLoadingFares } = useCollection(faresRef);
   const { data: registeredUsers } = useCollection(usersRef);
   const { data: voyageStatuses } = useCollection(voyagesRef);
+  const { data: allBookings } = useCollection(bookingsRef);
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -168,6 +170,27 @@ export default function DeskBookingsPage() {
   const watchScheduleId = useWatch({ control: form.control, name: "scheduleId" });
   const watchPassengers = useWatch({ control: form.control, name: "passengers" });
   const watchIsPaid = useWatch({ control: form.control, name: "isPaid" });
+
+  const deskStats = useMemo(() => {
+    if (!allBookings || !isMounted || !dateRange.min) return { counterPax: 0, webPax: 0, cashOnHand: 0 };
+    
+    return allBookings.reduce((acc, b) => {
+      // We look at bookings travel date matching today
+      const isToday = b.travelDate === dateRange.min;
+      
+      if (isToday) {
+        if (b.bookingSource === 'Desk') {
+          acc.counterPax++;
+          if (b.status === 'Confirmed' || b.status === 'Used') {
+            acc.cashOnHand += (b.finalFare || 0);
+          }
+        } else {
+          acc.webPax++;
+        }
+      }
+      return acc;
+    }, { counterPax: 0, webPax: 0, cashOnHand: 0 });
+  }, [allBookings, isMounted, dateRange.min]);
 
   const filteredSchedules = useMemo(() => {
     if (!watchRouteId || !watchTravelDate || !allSchedules) return [];
@@ -516,26 +539,26 @@ export default function DeskBookingsPage() {
            </div>
 
            {/* OPERATIONAL SUMMARY */}
-           <div className="pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 opacity-70">
-              <div className="bg-white/50 p-4 rounded-2xl border-2 border-dashed flex items-center gap-4">
+           <div className="pt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white border-none shadow-sm p-4 rounded-2xl border-2 flex items-center gap-4 transition-all">
                  <div className="bg-primary/10 p-2.5 rounded-xl"><Ticket className="h-5 w-5 text-primary" /></div>
                  <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground">Daily Counter Vol.</p>
-                    <p className="text-lg font-black text-primary">-- PAX</p>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Daily Counter Vol.</p>
+                    <p className="text-lg font-black text-primary">{deskStats.counterPax} PAX</p>
                  </div>
               </div>
-              <div className="bg-white/50 p-4 rounded-2xl border-2 border-dashed flex items-center gap-4">
+              <div className="bg-white border-none shadow-sm p-4 rounded-2xl border-2 flex items-center gap-4 transition-all">
                  <div className="bg-accent/10 p-2.5 rounded-xl"><Globe className="h-5 w-5 text-accent" /></div>
                  <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground">Web Intake Today</p>
-                    <p className="text-lg font-black text-primary">-- PAX</p>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Web Intake Today</p>
+                    <p className="text-lg font-black text-primary">{deskStats.webPax} PAX</p>
                  </div>
               </div>
-              <div className="bg-white/50 p-4 rounded-2xl border-2 border-dashed flex items-center gap-4">
+              <div className="bg-white border-none shadow-sm p-4 rounded-2xl border-2 flex items-center gap-4 transition-all">
                  <div className="bg-green-50 p-2.5 rounded-xl"><Banknote className="h-5 w-5 text-green-600" /></div>
                  <div>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground">Cash-on-Hand</p>
-                    <p className="text-lg font-black text-primary">₱--.00</p>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cash-on-Hand</p>
+                    <p className="text-lg font-black text-green-700">₱{deskStats.cashOnHand.toLocaleString()}</p>
                  </div>
               </div>
            </div>
