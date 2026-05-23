@@ -1,9 +1,8 @@
-
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useFieldArray, useForm, useWatch } from "react-hook-form"
-import * as z from "zod"
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import * as z from "zod";
 import { 
   Ticket, 
   PlusCircle, 
@@ -29,10 +28,11 @@ import {
   UserCheck,
   Ship,
   Tag,
-  QrCode
-} from "lucide-react"
+  QrCode,
+  Info
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -40,28 +40,28 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase"
-import { collection, doc, runTransaction, where, query, increment, getDoc } from "firebase/firestore"
-import React, { useMemo, useState, useEffect } from "react"
-import { format, addDays } from "date-fns"
-import { TripItinerary } from "@/components/trip-itinerary"
-import { nanoid } from "nanoid"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AdminNav } from "@/components/admin-nav"
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, runTransaction, where, query, increment, getDoc } from "firebase/firestore";
+import React, { useMemo, useState, useEffect } from "react";
+import { format, addDays } from "date-fns";
+import { TripItinerary } from "@/components/trip-itinerary";
+import { nanoid } from "nanoid";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AdminNav } from "@/components/admin-nav";
 import { 
   Dialog, 
   DialogContent, 
@@ -69,8 +69,9 @@ import {
   DialogTitle, 
   DialogFooter,
   DialogDescription
-} from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const passengerSchema = z.object({
   id: z.string(),
@@ -234,14 +235,11 @@ export default function DeskBookingsPage() {
     form.setValue(`passengers.${index}.fullName`, user.displayName || "");
     form.setValue(`passengers.${index}.passengerEmail`, user.email || "");
     form.setValue(`passengers.${index}.passengerContact`, user.phoneNumber || "");
-    form.setValue(`passengers.${index}.userId`, user.id); // Linking to passenger account
+    form.setValue(`passengers.${index}.userId`, user.id); 
     setLookupSearch('');
     setActiveLookupIndex(null);
   };
 
-  /**
-   * Search for an online booking
-   */
   const handleSearchOnlineBooking = async () => {
     if (!firestore || !onlineBookingId) return;
     setIsSearchingOnline(true);
@@ -262,9 +260,6 @@ export default function DeskBookingsPage() {
     }
   };
 
-  /**
-   * Process and issue payment for an existing online booking
-   */
   const handleProcessOnlineConfirm = async () => {
     if (!firestore || !foundBooking) return;
     setIsReserving(true);
@@ -292,7 +287,6 @@ export default function DeskBookingsPage() {
 
         let boardingSeq = null;
 
-        // Transition from Waitlist or Reserved to Confirmed
         if (currentStatus === 'Waitlisted') {
            if (currentBooked < capacity) {
               boardingSeq = currentBooked + 1;
@@ -306,7 +300,6 @@ export default function DeskBookingsPage() {
            }
         } else if (currentStatus === 'Reserved') {
            boardingSeq = currentBooked + 1;
-           // If already reserved, count was already in bookedCount, just need to confirm payment & assign seq
         } else {
            throw new Error(`Ticket is already ${currentStatus}.`);
         }
@@ -341,9 +334,6 @@ export default function DeskBookingsPage() {
     }
   };
 
-  /**
-   * Create a new counter booking
-   */
   async function handleFinalReserve(data: BookingFormData) {
     if (!firestore) return;
     setIsReserving(true);
@@ -406,7 +396,7 @@ export default function DeskBookingsPage() {
           
           transaction.set(bookingRef, {
             id: passengerBookingId,
-            userId: p.userId || null, // Linking linked account if found
+            userId: p.userId || null,
             routeId: data.routeId,
             scheduleId: data.scheduleId,
             travelDate: data.travelDate,
@@ -462,107 +452,150 @@ export default function DeskBookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
-      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-16 z-40">
         <h1 className="text-lg font-bold font-headline text-primary flex items-center gap-2">
-          <Ticket className="h-5 w-5 text-accent" /> Desk Operations
+          <Ticket className="h-5 w-5 text-accent" /> Terminal Command Center
         </h1>
+        <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full border border-secondary">
+           <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+           <span className="text-[10px] font-black uppercase text-primary tracking-widest">Gateway Online</span>
+        </div>
       </header>
 
-      <main className="p-4 sm:p-6 space-y-6 container mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <Card 
-            className="border-none shadow-md hover:ring-2 hover:ring-primary/20 transition-all group cursor-pointer bg-white"
-            onClick={() => { form.reset(); setIsBookingDialogOpen(true); }}
-           >
-              <CardHeader className="p-8 pb-4">
-                 <div className="bg-primary/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
-                    <UserPlus className="h-8 w-8 text-primary group-hover:text-white" />
-                 </div>
-                 <CardTitle className="text-2xl font-black text-primary">Process New Booking</CardTitle>
-                 <CardDescription>Issue new tickets for walk-in passengers.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 pt-0">
-                 <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                   Register new passengers, verify seat availability, and collect payment for immediate issuance.
-                 </p>
-                 <div className="flex items-center gap-2 text-xs font-black text-accent uppercase tracking-widest group-hover:gap-4 transition-all">
-                    Counter Issuance <ArrowRight className="h-4 w-4" />
-                 </div>
-              </CardContent>
-           </Card>
+      <main className="p-4 sm:p-6 space-y-8 container mx-auto">
+        <div className="max-w-4xl mx-auto space-y-8">
+           <div className="text-center space-y-2">
+              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">Passenger Intake</h2>
+              <p className="text-muted-foreground text-sm max-w-lg mx-auto">Select the appropriate flow to manage walk-in ticketing or verify existing reservations.</p>
+           </div>
 
-           <Card 
-            className="border-none shadow-md hover:ring-2 hover:ring-accent/40 transition-all group cursor-pointer bg-white"
-            onClick={() => { setOnlineBookingId(""); setFoundOnlineBooking(null); setIsOnlineSearchDialogOpen(true); }}
-           >
-              <CardHeader className="p-8 pb-4">
-                 <div className="bg-accent/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-accent group-hover:text-primary transition-colors">
-                    <Globe className="h-8 w-8 text-accent group-hover:text-primary" />
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card 
+                className="border-none shadow-xl hover:ring-4 hover:ring-primary/10 transition-all group cursor-pointer bg-white relative overflow-hidden h-72 flex flex-col justify-end p-8"
+                onClick={() => { form.reset(); setIsBookingDialogOpen(true); }}
+              >
+                 <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                    <UserPlus className="h-40 w-40 -rotate-12 translate-x-12 translate-y-[-20px]" />
                  </div>
-                 <CardTitle className="text-2xl font-black text-primary">Process Online Booking</CardTitle>
-                 <CardDescription>Verify and issue tickets for web reservations.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 pt-0">
-                 <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                   Confirm status for passengers who reserved online. Search by ID to verify manifest and finalize payment.
-                 </p>
-                 <div className="flex items-center gap-2 text-xs font-black text-accent uppercase tracking-widest group-hover:gap-4 transition-all">
-                    Web Intake <ArrowRight className="h-4 w-4" />
+                 <div className="relative z-10 space-y-4">
+                    <div className="bg-primary w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
+                       <UserPlus className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                       <CardTitle className="text-2xl font-black text-primary uppercase">Counter Issuance</CardTitle>
+                       <CardDescription className="font-bold text-muted-foreground mt-1">Issue fresh tickets for walk-in passengers.</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-black text-accent uppercase tracking-[0.2em] group-hover:gap-4 transition-all pt-2">
+                       Launch Intake <ArrowRight className="h-4 w-4" />
+                    </div>
                  </div>
-              </CardContent>
-           </Card>
+              </Card>
+
+              <Card 
+                className="border-none shadow-xl hover:ring-4 hover:ring-accent/20 transition-all group cursor-pointer bg-white relative overflow-hidden h-72 flex flex-col justify-end p-8"
+                onClick={() => { setOnlineBookingId(""); setFoundOnlineBooking(null); setIsOnlineSearchDialogOpen(true); }}
+              >
+                 <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                    <Globe className="h-40 w-40 -rotate-12 translate-x-12 translate-y-[-20px]" />
+                 </div>
+                 <div className="relative z-10 space-y-4">
+                    <div className="bg-accent w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shadow-accent/20">
+                       <Globe className="h-7 w-7 text-primary" />
+                    </div>
+                    <div>
+                       <CardTitle className="text-2xl font-black text-primary uppercase">Web Verification</CardTitle>
+                       <CardDescription className="font-bold text-muted-foreground mt-1">Process payments for online reservations.</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-[0.2em] group-hover:gap-4 transition-all pt-2">
+                       Scan Web ID <ArrowRight className="h-4 w-4 text-accent" />
+                    </div>
+                 </div>
+              </Card>
+           </div>
+
+           {/* OPERATIONAL SUMMARY */}
+           <div className="pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 opacity-70">
+              <div className="bg-white/50 p-4 rounded-2xl border-2 border-dashed flex items-center gap-4">
+                 <div className="bg-primary/10 p-2.5 rounded-xl"><Ticket className="h-5 w-5 text-primary" /></div>
+                 <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">Daily Counter Vol.</p>
+                    <p className="text-lg font-black text-primary">-- PAX</p>
+                 </div>
+              </div>
+              <div className="bg-white/50 p-4 rounded-2xl border-2 border-dashed flex items-center gap-4">
+                 <div className="bg-accent/10 p-2.5 rounded-xl"><Globe className="h-5 w-5 text-accent" /></div>
+                 <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">Web Intake Today</p>
+                    <p className="text-lg font-black text-primary">-- PAX</p>
+                 </div>
+              </div>
+              <div className="bg-white/50 p-4 rounded-2xl border-2 border-dashed flex items-center gap-4">
+                 <div className="bg-green-50 p-2.5 rounded-xl"><Banknote className="h-5 w-5 text-green-600" /></div>
+                 <div>
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">Cash-on-Hand</p>
+                    <p className="text-lg font-black text-primary">₱--.00</p>
+                 </div>
+              </div>
+           </div>
         </div>
       </main>
 
       {/* ONLINE PROCESSING DIALOG */}
       <Dialog open={isOnlineSearchDialogOpen} onOpenChange={setIsOnlineSearchDialogOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden rounded-3xl">
           <DialogHeader className="p-6 bg-primary text-primary-foreground">
-             <DialogTitle className="flex items-center gap-2 text-lg font-black uppercase">
-               <Globe className="h-5 w-5 text-accent" /> Online Intake
-             </DialogTitle>
-             <DialogDescription className="text-primary-foreground/70">Enter the 6-character reference code.</DialogDescription>
+             <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-xl"><Globe className="h-6 w-6 text-accent" /></div>
+                <div>
+                   <DialogTitle className="text-xl font-black uppercase tracking-tight">Web Verification</DialogTitle>
+                   <DialogDescription className="text-primary-foreground/70 text-xs font-bold">Process payment for online reservations.</DialogDescription>
+                </div>
+             </div>
           </DialogHeader>
           
           <div className="p-6 space-y-6">
-             <div className="flex gap-2">
-                <Input 
-                  placeholder="e.g. ABCDEF" 
-                  value={onlineBookingId}
-                  onChange={(e) => setOnlineBookingId(e.target.value.toUpperCase())}
-                  className="font-mono h-12 text-lg font-bold"
-                />
-                <Button 
-                  onClick={handleSearchOnlineBooking} 
-                  disabled={isSearchingOnline || !onlineBookingId}
-                  className="bg-accent text-primary font-bold h-12 px-6"
-                >
-                  {isSearchingOnline ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
-                </Button>
+             <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Enter 6-Character Code</Label>
+                <div className="flex gap-2">
+                   <Input 
+                     placeholder="e.g. ABCDEF" 
+                     value={onlineBookingId}
+                     onChange={(e) => setOnlineBookingId(e.target.value.toUpperCase())}
+                     className="font-mono h-14 text-2xl font-black text-center tracking-[0.3em] border-2 focus-visible:ring-accent"
+                   />
+                   <Button 
+                     onClick={handleSearchOnlineBooking} 
+                     disabled={isSearchingOnline || !onlineBookingId}
+                     className="bg-accent text-primary font-black h-14 px-8 shadow-xl"
+                   >
+                     {isSearchingOnline ? <Loader2 className="h-6 w-6 animate-spin" /> : <Search className="h-6 w-6" />}
+                   </Button>
+                </div>
              </div>
 
              {foundBooking && (
-                <div className="bg-secondary/10 p-5 rounded-2xl border-2 border-dashed space-y-4 animate-in zoom-in-95 duration-200">
+                <div className="bg-secondary/10 p-6 rounded-3xl border-2 border-dashed space-y-5 animate-in zoom-in-95 duration-200">
                    <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                         <p className="text-[10px] font-black uppercase text-muted-foreground">Passenger</p>
-                         <p className="font-black text-primary uppercase">{foundBooking.passengerName}</p>
+                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Passenger Record</p>
+                         <p className="text-xl font-black text-primary uppercase">{foundBooking.passengerName}</p>
                       </div>
                       <Badge className={cn(
-                        "uppercase font-black text-[9px]",
-                        foundBooking.status === 'Reserved' ? "bg-blue-500" : "bg-orange-500"
+                        "uppercase font-black text-[10px] h-6 px-3",
+                        foundBooking.status === 'Reserved' ? "bg-blue-600" : "bg-orange-500"
                       )}>{foundBooking.status}</Badge>
                    </div>
-                   <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                   
+                   <div className="grid grid-cols-2 gap-6 pt-4 border-t border-secondary-foreground/10">
                       <div>
-                         <p className="text-[10px] font-bold text-muted-foreground uppercase">Date</p>
-                         <p className="text-xs font-black">{foundBooking.travelDate}</p>
+                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Travel Date</p>
+                         <p className="text-sm font-black text-primary">{foundBooking.travelDate}</p>
                       </div>
-                      <div>
-                         <p className="text-[10px] font-bold text-muted-foreground uppercase">Fare</p>
-                         <p className="text-xs font-black">₱{foundBooking.finalFare?.toLocaleString()}</p>
+                      <div className="text-right">
+                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Final Fare</p>
+                         <p className="text-sm font-black text-primary">₱{foundBooking.finalFare?.toLocaleString()}</p>
                       </div>
                    </div>
                    
@@ -570,10 +603,10 @@ export default function DeskBookingsPage() {
                       <Button 
                         onClick={handleProcessOnlineConfirm}
                         disabled={isReserving}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-black uppercase"
+                        className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl"
                       >
-                         {isReserving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserCheck className="h-4 w-4 mr-2" />}
-                         Collect ₱{foundBooking.finalFare?.toLocaleString()} & Issue
+                         {isReserving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <HandCoins className="h-5 w-5 mr-2" />}
+                         Collect ₱{foundBooking.finalFare?.toLocaleString()} & Confirm
                       </Button>
                    </div>
                 </div>
@@ -584,26 +617,30 @@ export default function DeskBookingsPage() {
 
       {/* WALK-IN BOOKING DIALOG */}
       <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[800px] p-0 overflow-hidden h-[95vh] flex flex-col">
-          <DialogHeader className="p-4 sm:p-6 border-b bg-white shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-lg font-black text-primary uppercase">
-              <UserPlus className="h-5 w-5 text-accent" /> New Walk-in
-            </DialogTitle>
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[850px] p-0 overflow-hidden h-[95vh] flex flex-col rounded-3xl">
+          <DialogHeader className="p-6 border-b bg-white shrink-0">
+             <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-xl"><UserPlus className="h-6 w-6 text-primary" /></div>
+                <div>
+                   <DialogTitle className="text-xl font-black text-primary uppercase tracking-tight">Counter Ticketing</DialogTitle>
+                   <DialogDescription className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Real-time Passenger Intake Mode</DialogDescription>
+                </div>
+             </div>
           </DialogHeader>
 
           <ScrollArea className="flex-1">
-            <div className="p-4 sm:p-6 space-y-8 pb-10">
+            <div className="p-6 space-y-10 pb-20">
               <Form {...form}>
-                <form className="space-y-8">
-                  <section className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-secondary/10 p-4 rounded-xl border-2 border-dashed">
+                <form className="space-y-10">
+                  <section className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-secondary/5 p-6 rounded-3xl border-2 border-dashed border-secondary/50">
                     <FormField
                       control={form.control}
                       name="routeId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Select Route</FormLabel>
+                          <FormLabel className="text-[10px] font-black uppercase text-primary flex items-center gap-1.5 tracking-widest"><MapPin className="h-3.5 w-3.5 text-accent" /> 1. Select Route</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Choose Route" /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger className="h-11 bg-white border-2 font-bold"><SelectValue placeholder="Choose Lane" /></SelectTrigger></FormControl>
                             <SelectContent>{routes?.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
                           </Select>
                           <FormMessage />
@@ -615,8 +652,8 @@ export default function DeskBookingsPage() {
                       name="travelDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Travel Date</FormLabel>
-                          <FormControl><Input type="date" {...field} min={dateRange.min} max={dateRange.max} className="bg-white" /></FormControl>
+                          <FormLabel className="text-[10px] font-black uppercase text-primary flex items-center gap-1.5 tracking-widest"><Calendar className="h-3.5 w-3.5 text-accent" /> 2. Departure Date</FormLabel>
+                          <FormControl><Input type="date" {...field} min={dateRange.min} max={dateRange.max} className="h-11 bg-white border-2 font-bold" /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -626,9 +663,9 @@ export default function DeskBookingsPage() {
                       name="scheduleId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Select Schedule</FormLabel>
+                          <FormLabel className="text-[10px] font-black uppercase text-primary flex items-center gap-1.5 tracking-widest"><Clock className="h-3.5 w-3.5 text-accent" /> 3. Select Trip</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value} disabled={!watchRouteId}>
-                            <FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Choose Time" /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger className="h-11 bg-white border-2 font-bold"><SelectValue placeholder="Choose Time" /></SelectTrigger></FormControl>
                             <SelectContent>{filteredSchedules.map(s => <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>)}</SelectContent>
                           </Select>
                           <FormMessage />
@@ -638,64 +675,75 @@ export default function DeskBookingsPage() {
                   </section>
 
                   {inventoryStats && (
-                    <div className={cn("p-4 rounded-xl flex items-center justify-between border-2 shadow-sm", 
+                    <div className={cn("p-6 rounded-3xl flex items-center justify-between border-2 shadow-sm animate-in slide-in-from-top-2 duration-300", 
                       inventoryStats.isFull ? "bg-red-50 border-red-200" : inventoryStats.isWaitlistOnly ? "bg-orange-50 border-orange-200" : "bg-green-50 border-green-200")}>
-                      <div className="flex items-center gap-3">
-                        <BarChart className={cn("h-5 w-5", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-600")} />
+                      <div className="flex items-center gap-4">
+                        <div className={cn("p-3 rounded-2xl", 
+                           inventoryStats.isFull ? "bg-red-600 text-white" : inventoryStats.isWaitlistOnly ? "bg-orange-600 text-white" : "bg-green-600 text-white")}>
+                           <BarChart className="h-6 w-6" />
+                        </div>
                         <div>
-                           <p className="text-[10px] font-black uppercase text-muted-foreground">Atomic Seat Inventory</p>
-                           <p className={cn("text-lg font-black", inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? `text-orange-600` : "text-green-600")}>
+                           <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Atomic Seat Inventory</p>
+                           <p className={cn("text-2xl font-black uppercase", 
+                             inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-700")}>
                              {inventoryStats.isFull ? "VOYAGE FULL" : inventoryStats.isWaitlistOnly ? `WAITLIST ACTIVE (${inventoryStats.waitlistSpotsRemaining} left)` : `${inventoryStats.remaining} Seats Remaining`}
                            </p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-[10px] uppercase font-bold">{inventoryStats.capacity} Total</Badge>
+                      <Badge variant="outline" className="text-[10px] uppercase font-black px-4 py-1.5 border-primary/20 bg-white">
+                         Max {inventoryStats.capacity} PAX
+                      </Badge>
                     </div>
                   )}
 
                   <section className="space-y-6">
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <h3 className="font-black text-primary uppercase text-lg flex items-center gap-2">
-                        <Users className="h-5 w-5 text-accent" /> Passengers ({fields.length})
+                    <div className="flex items-center justify-between border-b-2 border-secondary pb-3">
+                      <h3 className="font-black text-primary uppercase text-lg flex items-center gap-2.5">
+                        <Users className="h-6 w-6 text-accent" /> Passengers ({fields.length})
                       </h3>
                     </div>
 
-                    <div className="space-y-10">
+                    <div className="space-y-12">
                       {fields.map((field, index) => {
                         const currentFareLabel = watchPassengers?.[index]?.fareType;
                         const currentFarePrice = availableFares.find(f => f.segmentLabel === currentFareLabel)?.finalFare || 0;
 
                         return (
-                          <div key={field.id} className="relative bg-secondary/5 rounded-2xl border-2 border-dashed p-4 sm:p-6 pt-10 group hover:border-accent/40 transition-colors">
-                            <div className="absolute -top-4 left-4 bg-white border-2 px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary tracking-widest z-10 shadow-sm">
-                              Passenger #{index + 1}
+                          <div key={field.id} className="relative bg-secondary/5 rounded-3xl border-2 border-dashed p-6 pt-12 group hover:border-accent/40 transition-colors">
+                            <div className="absolute -top-4 left-6 bg-primary text-white border-4 border-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest z-10 shadow-lg">
+                              Manifest Entry #{index + 1}
                             </div>
-                            <Button type="button" variant="ghost" size="icon" className="absolute -top-3 -right-3 h-8 w-8 bg-white shadow-md border-2 rounded-full text-destructive hover:bg-red-50 z-20" onClick={() => remove(index)} disabled={fields.length === 1}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button type="button" variant="ghost" size="icon" className="absolute -top-4 -right-4 h-10 w-10 bg-white shadow-xl border-2 rounded-full text-destructive hover:bg-red-50 z-20" onClick={() => remove(index)} disabled={fields.length === 1}>
+                              <Trash2 className="h-5 w-5" />
                             </Button>
 
-                            <div className="space-y-6">
+                            <div className="space-y-8">
                               <div className="space-y-2 relative">
                                 <Label className="text-[10px] font-black uppercase text-accent flex items-center gap-1.5 tracking-wider">
-                                  <Search className="h-3 w-3" /> Step 3: Rapid Profile Lookup
+                                  <Search className="h-3.5 w-3.5" /> Rapid Profile Lookup
                                 </Label>
-                                <input 
-                                  placeholder="Search by name or mobile..." 
-                                  value={activeLookupIndex === index ? lookupSearch : ''}
-                                  onChange={(e) => { setLookupSearch(e.target.value); setActiveLookupIndex(index); }}
-                                  onFocus={() => setActiveLookupIndex(index)}
-                                  className="flex h-11 w-full rounded-md border border-accent/20 bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                                />
+                                <div className="relative">
+                                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                   <input 
+                                     placeholder="Search registered passengers by name or mobile..." 
+                                     value={activeLookupIndex === index ? lookupSearch : ''}
+                                     onChange={(e) => { setLookupSearch(e.target.value); setActiveLookupIndex(index); }}
+                                     onFocus={() => setActiveLookupIndex(index)}
+                                     className="flex h-12 w-full rounded-2xl border-2 border-accent/20 bg-white pl-11 pr-4 text-sm font-bold ring-offset-background placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-all"
+                                   />
+                                </div>
                                 {activeLookupIndex === index && lookupSearch.length > 1 && (
-                                  <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
+                                  <div className="absolute top-full left-0 w-full bg-white border-2 rounded-2xl shadow-2xl z-50 mt-2 overflow-hidden animate-in zoom-in-95 duration-200">
                                     {registeredUsers?.filter(u => u.displayName?.toLowerCase().includes(lookupSearch.toLowerCase()) || u.phoneNumber?.includes(lookupSearch)).slice(0, 3).map(user => (
-                                      <button key={user.id} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-5 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-4 transition-colors">
-                                        <div className="bg-primary/10 p-2 rounded-lg shrink-0"><Users className="h-5 w-5 text-primary" /></div>
+                                      <button key={user.id} type="button" onClick={() => handleApplyProfile(index, user)} className="w-full text-left px-6 py-4 hover:bg-accent/5 border-b last:border-0 flex items-center gap-5 transition-colors">
+                                        <div className="bg-primary/10 p-2.5 rounded-xl shrink-0"><Users className="h-5 w-5 text-primary" /></div>
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-bold text-primary truncate">{user.displayName}</p>
-                                          <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {user.phoneNumber || "No mobile set"}</p>
+                                          <p className="text-sm font-black text-primary truncate uppercase">{user.displayName}</p>
+                                          <p className="text-[10px] text-muted-foreground font-bold flex items-center gap-1.5"><Phone className="h-3 w-3" /> {user.phoneNumber || "No mobile registered"}</p>
                                         </div>
-                                        <UserPlus className="h-5 w-5 ml-auto text-accent shrink-0" />
+                                        <div className="bg-accent text-primary p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                           <UserCheck className="h-4 w-4" />
+                                        </div>
                                       </button>
                                     ))}
                                   </div>
@@ -704,34 +752,37 @@ export default function DeskBookingsPage() {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField control={form.control} name={`passengers.${index}.fullName`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</FormLabel><FormControl><Input placeholder="Juan Dela Cruz" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Full Legal Name</FormLabel><FormControl><Input placeholder="Juan Dela Cruz" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={form.control} name={`passengers.${index}.birthDate`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground">Date of Birth</FormLabel><FormControl><Input type="date" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</FormLabel><FormControl><Input type="date" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
                                 )} />
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField control={form.control} name={`passengers.${index}.passengerContact`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Mobile Number</FormLabel><FormControl><Input placeholder="0917XXXXXXX" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Phone className="h-3 w-3" /> Mobile Number</FormLabel><FormControl><Input placeholder="0917XXXXXXX" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={form.control} name={`passengers.${index}.emergencyContact`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Heart className="h-2.5 w-2.5 text-red-500" /> Emergency Number</FormLabel><FormControl><Input placeholder="Backup Contact" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Heart className="h-3 w-3 text-destructive" /> Emergency Number</FormLabel><FormControl><Input placeholder="Contact for emergency" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
                                 )} />
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField control={form.control} name={`passengers.${index}.passengerEmail`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Email Address</FormLabel><FormControl><Input type="email" placeholder="juan@example.com" {...field} className="bg-white" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Mail className="h-3 w-3" /> Email Address</FormLabel><FormControl><Input type="email" placeholder="itinerary@example.com" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={form.control} name={`passengers.${index}.fareType`} render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Fare Type</FormLabel>
+                                    <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Banknote className="h-3 w-3" /> Fare Type</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value} disabled={!watchScheduleId}>
-                                      <FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Select Tier" /></SelectTrigger></FormControl>
+                                      <FormControl><SelectTrigger className="h-11 bg-white border-2 font-black"><SelectValue placeholder="Select Tier" /></SelectTrigger></FormControl>
                                       <SelectContent>{availableFares.map(f => <SelectItem key={f.id} value={f.segmentLabel}>{f.segmentLabel} (₱{f.finalFare})</SelectItem>)}</SelectContent>
                                     </Select>
                                     <FormMessage />
                                     {currentFarePrice > 0 && (
-                                      <p className="text-[10px] font-black text-primary uppercase mt-1">Applied Fare: ₱{currentFarePrice.toLocaleString()}</p>
+                                      <div className="flex items-center gap-1.5 pt-2">
+                                         <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                         <p className="text-[10px] font-black text-primary uppercase">Segment Fare Applied: ₱{currentFarePrice.toLocaleString()}</p>
+                                      </div>
                                     )}
                                   </FormItem>
                                 )} />
@@ -740,30 +791,31 @@ export default function DeskBookingsPage() {
                           </div>
                         );
                       })}
-                      <Button type="button" variant="outline" onClick={() => append({ id: nanoid(), userId: "", fullName: "", birthDate: "", passengerContact: "", emergencyContact: "", passengerEmail: "", fareType: "" })} disabled={!watchScheduleId || inventoryStats?.isFull} className="w-full gap-2 border-2 border-dashed font-bold">
-                        <PlusCircle className="h-4 w-4" /> Add Another Passenger
+                      <Button type="button" variant="outline" onClick={() => append({ id: nanoid(), userId: "", fullName: "", birthDate: "", passengerContact: "", emergencyContact: "", passengerEmail: "", fareType: "" })} disabled={!watchScheduleId || inventoryStats?.isFull} className="w-full h-14 gap-2 border-2 border-dashed font-black uppercase text-xs tracking-widest hover:bg-primary/5 transition-all">
+                        <PlusCircle className="h-5 w-5" /> Add Group Passenger
                       </Button>
                     </div>
                   </section>
 
-                  <section className={cn("p-6 rounded-2xl border-2 space-y-4 transition-all", watchIsPaid ? "bg-green-50 border-green-200" : "bg-primary/5")}>
+                  <section className={cn("p-6 rounded-3xl border-2 space-y-4 transition-all", watchIsPaid ? "bg-green-50 border-green-200" : "bg-primary/5")}>
                     <FormField
                       control={form.control}
                       name="isPaid"
                       render={({ field }) => (
                         <FormItem className="space-y-4">
                           <div className="flex flex-row items-center justify-between">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base font-black text-primary uppercase">Step 5: Process Payment Now</FormLabel>
+                            <div className="space-y-1">
+                              <FormLabel className="text-lg font-black text-primary uppercase tracking-tight flex items-center gap-2">
+                                 <HandCoins className="h-5 w-5 text-accent" /> Final Step: Payment Processing
+                              </FormLabel>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase">Verify cash or digital transaction before marking as paid.</p>
                             </div>
                             <FormControl>
                               <Switch 
                                 checked={field.value} 
                                 onCheckedChange={(val) => {
                                   if (val) {
-                                    // Always call field.onChange first to sync visual state
                                     field.onChange(true);
-                                    // Defer to avoid lifecycle conflicts (flushSync) with nested dialogs/focus management
                                     setTimeout(() => setIsPaymentCollectionAlertOpen(true), 0);
                                   } else {
                                     field.onChange(false);
@@ -774,11 +826,11 @@ export default function DeskBookingsPage() {
                           </div>
 
                           {field.value && (
-                            <div className="bg-white border-2 border-green-500 p-4 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
-                               <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                            <div className="bg-white border-2 border-green-500 p-5 rounded-2xl flex items-start gap-4 animate-in slide-in-from-top-2 duration-300 shadow-sm">
+                               <div className="bg-green-600 p-1.5 rounded-full"><Check className="h-4 w-4 text-white" /></div>
                                <div>
-                                 <p className="text-xs font-black text-green-700 uppercase">Payment Verified</p>
-                                 <p className="text-[10px] text-green-600 font-bold">Total of ₱{currentTotalPrice.toLocaleString()} has been marked as collected.</p>
+                                 <p className="text-sm font-black text-green-700 uppercase">Cash/Funds Verified</p>
+                                 <p className="text-[10px] text-green-600 font-bold uppercase">Transaction of ₱{currentTotalPrice.toLocaleString()} marked as received.</p>
                                </div>
                             </div>
                           )}
@@ -791,71 +843,77 @@ export default function DeskBookingsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 shrink-0 items-center flex flex-row justify-between">
-            <Button variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="px-8 font-bold">Cancel</Button>
-            <div className="flex flex-col items-end mr-4">
-               <p className="text-[9px] font-black uppercase text-muted-foreground">Booking Total</p>
-               <p className="text-xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
+          <DialogFooter className="p-6 border-t bg-secondary/5 shrink-0 items-center flex flex-row justify-between">
+            <Button variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="px-8 font-black uppercase text-xs h-12 rounded-xl">Discard</Button>
+            <div className="flex items-center gap-6">
+               <div className="flex flex-col items-end">
+                  <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Total Transaction</p>
+                  <p className="text-2xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
+               </div>
+               <Button 
+                 onClick={form.handleSubmit(handleFinalReserve)} 
+                 disabled={isReserving || !watchScheduleId || inventoryStats?.isFull || (!inventoryStats?.isWaitlistOnly && !watchIsPaid)}
+                 className={cn("px-12 h-14 font-black uppercase text-sm tracking-widest shadow-2xl rounded-2xl transition-all", 
+                   inventoryStats?.isWaitlistOnly ? "bg-orange-600 text-white" : "bg-primary")}
+               >
+                 {isReserving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Check className="h-5 w-5 mr-2" />}
+                 {inventoryStats?.isWaitlistOnly ? "Add to Waitlist" : "Issue Ticket(s)"}
+               </Button>
             </div>
-            <Button 
-              onClick={form.handleSubmit(handleFinalReserve)} 
-              disabled={isReserving || !watchScheduleId || inventoryStats?.isFull || (!inventoryStats?.isWaitlistOnly && !watchIsPaid)}
-              className={cn("px-10 font-black uppercase tracking-wider shadow-lg", 
-                inventoryStats?.isWaitlistOnly ? "bg-orange-600 text-white" : "bg-primary")}
-            >
-              {isReserving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-              {inventoryStats?.isWaitlistOnly ? "Add to Waitlist" : "Confirm & Issue"}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* PAYMENT ALERT */}
       <Dialog open={isPaymentCollectionAlertOpen} onOpenChange={setIsPaymentCollectionAlertOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[450px] p-0 overflow-hidden">
-          <DialogHeader className="p-6 bg-orange-500 text-white">
-             <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-xl">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[450px] p-0 overflow-hidden rounded-3xl">
+          <DialogHeader className="p-6 bg-orange-600 text-white">
+             <div className="flex items-center gap-4">
+                <div className="bg-white/20 p-3 rounded-2xl shadow-inner">
                   <HandCoins className="h-8 w-8" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-black uppercase tracking-tight">Collect Payment</DialogTitle>
-                  <DialogDescription className="text-orange-100 text-xs font-medium">Verify cash or digital transaction before marking as paid.</DialogDescription>
+                  <DialogTitle className="text-2xl font-black uppercase tracking-tight leading-none">Collect Funds</DialogTitle>
+                  <DialogDescription className="text-orange-100 text-[10px] font-black uppercase tracking-widest mt-1">Manual Cash/Digital Verification</DialogDescription>
                 </div>
              </div>
           </DialogHeader>
-          <div className="p-8 space-y-6">
-             <div className="text-center space-y-2">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Total Amount to Collect</p>
-                <p className="text-5xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
+          <div className="p-10 space-y-8">
+             <div className="text-center space-y-4">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Total Amount to Collect</p>
+                <p className="text-6xl font-black text-primary tracking-tighter">₱{currentTotalPrice.toLocaleString()}</p>
+                <div className="bg-secondary/30 p-3 rounded-xl inline-flex items-center gap-2 text-xs font-bold text-primary">
+                   <Info className="h-4 w-4" /> Ensure exact change for cash payments.
+                </div>
              </div>
           </div>
           <DialogFooter className="p-6 border-t bg-secondary/5 gap-3">
-             <Button variant="outline" className="flex-1 font-bold" onClick={() => {
+             <Button variant="outline" className="flex-1 font-black h-14 rounded-2xl uppercase text-xs" onClick={() => {
                 form.setValue('isPaid', false);
                 setIsPaymentCollectionAlertOpen(false);
-             }}>Not Yet</Button>
+             }}>Not Received</Button>
              <Button 
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-[0.2em] h-14 rounded-2xl shadow-xl"
                 onClick={() => {
-                   // Status already set to true from switch, just close dialog
                    setIsPaymentCollectionAlertOpen(false);
                 }}
              >
-               Funds Collected
+               Funds Verified
              </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* CONFIRMATION / ITINERARY */}
       <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[550px] p-0 overflow-hidden">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[550px] p-0 overflow-hidden bg-transparent border-none shadow-none">
           <DialogHeader className="sr-only">
-            <DialogTitle>Booking Confirmation</DialogTitle>
+            <DialogTitle>Success</DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-6">
+          <div className="p-2 space-y-6">
             <TripItinerary booking={confirmedBooking} />
-            <Button onClick={() => setIsConfirmationOpen(false)} className="w-full h-12 font-bold bg-primary text-white">
-              Done & Return
+            <Button onClick={() => setIsConfirmationOpen(false)} className="w-full h-14 font-black uppercase text-sm tracking-widest bg-white text-primary border-4 border-white/20 shadow-2xl rounded-2xl">
+              Done & Return to Desk
             </Button>
           </div>
         </DialogContent>
