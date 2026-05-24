@@ -922,41 +922,113 @@ export default function DeskBookingsPage() {
                               </div>
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={form.control} name={`passengers.${index}.fullName`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Full Legal Name</FormLabel><FormControl><Input placeholder="Juan Dela Cruz" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name={`passengers.${index}.birthDate`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</Label><FormControl><Input type="date" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
-                                )} />
+                                <FormField 
+                                  control={form.control} 
+                                  name={`passengers.${index}.fullName`} 
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Full Legal Name</FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="Juan Dela Cruz" {...field} className="h-11 bg-white border-2 font-bold" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )} 
+                                />
+                                <FormField 
+                                  control={form.control} 
+                                  name={`passengers.${index}.birthDate`} 
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</FormLabel>
+                                      <FormControl>
+                                        <Input type="date" {...field} className="h-11 bg-white border-2 font-bold" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )} 
+                                />
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={form.control} name={`passengers.${index}.passengerContact`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Phone className="h-3 w-3" /> Mobile Number</FormLabel><FormControl><Input placeholder="0917XXXXXXX" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name={`passengers.${index}.emergencyContact`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Heart className="h-3 w-3 text-destructive" /> Emergency Number</FormLabel><FormControl><Input placeholder="Contact for emergency" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
-                                )} />
+                                <FormField 
+                                  control={form.control} 
+                                  name={`passengers.${index}.passengerContact`} 
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                                        <Phone className="h-3 w-3" /> Mobile Number
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="0917XXXXXXX" {...field} className="h-11 bg-white border-2 font-bold" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )} 
+                                />
+                                <FormField 
+                                  control={form.control} 
+                                  name={`passengers.${index}.emergencyContact`} 
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                                        <Heart className="h-3 w-3 text-destructive" /> Emergency Number
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input placeholder="Contact for emergency" {...field} className="h-11 bg-white border-2 font-bold" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )} 
+                                />
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={form.control} name={`passengers.${index}.passengerEmail`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Mail className="h-3 w-3" /> Email Address</FormLabel><FormControl><Input type="email" placeholder="itinerary@example.com" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name={`passengers.${index}.fareType`} render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5"><Banknote className="h-3 w-3" /> Fare Type</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={!watchScheduleId}>
-                                      <FormControl><SelectTrigger className="h-11 bg-white border-2 font-black"><SelectValue placeholder="Select Tier" /></SelectTrigger></FormControl>
-                                      <SelectContent>{availableFares.map(f => <SelectItem key={f.id} value={f.segmentLabel}>{f.segmentLabel} (₱{f.finalFare})</SelectItem>)}</SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                    {currentFarePrice > 0 && (
-                                      <div className="flex items-center gap-1.5 pt-2">
-                                         <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                                         <p className="text-[10px] font-black text-primary uppercase">Segment Fare Applied: ₱{currentFarePrice.toLocaleString()}</p>
-                                      </div>
-                                    )}
-                                  </FormItem>
-                                )} />
+                                <FormField 
+                                  control={form.control} 
+                                  name={`passengers.${index}.passengerEmail`} 
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                                        <Mail className="h-3 w-3" /> Email Address
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Input type="email" placeholder="itinerary@example.com" {...field} className="h-11 bg-white border-2 font-bold" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )} 
+                                />
+                                <FormField 
+                                  control={form.control} 
+                                  name={`passengers.${index}.fareType`} 
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                                        <Banknote className="h-3 w-3" /> Fare Type
+                                      </FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchScheduleId}>
+                                        <FormControl>
+                                          <SelectTrigger className="h-11 bg-white border-2 font-black">
+                                            <SelectValue placeholder="Select Tier" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {availableFares.map(f => (
+                                            <SelectItem key={f.id} value={f.segmentLabel}>
+                                              {f.segmentLabel} (₱{f.finalFare})
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                      {currentFarePrice > 0 && (
+                                        <div className="flex items-center gap-1.5 pt-2">
+                                           <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                           <p className="text-[10px] font-black text-primary uppercase">Segment Fare Applied: ₱{currentFarePrice.toLocaleString()}</p>
+                                        </div>
+                                      )}
+                                    </FormItem>
+                                  )} 
+                                />
                               </div>
                             </div>
                           </div>
