@@ -29,7 +29,9 @@ import {
   Ship,
   Tag,
   QrCode,
-  Info
+  Info,
+  Pencil,
+  X
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -111,6 +113,8 @@ export default function DeskBookingsPage() {
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
   const [onlineBookingId, setOnlineBookingId] = useState("");
   const [foundBooking, setFoundOnlineBooking] = useState<any>(null);
+  const [isEditingOnline, setIsEditingOnline] = useState(false);
+  const [onlineEditData, setOnlineEditData] = useState<any>(null);
   
   const [dateRange, setDateRange] = useState<{ min: string; max: string }>({ min: '', max: '' });
   const [lookupSearch, setLookupSearch] = useState('');
@@ -175,9 +179,7 @@ export default function DeskBookingsPage() {
     if (!allBookings || !isMounted || !dateRange.min) return { counterPax: 0, webPax: 0, cashOnHand: 0 };
     
     return allBookings.reduce((acc, b) => {
-      // We look at bookings travel date matching today
       const isToday = b.travelDate === dateRange.min;
-      
       if (isToday) {
         if (b.bookingSource === 'Desk') {
           acc.counterPax++;
@@ -267,12 +269,22 @@ export default function DeskBookingsPage() {
     if (!firestore || !onlineBookingId) return;
     setIsSearchingOnline(true);
     setFoundOnlineBooking(null);
+    setIsEditingOnline(false);
 
     try {
       const docRef = doc(firestore, "bookings", onlineBookingId.toUpperCase());
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        setFoundOnlineBooking(snap.data());
+        const data = snap.data();
+        setFoundOnlineBooking(data);
+        setOnlineEditData({
+           passengerName: data.passengerName,
+           passengerDob: data.passengerDob,
+           passengerEmail: data.passengerEmail,
+           passengerContact: data.passengerContact,
+           emergencyContact: data.emergencyContact,
+           fareId: data.fareId || ""
+        });
       } else {
         toast({ variant: "destructive", title: "Not Found", description: "Reference ID does not exist." });
       }
@@ -323,20 +335,26 @@ export default function DeskBookingsPage() {
            }
         } else if (currentStatus === 'Reserved') {
            boardingSeq = currentBooked + 1;
-        } else {
+        } else if (currentStatus === 'Confirmed' || currentStatus === 'Used') {
            throw new Error(`Ticket is already ${currentStatus}.`);
         }
 
-        transaction.update(bookingRef, {
+        // Apply any edits made by the agent
+        const selectedFare = allFares?.find(f => f.id === onlineEditData.fareId);
+        const updatePayload: any = {
+          ...onlineEditData,
+          segmentLabel: selectedFare?.segmentLabel || foundBooking.segmentLabel,
+          finalFare: selectedFare?.finalFare || foundBooking.finalFare,
           status: "Confirmed",
           boardingSequenceNumber: boardingSeq,
           updatedAt: new Date().toISOString()
-        });
+        };
+
+        transaction.update(bookingRef, updatePayload);
 
         return { 
-          ...bookingSnap.data(), 
-          status: 'Confirmed', 
-          boardingSequenceNumber: boardingSeq 
+          ...foundBooking, 
+          ...updatePayload
         };
       });
 
@@ -462,6 +480,17 @@ export default function DeskBookingsPage() {
     }
   }
 
+  const onlineAvailableFares = useMemo(() => {
+    if (!foundBooking || !allFares) return [];
+    return allFares.filter(f => f.routeId === foundBooking.routeId);
+  }, [foundBooking, allFares]);
+
+  const currentOnlineTotal = useMemo(() => {
+    if (!foundBooking || !onlineEditData || !onlineAvailableFares) return 0;
+    const fare = onlineAvailableFares.find(f => f.id === onlineEditData.fareId);
+    return fare?.finalFare || foundBooking.finalFare;
+  }, [foundBooking, onlineEditData, onlineAvailableFares]);
+
   if (isLoadingSchedules || isLoadingRoutes || isLoadingFares || !isMounted) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -538,7 +567,6 @@ export default function DeskBookingsPage() {
               </Card>
            </div>
 
-           {/* OPERATIONAL SUMMARY */}
            <div className="pt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white border-none shadow-sm p-4 rounded-2xl border-2 flex items-center gap-4 transition-all">
                  <div className="bg-primary/10 p-2.5 rounded-xl"><Ticket className="h-5 w-5 text-primary" /></div>
@@ -567,74 +595,193 @@ export default function DeskBookingsPage() {
 
       {/* ONLINE PROCESSING DIALOG */}
       <Dialog open={isOnlineSearchDialogOpen} onOpenChange={setIsOnlineSearchDialogOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden rounded-3xl">
-          <DialogHeader className="p-6 bg-primary text-primary-foreground">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[700px] p-0 overflow-hidden rounded-3xl h-[90vh] flex flex-col">
+          <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">
              <div className="flex items-center gap-3">
                 <div className="bg-white/20 p-2 rounded-xl"><Globe className="h-6 w-6 text-accent" /></div>
                 <div>
                    <DialogTitle className="text-xl font-black uppercase tracking-tight">Web Verification</DialogTitle>
-                   <DialogDescription className="text-primary-foreground/70 text-xs font-bold">Process payment for online reservations.</DialogDescription>
+                   <DialogDescription className="text-primary-foreground/70 text-xs font-bold uppercase">Search & Process Payments</DialogDescription>
                 </div>
              </div>
           </DialogHeader>
           
-          <div className="p-6 space-y-6">
-             <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Enter 6-Character Code</Label>
-                <div className="flex gap-2">
-                   <Input 
-                     placeholder="e.g. ABCDEF" 
-                     value={onlineBookingId}
-                     onChange={(e) => setOnlineBookingId(e.target.value.toUpperCase())}
-                     className="font-mono h-14 text-2xl font-black text-center tracking-[0.3em] border-2 focus-visible:ring-accent"
-                   />
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-8 pb-32">
+               <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">1. Enter 6-Character Reference Code</Label>
+                  <div className="flex gap-2">
+                     <Input 
+                       placeholder="e.g. ABCDEF" 
+                       value={onlineBookingId}
+                       onChange={(e) => setOnlineBookingId(e.target.value.toUpperCase())}
+                       className="font-mono h-14 text-2xl font-black text-center tracking-[0.3em] border-2 focus-visible:ring-accent"
+                       onKeyDown={(e) => e.key === 'Enter' && handleSearchOnlineBooking()}
+                     />
+                     <Button 
+                       onClick={handleSearchOnlineBooking} 
+                       disabled={isSearchingOnline || !onlineBookingId}
+                       className="bg-accent text-primary font-black h-14 px-8 shadow-xl"
+                     >
+                       {isSearchingOnline ? <Loader2 className="h-6 w-6 animate-spin" /> : <Search className="h-6 w-6" />}
+                     </Button>
+                  </div>
+               </div>
+
+               {foundBooking && (
+                  <div className="space-y-8 animate-in zoom-in-95 duration-200">
+                     <div className="flex items-center justify-between border-b pb-2">
+                        <h3 className="font-black text-primary uppercase text-sm flex items-center gap-2">
+                           <User className="h-4 w-4 text-accent" /> Reservation Profile
+                        </h3>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-[10px] font-black uppercase tracking-widest gap-2"
+                          onClick={() => setIsEditingOnline(!isEditingOnline)}
+                        >
+                           {isEditingOnline ? <><X className="h-3 w-3" /> Cancel Edit</> : <><Pencil className="h-3 w-3" /> Edit Info</>}
+                        </Button>
+                     </div>
+
+                     <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-8 p-6 rounded-3xl border-2 transition-all", isEditingOnline ? "bg-accent/5 border-accent/30" : "bg-secondary/5 border-dashed border-secondary")}>
+                        {isEditingOnline ? (
+                          <>
+                            <div className="space-y-4">
+                               <div className="space-y-1.5">
+                                  <Label className="text-[9px] font-bold uppercase text-muted-foreground">Passenger Full Name</Label>
+                                  <Input 
+                                    value={onlineEditData.passengerName}
+                                    onChange={(e) => setOnlineEditData({...onlineEditData, passengerName: e.target.value})}
+                                    className="bg-white h-11 font-bold"
+                                  />
+                               </div>
+                               <div className="space-y-1.5">
+                                  <Label className="text-[9px] font-bold uppercase text-muted-foreground">Date of Birth</Label>
+                                  <Input 
+                                    type="date"
+                                    value={onlineEditData.passengerDob}
+                                    onChange={(e) => setOnlineEditData({...onlineEditData, passengerDob: e.target.value})}
+                                    className="bg-white h-11"
+                                  />
+                               </div>
+                               <div className="space-y-1.5">
+                                  <Label className="text-[9px] font-bold uppercase text-muted-foreground">Fare Demographic</Label>
+                                  <Select value={onlineEditData.fareId} onValueChange={(val) => setOnlineEditData({...onlineEditData, fareId: val})}>
+                                     <SelectTrigger className="bg-white h-11 border-2"><SelectValue placeholder="Select Segment" /></SelectTrigger>
+                                     <SelectContent>
+                                        {onlineAvailableFares.map(f => (
+                                          <SelectItem key={f.id} value={f.id}>{f.segmentLabel} (₱{f.finalFare})</SelectItem>
+                                        ))}
+                                     </SelectContent>
+                                  </Select>
+                               </div>
+                            </div>
+                            <div className="space-y-4">
+                               <div className="space-y-1.5">
+                                  <Label className="text-[9px] font-bold uppercase text-muted-foreground">Mobile Number</Label>
+                                  <Input 
+                                    value={onlineEditData.passengerContact}
+                                    onChange={(e) => setOnlineEditData({...onlineEditData, passengerContact: e.target.value})}
+                                    className="bg-white h-11"
+                                  />
+                               </div>
+                               <div className="space-y-1.5">
+                                  <Label className="text-[9px] font-bold uppercase text-muted-foreground">Email Address</Label>
+                                  <Input 
+                                    type="email"
+                                    value={onlineEditData.passengerEmail}
+                                    onChange={(e) => setOnlineEditData({...onlineEditData, passengerEmail: e.target.value})}
+                                    className="bg-white h-11"
+                                  />
+                               </div>
+                               <div className="space-y-1.5">
+                                  <Label className="text-[9px] font-bold uppercase text-muted-foreground">Emergency Contact</Label>
+                                  <Input 
+                                    value={onlineEditData.emergencyContact}
+                                    onChange={(e) => setOnlineEditData({...onlineEditData, emergencyContact: e.target.value})}
+                                    className="bg-white h-11"
+                                  />
+                               </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="space-y-4">
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase">Legal Name</p>
+                                  <p className="text-xl font-black text-primary uppercase">{foundBooking.passengerName}</p>
+                               </div>
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase">Birth Date</p>
+                                  <p className="text-sm font-bold text-primary">{foundBooking.passengerDob}</p>
+                               </div>
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase">Segment</p>
+                                  <Badge className="bg-primary text-white h-5 px-3 uppercase text-[10px] font-black">{foundBooking.segmentLabel}</Badge>
+                               </div>
+                            </div>
+                            <div className="space-y-4">
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase">Primary Contact</p>
+                                  <p className="text-sm font-bold text-primary flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {foundBooking.passengerContact}</p>
+                               </div>
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase">Email</p>
+                                  <p className="text-sm font-bold text-primary flex items-center gap-2 truncate"><Mail className="h-3.5 w-3.5" /> {foundBooking.passengerEmail}</p>
+                               </div>
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase">Emergency</p>
+                                  <p className="text-sm font-bold text-destructive flex items-center gap-2"><Heart className="h-3.5 w-3.5" /> {foundBooking.emergencyContact}</p>
+                               </div>
+                            </div>
+                          </>
+                        )}
+                     </div>
+
+                     <div className="space-y-4">
+                        <h3 className="font-black text-primary uppercase text-sm flex items-center gap-2">
+                           <Ship className="h-4 w-4 text-accent" /> Voyage Summary
+                        </h3>
+                        <div className="bg-secondary/10 p-5 rounded-2xl border-2 border-dashed flex justify-between items-center">
+                           <div className="space-y-1">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Travel Date</p>
+                              <p className="text-lg font-black text-primary">{foundBooking.travelDate}</p>
+                           </div>
+                           <div className="text-center space-y-1">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Trip Code</p>
+                              <p className="text-lg font-black text-accent">{allSchedules?.find(s => s.id === foundBooking.scheduleId)?.tripCode || "TBA"}</p>
+                           </div>
+                           <div className="text-right space-y-1">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Routing</p>
+                              <p className="text-sm font-bold text-primary max-w-[200px] truncate">{routes?.find(r => r.id === foundBooking.routeId)?.name}</p>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               )}
+            </div>
+          </ScrollArea>
+          
+          <DialogFooter className="p-6 border-t bg-secondary/5 shrink-0 flex flex-row items-center justify-between">
+             <Button variant="outline" className="px-6 font-black uppercase text-xs h-12" onClick={() => setIsOnlineSearchDialogOpen(false)}>Close</Button>
+             {foundBooking && (
+                <div className="flex items-center gap-6">
+                   <div className="flex flex-col items-end">
+                      <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Payable Amount</p>
+                      <p className="text-3xl font-black text-primary">₱{currentOnlineTotal.toLocaleString()}</p>
+                   </div>
                    <Button 
-                     onClick={handleSearchOnlineBooking} 
-                     disabled={isSearchingOnline || !onlineBookingId}
-                     className="bg-accent text-primary font-black h-14 px-8 shadow-xl"
+                      onClick={() => setIsPaymentCollectionAlertOpen(true)}
+                      disabled={isReserving}
+                      className="bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest px-10 h-14 rounded-2xl shadow-xl transition-all"
                    >
-                     {isSearchingOnline ? <Loader2 className="h-6 w-6 animate-spin" /> : <Search className="h-6 w-6" />}
+                      {isReserving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <HandCoins className="h-5 w-5 mr-2" />}
+                      Collect & Confirm
                    </Button>
                 </div>
-             </div>
-
-             {foundBooking && (
-                <div className="bg-secondary/10 p-6 rounded-3xl border-2 border-dashed space-y-5 animate-in zoom-in-95 duration-200">
-                   <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Passenger Record</p>
-                         <p className="text-xl font-black text-primary uppercase">{foundBooking.passengerName}</p>
-                      </div>
-                      <Badge className={cn(
-                        "uppercase font-black text-[10px] h-6 px-3",
-                        foundBooking.status === 'Reserved' ? "bg-blue-600" : "bg-orange-500"
-                      )}>{foundBooking.status}</Badge>
-                   </div>
-                   
-                   <div className="grid grid-cols-2 gap-6 pt-4 border-t border-secondary-foreground/10">
-                      <div>
-                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Travel Date</p>
-                         <p className="text-sm font-black text-primary">{foundBooking.travelDate}</p>
-                      </div>
-                      <div className="text-right">
-                         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Final Fare</p>
-                         <p className="text-sm font-black text-primary">₱{foundBooking.finalFare?.toLocaleString()}</p>
-                      </div>
-                   </div>
-                   
-                   <div className="pt-4">
-                      <Button 
-                        onClick={handleProcessOnlineConfirm}
-                        disabled={isReserving}
-                        className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl"
-                      >
-                         {isReserving ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <HandCoins className="h-5 w-5 mr-2" />}
-                         Collect ₱{foundBooking.finalFare?.toLocaleString()} & Confirm
-                      </Button>
-                   </div>
-                </div>
              )}
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -732,7 +879,7 @@ export default function DeskBookingsPage() {
                         const currentFarePrice = availableFares.find(f => f.segmentLabel === currentFareLabel)?.finalFare || 0;
 
                         return (
-                          <div key={field.id} className="relative bg-secondary/5 rounded-3xl border-2 border-dashed p-6 pt-12 group hover:border-accent/40 transition-colors">
+                          <div key={field.id} className="relative bg-secondary/5 rounded-3xl border-2 border-dashed p-4 sm:p-6 pt-12 group hover:border-accent/40 transition-colors">
                             <div className="absolute -top-4 left-6 bg-primary text-white border-4 border-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest z-10 shadow-lg">
                               Manifest Entry #{index + 1}
                             </div>
@@ -904,7 +1051,9 @@ export default function DeskBookingsPage() {
           <div className="p-10 space-y-8">
              <div className="text-center space-y-4">
                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Total Amount to Collect</p>
-                <p className="text-6xl font-black text-primary tracking-tighter">₱{currentTotalPrice.toLocaleString()}</p>
+                <p className="text-6xl font-black text-primary tracking-tighter">
+                   ₱{(foundBooking ? currentOnlineTotal : currentTotalPrice).toLocaleString()}
+                </p>
                 <div className="bg-secondary/30 p-3 rounded-xl inline-flex items-center gap-2 text-xs font-bold text-primary">
                    <Info className="h-4 w-4" /> Ensure exact change for cash payments.
                 </div>
@@ -912,12 +1061,15 @@ export default function DeskBookingsPage() {
           </div>
           <DialogFooter className="p-6 border-t bg-secondary/5 gap-3">
              <Button variant="outline" className="flex-1 font-black h-14 rounded-2xl uppercase text-xs" onClick={() => {
-                form.setValue('isPaid', false);
+                if (!foundBooking) form.setValue('isPaid', false);
                 setIsPaymentCollectionAlertOpen(false);
              }}>Not Received</Button>
              <Button 
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-[0.2em] h-14 rounded-2xl shadow-xl"
                 onClick={() => {
+                   if (foundBooking) {
+                      handleProcessOnlineConfirm();
+                   }
                    setIsPaymentCollectionAlertOpen(false);
                 }}
              >
