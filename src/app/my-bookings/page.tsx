@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -20,7 +19,8 @@ import {
   Info,
   X,
   CreditCard,
-  Building2
+  Building2,
+  Globe
 } from "lucide-react";
 import { collection, query, where } from "firebase/firestore";
 import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase";
