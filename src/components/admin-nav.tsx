@@ -119,56 +119,57 @@ export function AdminNav() {
               <LayoutDashboard className="h-4 w-4" /> Home
             </Link>
             
-            {filteredMenuItems.length > 0 && (
-              <>
-                <div className="h-4 w-px bg-white/20 mx-2" />
-                {filteredMenuItems.map(item => (
-                  <Link key={item.href} href={item.href} className={cn("flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-colors", pathname === item.href ? "bg-accent text-primary" : "hover:bg-white/10")}>
-                    <item.icon className="h-4 w-4" /> {item.label}
-                  </Link>
-                ))}
-              </>
-            )}
+            <div className="h-4 w-px bg-white/20 mx-2" />
 
-            {filteredAnalyticItems.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-3 font-bold text-xs gap-2 ml-1">
-                    <Activity className="h-4 w-4" /> Intelligence <ChevronDown className="h-3 w-3 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <DropdownMenuLabel className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Data & Analytics</DropdownMenuLabel>
-                  {filteredAnalyticItems.map(item => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href} className="flex items-center gap-2 cursor-pointer">
-                        <item.icon className="h-4 w-4 text-muted-foreground" /> {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-4 font-bold text-xs gap-2">
+                  <LayoutGrid className="h-4 w-4" /> Admin Modules <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64 max-h-[85vh] overflow-y-auto">
+                {filteredMenuItems.length > 0 && (
+                  <>
+                    <DropdownMenuLabel className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Operations</DropdownMenuLabel>
+                    {filteredMenuItems.map(item => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href} className="flex items-center gap-2 cursor-pointer">
+                          <item.icon className="h-4 w-4 text-muted-foreground" /> {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
 
-            {filteredConfigItems.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-3 font-bold text-xs gap-2">
-                    <Database className="h-4 w-4" /> Configuration <ChevronDown className="h-3 w-3 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <DropdownMenuLabel className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Infrastructure Hub</DropdownMenuLabel>
-                  {filteredConfigItems.map(item => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href} className="flex items-center gap-2 cursor-pointer">
-                        <item.icon className="h-4 w-4 text-muted-foreground" /> {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                {filteredAnalyticItems.length > 0 && (
+                  <>
+                    <DropdownMenuLabel className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Intelligence</DropdownMenuLabel>
+                    {filteredAnalyticItems.map(item => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href} className="flex items-center gap-2 cursor-pointer">
+                          <item.icon className="h-4 w-4 text-muted-foreground" /> {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+
+                {filteredConfigItems.length > 0 && (
+                  <>
+                    <DropdownMenuLabel className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Configuration</DropdownMenuLabel>
+                    {filteredConfigItems.map(item => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link href={item.href} className="flex items-center gap-2 cursor-pointer">
+                          <item.icon className="h-4 w-4 text-muted-foreground" /> {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         
