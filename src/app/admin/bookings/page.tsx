@@ -31,7 +31,8 @@ import {
   QrCode,
   Info,
   Pencil,
-  X
+  X,
+  User
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -925,7 +926,7 @@ export default function DeskBookingsPage() {
                                   <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Full Legal Name</FormLabel><FormControl><Input placeholder="Juan Dela Cruz" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={form.control} name={`passengers.${index}.birthDate`} render={({ field }) => (
-                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</FormLabel><FormControl><Input type="date" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</Label><FormControl><Input type="date" {...field} className="h-11 bg-white border-2 font-bold" /></FormControl><FormMessage /></FormItem>
                                 )} />
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
