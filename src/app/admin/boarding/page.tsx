@@ -61,6 +61,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
@@ -939,8 +940,8 @@ export default function BoardingPage() {
       </main>
 
       <Dialog open={isClearanceDialogOpen} onOpenChange={setIsClearanceDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden">
-          <DialogHeader className="p-6 bg-accent text-primary">
+        <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-3xl flex flex-col h-[80vh] max-h-[90vh]">
+          <DialogHeader className="p-6 bg-accent text-primary shrink-0">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-xl">
                 <ShieldAlert className="h-6 w-6" />
@@ -951,64 +952,68 @@ export default function BoardingPage() {
               </div>
             </div>
           </DialogHeader>
-          <div className="p-6 space-y-8">
-             <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
-                  <PenTool className="h-3 w-3" /> Master's Declaration
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-secondary/10 p-4 rounded-2xl border-2 border-dashed">
-                   <div className="space-y-1.5">
-                      <Label className="text-[9px] font-bold uppercase text-primary">Captain's Full Name</Label>
-                      <Input 
-                        placeholder="Master Mariner Name" 
-                        value={clearanceForm.captainName}
-                        onChange={(e) => setClearanceForm({...clearanceForm, captainName: e.target.value.toUpperCase()})}
-                        className="bg-white text-xs font-bold h-9"
-                      />
-                   </div>
-                   <div className="space-y-1.5">
-                      <Label className="text-[9px] font-bold uppercase text-primary">License/PRC ID</Label>
-                      <Input 
-                        placeholder="ID No." 
-                        value={clearanceForm.captainLicense}
-                        onChange={(e) => setClearanceForm({...clearanceForm, captainLicense: e.target.value.toUpperCase()})}
-                        className="bg-white text-xs font-bold h-9"
-                      />
-                   </div>
-                </div>
-             </div>
+          
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-8">
+               <div className="space-y-4">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                    <PenTool className="h-3 w-3" /> Master's Declaration
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-secondary/10 p-4 rounded-2xl border-2 border-dashed">
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-primary">Captain's Full Name</Label>
+                        <Input 
+                          placeholder="Master Mariner Name" 
+                          value={clearanceForm.captainName}
+                          onChange={(e) => setClearanceForm({...clearanceForm, captainName: e.target.value.toUpperCase()})}
+                          className="bg-white text-xs font-bold h-9"
+                        />
+                     </div>
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-primary">License/PRC ID</Label>
+                        <Input 
+                          placeholder="ID No." 
+                          value={clearanceForm.captainLicense}
+                          onChange={(e) => setClearanceForm({...clearanceForm, captainLicense: e.target.value.toUpperCase()})}
+                          className="bg-white text-xs font-bold h-9"
+                        />
+                     </div>
+                  </div>
+               </div>
 
-             <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
-                  <ShieldCheck className="h-3 w-3 text-blue-600" /> Coast Guard Clearance
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-blue-50/50 p-4 rounded-2xl border-2 border-blue-100">
-                   <div className="space-y-1.5">
-                      <Label className="text-[9px] font-bold uppercase text-blue-800">Officer-in-Charge</Label>
-                      <Input 
-                        placeholder="PCG Officer Name" 
-                        value={clearanceForm.coastGuardOfficer}
-                        onChange={(e) => setClearanceForm({...clearanceForm, coastGuardOfficer: e.target.value.toUpperCase()})}
-                        className="bg-white text-xs font-bold h-9"
-                      />
-                   </div>
-                   <div className="space-y-1.5">
-                      <Label className="text-[9px] font-bold uppercase text-blue-800">Officer Rank</Label>
-                      <Input 
-                        placeholder="e.g. Ensign / Lieutenant" 
-                        value={clearanceForm.coastGuardRank}
-                        onChange={(e) => setClearanceForm({...clearanceForm, coastGuardRank: e.target.value.toUpperCase()})}
-                        className="bg-white text-xs font-bold h-9"
-                      />
-                   </div>
-                </div>
-             </div>
+               <div className="space-y-4">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                    <ShieldCheck className="h-3 w-3 text-blue-600" /> Coast Guard Clearance
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-blue-50/50 p-4 rounded-2xl border-2 border-blue-100">
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-blue-800">Officer-in-Charge</Label>
+                        <Input 
+                          placeholder="PCG Officer Name" 
+                          value={clearanceForm.coastGuardOfficer}
+                          onChange={(e) => setClearanceForm({...clearanceForm, coastGuardOfficer: e.target.value.toUpperCase()})}
+                          className="bg-white text-xs font-bold h-9"
+                        />
+                     </div>
+                     <div className="space-y-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-blue-800">Officer Rank</Label>
+                        <Input 
+                          placeholder="e.g. Ensign / Lieutenant" 
+                          value={clearanceForm.coastGuardRank}
+                          onChange={(e) => setClearanceForm({...clearanceForm, coastGuardRank: e.target.value.toUpperCase()})}
+                          className="bg-white text-xs font-bold h-9"
+                        />
+                     </div>
+                  </div>
+               </div>
 
-             <p className="text-[9px] text-muted-foreground italic leading-relaxed text-center px-4">
-               By submitting this clearance, you verify that the physical headcount matches the passenger manifest and all vessel stability requirements are satisfied per PCG regulations.
-             </p>
-          </div>
-          <DialogFooter className="p-6 border-t bg-secondary/5 gap-2">
+               <p className="text-[9px] text-muted-foreground italic leading-relaxed text-center px-4">
+                 By submitting this clearance, you verify that the physical headcount matches the passenger manifest and all vessel stability requirements are satisfied per PCG regulations.
+               </p>
+            </div>
+          </ScrollArea>
+          
+          <DialogFooter className="p-6 border-t bg-secondary/5 gap-2 shrink-0">
             <Button variant="outline" onClick={() => setIsClearanceDialogOpen(false)} className="flex-1 font-bold">Cancel</Button>
             <Button 
               className="flex-1 bg-primary text-white font-black uppercase text-xs" 
