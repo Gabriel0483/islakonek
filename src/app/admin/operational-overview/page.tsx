@@ -145,272 +145,263 @@ export default function OperationalOverviewPage() {
       </header>
 
       <main className="p-4 sm:p-6 space-y-8 container mx-auto">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-30">
-            <Loader2 className="h-12 w-12 animate-spin text-accent" />
-            <p className="text-xs font-black uppercase tracking-widest">Auditing System Infrastructure...</p>
-          </div>
-        ) : (
-          <>
-            {/* KPI MATRIX */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-               <Card className="border-none shadow-sm bg-white overflow-hidden group">
-                  <CardHeader className="p-4 pb-1">
-                     <div className="flex justify-between items-start">
-                        <div className="bg-blue-500/10 p-2 rounded-xl text-blue-600 group-hover:scale-110 transition-transform">
-                          <Anchor className="h-5 w-5" />
-                        </div>
-                        <Badge variant="outline" className="text-[8px] font-black uppercase border-blue-200 text-blue-700">Infrastructure</Badge>
-                     </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                     <p className="text-4xl font-black text-primary">{ports?.length || 0}</p>
-                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Active Terminals</p>
-                     <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Verified maritime hubs in the Philippine network.</p>
-                  </CardContent>
-               </Card>
+        {/* KPI MATRIX */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+           <Card className="border-none shadow-sm bg-white overflow-hidden group">
+              <CardHeader className="p-4 pb-1">
+                 <div className="flex justify-between items-start">
+                    <div className="bg-blue-500/10 p-2 rounded-xl text-blue-600 group-hover:scale-110 transition-transform">
+                      <Anchor className="h-5 w-5" />
+                    </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase border-blue-200 text-blue-700">Infrastructure</Badge>
+                 </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                 <p className="text-4xl font-black text-primary">{ports?.length || 0}</p>
+                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Active Terminals</p>
+                 <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Verified maritime hubs in the Philippine network.</p>
+              </CardContent>
+           </Card>
 
-               <Card className="border-none shadow-sm bg-white overflow-hidden group">
-                  <CardHeader className="p-4 pb-1">
-                     <div className="flex justify-between items-start">
-                        <div className="bg-accent/10 p-2 rounded-xl text-accent group-hover:scale-110 transition-transform">
-                          <Waypoints className="h-5 w-5" />
-                        </div>
-                        <Badge variant="outline" className="text-[8px] font-black uppercase border-accent/20 text-primary">Connectivity</Badge>
-                     </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                     <p className="text-4xl font-black text-primary">{routes?.length || 0}</p>
-                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Established Lanes</p>
-                     <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Inter-island routes with active fare tables.</p>
-                  </CardContent>
-               </Card>
+           <Card className="border-none shadow-sm bg-white overflow-hidden group">
+              <CardHeader className="p-4 pb-1">
+                 <div className="flex justify-between items-start">
+                    <div className="bg-accent/10 p-2 rounded-xl text-accent group-hover:scale-110 transition-transform">
+                      <Waypoints className="h-5 w-5" />
+                    </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase border-accent/20 text-primary">Connectivity</Badge>
+                 </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                 <p className="text-4xl font-black text-primary">{routes?.length || 0}</p>
+                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Established Lanes</p>
+                 <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Inter-island routes with active fare tables.</p>
+              </CardContent>
+           </Card>
 
-               <Card className="border-none shadow-sm bg-white overflow-hidden group">
-                  <CardHeader className="p-4 pb-1">
-                     <div className="flex justify-between items-start">
-                        <div className="bg-green-500/10 p-2 rounded-xl text-green-600 group-hover:scale-110 transition-transform">
-                          <Calendar className="h-5 w-5" />
-                        </div>
-                        <Badge variant="outline" className="text-[8px] font-black uppercase border-green-200 text-green-700">Deployment</Badge>
-                     </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                     <p className="text-4xl font-black text-primary">{operationalStats.totalTrips}</p>
-                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Voyages Today</p>
-                     <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Scheduled rotations for {todayPHT}.</p>
-                  </CardContent>
-               </Card>
+           <Card className="border-none shadow-sm bg-white overflow-hidden group">
+              <CardHeader className="p-4 pb-1">
+                 <div className="flex justify-between items-start">
+                    <div className="bg-green-500/10 p-2 rounded-xl text-green-600 group-hover:scale-110 transition-transform">
+                      <Calendar className="h-5 w-5" />
+                    </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase border-green-200 text-green-700">Deployment</Badge>
+                 </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                 <p className="text-4xl font-black text-primary">{operationalStats.totalTrips}</p>
+                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Voyages Today</p>
+                 <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Scheduled rotations for {todayPHT}.</p>
+              </CardContent>
+           </Card>
 
-               <Card className="border-none shadow-sm bg-white overflow-hidden group">
-                  <CardHeader className="p-4 pb-1">
-                     <div className="flex justify-between items-start">
-                        <div className="bg-orange-500/10 p-2 rounded-xl text-orange-600 group-hover:scale-110 transition-transform">
-                          <Ship className="h-5 w-5" />
-                        </div>
-                        <Badge variant="outline" className="text-[8px] font-black uppercase border-orange-200 text-orange-700">Assets</Badge>
-                     </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                     <p className="text-4xl font-black text-primary">{vessels?.length || 0}</p>
-                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Fleet Registry</p>
-                     <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Total physical assets under management.</p>
-                  </CardContent>
-               </Card>
-            </div>
+           <Card className="border-none shadow-sm bg-white overflow-hidden group">
+              <CardHeader className="p-4 pb-1">
+                 <div className="flex justify-between items-start">
+                    <div className="bg-orange-500/10 p-2 rounded-xl text-orange-600 group-hover:scale-110 transition-transform">
+                      <Ship className="h-5 w-5" />
+                    </div>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase border-orange-200 text-orange-700">Assets</Badge>
+                 </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                 <p className="text-4xl font-black text-primary">{vessels?.length || 0}</p>
+                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Fleet Registry</p>
+                 <p className="text-[9px] text-muted-foreground mt-2 italic leading-relaxed">Total physical assets under management.</p>
+              </CardContent>
+           </Card>
+        </div>
 
-            {/* INTEGRITY & ALERT GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-               
-               {/* SERVICE INTEGRITY PANEL */}
-               <Card className="lg:col-span-2 border-none shadow-sm bg-white p-8 overflow-hidden relative">
-                  <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 translate-x-12 translate-y-12">
-                     <ShieldCheck className="h-64 w-64" />
-                  </div>
-                  <div className="relative z-10 space-y-8">
-                     <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 p-2.5 rounded-xl">
-                          <Activity className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                           <h3 className="text-2xl font-black text-primary uppercase tracking-tight leading-none">Service Integrity</h3>
-                           <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-2">Overall Operational Readiness Index</p>
-                        </div>
-                     </div>
+        {/* INTEGRITY & ALERT GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           
+           {/* SERVICE INTEGRITY PANEL */}
+           <Card className="lg:col-span-2 border-none shadow-sm bg-white p-8 overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12 translate-x-12 translate-y-12">
+                 <ShieldCheck className="h-64 w-64" />
+              </div>
+              <div className="relative z-10 space-y-8">
+                 <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2.5 rounded-xl">
+                      <Activity className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                       <h3 className="text-2xl font-black text-primary uppercase tracking-tight leading-none">Service Integrity</h3>
+                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-2">Overall Operational Readiness Index</p>
+                    </div>
+                 </div>
 
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                        <div className="space-y-6">
-                           <div className="space-y-2">
-                              <div className="flex justify-between items-end">
-                                 <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Fleet Availability</span>
-                                 <span className="text-2xl font-black text-primary">{operationalStats.fleetHealth}%</span>
-                              </div>
-                              <Progress value={operationalStats.fleetHealth} className="h-1.5 bg-secondary shadow-inner" />
-                              <div className="flex justify-between items-center text-[9px] font-bold text-muted-foreground">
-                                 <span>{operationalStats.operationalVessels} Ready Ships</span>
-                                 <span>{operationalStats.maintenanceVessels} In Shop</span>
-                              </div>
-                           </div>
-                           <Separator className="bg-secondary/50" />
-                           <div className="space-y-2">
-                              <div className="flex justify-between items-end">
-                                 <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Assignment Readiness</span>
-                                 <span className={cn("text-2xl font-black", readinessScore === 100 ? "text-green-600" : "text-orange-600")}>
-                                    {readinessScore}%
-                                 </span>
-                              </div>
-                              <Progress value={readinessScore} className={cn("h-1.5 bg-secondary shadow-inner", readinessScore === 100 ? "[&>div]:bg-green-600" : "[&>div]:bg-orange-500")} />
-                              <div className="flex justify-between items-center text-[9px] font-bold text-muted-foreground">
-                                 <span>{operationalStats.assignedCount} Trips Assigned</span>
-                                 <span className={cn(operationalStats.unassignedCount > 0 && "text-orange-600")}>{operationalStats.unassignedCount} Missing Vessel</span>
-                              </div>
-                           </div>
-                        </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="space-y-6">
+                       <div className="space-y-2">
+                          <div className="flex justify-between items-end">
+                             <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Fleet Availability</span>
+                             <span className="text-2xl font-black text-primary">{operationalStats.fleetHealth}%</span>
+                          </div>
+                          <Progress value={operationalStats.fleetHealth} className="h-1.5 bg-secondary shadow-inner" />
+                          <div className="flex justify-between items-center text-[9px] font-bold text-muted-foreground">
+                             <span>{operationalStats.operationalVessels} Ready Ships</span>
+                             <span>{operationalStats.maintenanceVessels} In Shop</span>
+                          </div>
+                       </div>
+                       <Separator className="bg-secondary/50" />
+                       <div className="space-y-2">
+                          <div className="flex justify-between items-end">
+                             <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Assignment Readiness</span>
+                             <span className={cn("text-2xl font-black", readinessScore === 100 ? "text-green-600" : "text-orange-600")}>
+                                {readinessScore}%
+                             </span>
+                          </div>
+                          <Progress value={readinessScore} className={cn("h-1.5 bg-secondary shadow-inner", readinessScore === 100 ? "[&>div]:bg-green-600" : "[&>div]:bg-orange-500")} />
+                          <div className="flex justify-between items-center text-[9px] font-bold text-muted-foreground">
+                             <span>{operationalStats.assignedCount} Trips Assigned</span>
+                             <span className={cn(operationalStats.unassignedCount > 0 && "text-orange-600")}>{operationalStats.unassignedCount} Missing Vessel</span>
+                          </div>
+                       </div>
+                    </div>
 
-                        <div className="bg-secondary/10 rounded-3xl p-6 border-2 border-dashed border-secondary-foreground/10 space-y-4 flex flex-col justify-center">
-                           <div className="flex items-start gap-4">
-                              <div className="bg-white p-3 rounded-2xl shadow-sm text-accent">
-                                 <Zap className="h-6 w-6" />
-                              </div>
-                              <div className="space-y-1">
-                                 <h4 className="font-black text-primary uppercase text-sm">System Capacity</h4>
-                                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                    The integrity score reflects the operation's ability to fulfill the published schedule with ready-for-service assets.
-                                 </p>
-                              </div>
-                           </div>
-                           <Link href="/admin/schedules" className="w-full">
-                              <Button className="w-full h-12 bg-primary text-white font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl hover:scale-[1.02] transition-transform">
-                                 Optimize Schedules <ArrowRight className="h-4 w-4" />
-                              </Button>
-                           </Link>
-                        </div>
-                     </div>
-                  </div>
-               </Card>
+                    <div className="bg-secondary/10 rounded-3xl p-6 border-2 border-dashed border-secondary-foreground/10 space-y-4 flex flex-col justify-center">
+                       <div className="flex items-start gap-4">
+                          <div className="bg-white p-3 rounded-2xl shadow-sm text-accent">
+                             <Zap className="h-6 w-6" />
+                          </div>
+                          <div className="space-y-1">
+                             <h4 className="font-black text-primary uppercase text-sm">System Capacity</h4>
+                             <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                The integrity score reflects the operation's ability to fulfill the published schedule with ready-for-service assets.
+                             </p>
+                          </div>
+                       </div>
+                       <Link href="/admin/voyages" className="w-full">
+                          <Button className="w-full h-12 bg-primary text-white font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl hover:scale-[1.02] transition-transform">
+                             Go to Voyage Control <ArrowRight className="h-4 w-4" />
+                          </Button>
+                       </Link>
+                    </div>
+                 </div>
+              </div>
+           </Card>
 
-               {/* OPERATIONAL ALERTS PANEL */}
-               <Card className="border-none shadow-sm bg-white overflow-hidden flex flex-col">
-                  <CardHeader className="bg-secondary/5 py-4 border-b flex flex-row items-center justify-between">
-                     <CardTitle className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2 tracking-widest">
-                        <AlertCircle className="h-4 w-4 text-destructive" /> Critical Disruptions
-                     </CardTitle>
-                     {isMounted && (operationalStats.unassignedCount > 0 || operationalStats.activeMaintenance > 0) && (
-                       <div className="h-2 w-2 rounded-full bg-destructive animate-ping" />
-                     )}
-                  </CardHeader>
-                  <CardContent className="flex-1 p-0">
-                     <ScrollArea className="h-[340px]">
-                        <div className="p-4 space-y-4">
-                           {operationalStats.unassignedCount > 0 && (
-                              <div className="space-y-2">
-                                 <Label className="text-[9px] font-black uppercase text-orange-700 ml-1">Vessel Assignment Gaps ({operationalStats.unassignedCount})</Label>
-                                 <div className="space-y-2">
-                                    {unassignedVoyages.map(trip => (
-                                       <div key={trip.id} className="p-3 rounded-xl bg-orange-50 border border-orange-200 flex justify-between items-center group hover:bg-orange-100 transition-colors">
-                                          <div className="flex items-center gap-3">
-                                             <div className="bg-white p-1.5 rounded-lg border border-orange-200">
-                                                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                                             </div>
-                                             <div>
-                                                <p className="text-xs font-black text-primary uppercase">{trip.tripCode}</p>
-                                                <p className="text-[8px] font-bold text-orange-800 uppercase">{trip.departureTime} • {routes?.find(r => r.id === trip.routeId)?.name}</p>
-                                             </div>
-                                          </div>
-                                          <Link href="/admin/schedules">
-                                             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <ChevronRight className="h-4 w-4" />
-                                             </Button>
-                                          </Link>
-                                       </div>
-                                    ))}
-                                 </div>
-                              </div>
-                           )}
+           {/* OPERATIONAL ALERTS PANEL */}
+           <Card className="border-none shadow-sm bg-white overflow-hidden flex flex-col">
+              <CardHeader className="bg-secondary/5 py-4 border-b flex flex-row items-center justify-between">
+                 <CardTitle className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2 tracking-widest">
+                    <AlertCircle className="h-4 w-4 text-destructive" /> Critical Disruptions
+                 </CardTitle>
+                 {isMounted && (operationalStats.unassignedCount > 0 || operationalStats.activeMaintenance > 0) && (
+                   <div className="h-2 w-2 rounded-full bg-destructive animate-ping" />
+                 )}
+              </CardHeader>
+              <CardContent className="flex-1 p-0">
+                 <ScrollArea className="h-[340px]">
+                    <div className="p-4 space-y-4">
+                       {operationalStats.unassignedCount > 0 && (
+                          <div className="space-y-2">
+                             <Label className="text-[9px] font-black uppercase text-orange-700 ml-1">Vessel Assignment Gaps ({operationalStats.unassignedCount})</Label>
+                             <div className="space-y-2">
+                                {unassignedVoyages.map(trip => (
+                                   <div key={trip.id} className="p-3 rounded-xl bg-orange-50 border border-orange-200 flex justify-between items-center group hover:bg-orange-100 transition-colors">
+                                      <div className="flex items-center gap-3">
+                                         <div className="bg-white p-1.5 rounded-lg border border-orange-200">
+                                            <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                         </div>
+                                         <div>
+                                            <p className="text-xs font-black text-primary uppercase">{trip.tripCode}</p>
+                                            <p className="text-[8px] font-bold text-orange-800 uppercase">{trip.departureTime} • {routes?.find(r => r.id === trip.routeId)?.name}</p>
+                                         </div>
+                                      </div>
+                                      <Link href="/admin/voyages">
+                                         <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ChevronRight className="h-4 w-4" />
+                                         </Button>
+                                      </Link>
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+                       )}
 
-                           {operationalStats.activeMaintenance > 0 && (
-                              <div className="space-y-2">
-                                 <Label className="text-[9px] font-black uppercase text-blue-700 ml-1">Asset Service Alert ({operationalStats.activeMaintenance})</Label>
-                                 <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-start gap-4">
-                                    <div className="bg-white p-2 rounded-xl shadow-sm">
-                                       <Wrench className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                    <div>
-                                       <p className="text-xs font-black text-blue-800 uppercase">Fleet Offline</p>
-                                       <p className="text-[10px] text-blue-700 leading-relaxed mt-1 font-medium">
-                                          {operationalStats.activeMaintenance} vessel(s) are undergoing technical inspection or repair. 
-                                       </p>
-                                       <Link href="/admin/fleet">
-                                          <Button variant="link" className="p-0 h-auto text-[9px] font-black uppercase text-blue-800 underline mt-2">Check Log</Button>
-                                       </Link>
-                                    </div>
-                                 </div>
-                              </div>
-                           )}
+                       {operationalStats.activeMaintenance > 0 && (
+                          <div className="space-y-2">
+                             <Label className="text-[9px] font-black uppercase text-blue-700 ml-1">Asset Service Alert ({operationalStats.activeMaintenance})</Label>
+                             <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-start gap-4">
+                                <div className="bg-white p-2 rounded-xl shadow-sm">
+                                   <Wrench className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                   <p className="text-xs font-black text-blue-800 uppercase">Fleet Offline</p>
+                                   <p className="text-[10px] text-blue-700 leading-relaxed mt-1 font-medium">
+                                      {operationalStats.activeMaintenance} vessel(s) are undergoing technical inspection or repair. 
+                                   </p>
+                                   <Link href="/admin/fleet">
+                                      <Button variant="link" className="p-0 h-auto text-[9px] font-black uppercase text-blue-800 underline mt-2">Check Log</Button>
+                                   </Link>
+                                </div>
+                             </div>
+                          </div>
+                       )}
 
-                           {isSystemNominal && (
-                              <div className="py-20 text-center opacity-30 flex flex-col items-center">
-                                 <CheckCircle2 className="h-12 w-12 text-green-600 mb-4" />
-                                 <p className="text-[10px] font-black uppercase tracking-[0.2em]">Zero Critical Hazards</p>
-                                 <p className="text-[10px] font-bold">Systems currently operating at peak capacity.</p>
-                              </div>
-                           )}
-                        </div>
-                     </ScrollArea>
-                  </CardContent>
-               </Card>
-            </div>
+                       {isSystemNominal && (
+                          <div className="py-20 text-center opacity-30 flex flex-col items-center">
+                             <CheckCircle2 className="h-12 w-12 text-green-600 mb-4" />
+                             <p className="text-[10px] font-black uppercase tracking-[0.2em]">Zero Critical Hazards</p>
+                             <p className="text-[10px] font-bold">Systems currently operating at peak capacity.</p>
+                          </div>
+                       )}
+                    </div>
+                 </ScrollArea>
+              </CardContent>
+           </Card>
+        </div>
 
-            {/* INFRASTRUCTURE NODES BOARD */}
-            <section className="space-y-4">
-               <div className="flex items-center justify-between border-b-2 border-secondary pb-3">
-                  <h2 className="text-sm font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
-                    <LayoutGrid className="h-5 w-5 text-accent" /> Terminal Connectivity Audit
-                  </h2>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Live Port Registry Hierarchy</p>
-               </div>
-               
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {ports?.map(port => {
-                    const connections = routes?.filter(r => r.originPortId === port.id || r.destinationPortId === port.id).length || 0;
-                    return (
-                      <Card key={port.id} className="border-none shadow-sm bg-white overflow-hidden hover:ring-2 hover:ring-primary/5 transition-all">
-                        <CardHeader className="p-4 border-b bg-secondary/5">
-                           <div className="flex justify-between items-center">
-                              <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary/60">{port.code || 'TBA'}</Badge>
-                              {port.status === 'Operational' ? (
-                                <div className="h-2 w-2 rounded-full bg-green-500 shadow-sm shadow-green-200" title="Online" />
-                              ) : (
-                                <div className="h-2 w-2 rounded-full bg-destructive shadow-sm shadow-destructive/20" title="Suspended" />
-                              )}
-                           </div>
-                        </CardHeader>
-                        <CardContent className="p-5 space-y-4">
-                           <div>
-                              <p className="text-sm font-black text-primary uppercase truncate">{port.name}</p>
-                              <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase mt-1">
-                                 <MapPin className="h-2.5 w-2.5" /> {port.province}
-                              </div>
-                           </div>
-                           <div className="flex items-center gap-4 pt-1">
-                              <div className="flex flex-col">
-                                 <span className="text-[8px] font-black uppercase text-muted-foreground">Density</span>
-                                 <span className="text-lg font-black text-accent">{connections} <span className="text-[8px] opacity-40">LANES</span></span>
-                              </div>
-                              <div className="h-8 w-px bg-secondary" />
-                              <div className="flex flex-col">
-                                 <span className="text-[8px] font-black uppercase text-muted-foreground">Condition</span>
-                                 <span className="text-[10px] font-black text-primary uppercase">{port.status}</span>
-                              </div>
-                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-               </div>
-            </section>
-          </>
-        )}
+        {/* INFRASTRUCTURE NODES BOARD */}
+        <section className="space-y-4">
+           <div className="flex items-center justify-between border-b-2 border-secondary pb-3">
+              <h2 className="text-sm font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-accent" /> Terminal Connectivity Audit
+              </h2>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Live Port Registry Hierarchy</p>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {ports?.map(port => {
+                const connections = routes?.filter(r => r.originPortId === port.id || r.destinationPortId === port.id).length || 0;
+                return (
+                  <Card key={port.id} className="border-none shadow-sm bg-white overflow-hidden hover:ring-2 hover:ring-primary/5 transition-all">
+                    <CardHeader className="p-4 border-b bg-secondary/5">
+                       <div className="flex justify-between items-center">
+                          <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary/60">{port.code || 'TBA'}</Badge>
+                          {port.status === 'Operational' ? (
+                            <div className="h-2 w-2 rounded-full bg-green-500 shadow-sm shadow-green-200" title="Online" />
+                          ) : (
+                            <div className="h-2 w-2 rounded-full bg-destructive shadow-sm shadow-destructive/20" title="Suspended" />
+                          )}
+                       </div>
+                    </CardHeader>
+                    <CardContent className="p-5 space-y-4">
+                       <div>
+                          <p className="text-sm font-black text-primary uppercase truncate">{port.name}</p>
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase mt-1">
+                             <MapPin className="h-2.5 w-2.5" /> {port.province}
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-4 pt-1">
+                          <div className="flex flex-col">
+                             <span className="text-[8px] font-black uppercase text-muted-foreground">Density</span>
+                             <span className="text-lg font-black text-accent">{connections} <span className="text-[8px] opacity-40">LANES</span></span>
+                          </div>
+                          <div className="h-8 w-px bg-secondary" />
+                          <div className="flex flex-col">
+                             <span className="text-[8px] font-black uppercase text-muted-foreground">Condition</span>
+                             <span className="text-[10px] font-black text-primary uppercase">{port.status}</span>
+                          </div>
+                       </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+           </div>
+        </section>
       </main>
 
       <footer className="mt-12 py-12 bg-primary text-primary-foreground relative overflow-hidden">
