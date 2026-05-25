@@ -21,7 +21,8 @@ import {
   Building2,
   ChevronRight,
   ArrowRight,
-  Radio
+  Radio,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
