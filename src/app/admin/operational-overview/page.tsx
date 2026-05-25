@@ -32,6 +32,8 @@ import { Badge } from "@/components/ui/badge";
 import { AdminNav } from "@/components/admin-nav";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 export default function OperationalOverviewPage() {
