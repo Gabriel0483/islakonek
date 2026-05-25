@@ -15,7 +15,14 @@ import {
   Ship,
   Search,
   Filter,
-  Clock
+  Clock,
+  Flame,
+  Info,
+  AlertCircle,
+  CheckCircle2,
+  Activity,
+  Zap,
+  BarChart
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
@@ -26,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { AdminNav } from "@/components/admin-nav";
 import { 
   Bar, 
-  BarChart, 
+  BarChart as RechartsBarChart, 
   Line, 
   LineChart, 
   ResponsiveContainer, 
@@ -58,7 +65,7 @@ export default function SalesOverviewPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Set default filter to today
+    // Set default filter to today in PHT
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     const pht = new Date(utc + (3600000 * 8));
@@ -111,7 +118,7 @@ export default function SalesOverviewPage() {
     return last14Days.map(date => {
       const dayBookings = bookings.filter(b => 
         ['Confirmed', 'Used'].includes(b.status) && 
-        (b.travelDate === date || (b.createdAt && b.createdAt.startsWith(date)))
+        (b.travelDate === date)
       );
       
       const revenue = dayBookings.reduce((sum, b) => sum + (b.finalFare || 0), 0);
@@ -194,370 +201,345 @@ export default function SalesOverviewPage() {
     }).sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [bookings, schedules, routes, occupancySearch, occupancyDateFilter]);
 
+  const avgLoadFactor = useMemo(() => {
+    if (tripOccupancyData.length === 0) return 0;
+    const totalRate = tripOccupancyData.reduce((sum, t) => sum + t.occupancyRate, 0);
+    return Math.round(totalRate / tripOccupancyData.length);
+  }, [tripOccupancyData]);
+
   const isLoading = isBookingsLoading || isRoutesLoading || isSchedulesLoading;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col font-body">
       <AdminNav />
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary h-9">
-              <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Back to Dashboard</span><span className="sm:hidden">Back</span>
-            </Button>
-          </Link>
-          <div className="h-6 w-px bg-border" />
-          <h1 className="text-base sm:text-lg font-bold font-headline text-primary flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-accent" />
-            Sales Overview
-          </h1>
+      <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-white sticky top-16 z-40">
+        <div className="flex items-center gap-2">
+          <div className="bg-primary/10 p-2 rounded-lg">
+            <TrendingUp className="h-5 w-5 text-primary" />
+          </div>
+          <h1 className="text-lg font-black font-headline text-primary uppercase tracking-tight">Operational Intelligence</h1>
+        </div>
+        <div className="flex items-center gap-3">
+           <Link href="/admin/reports">
+             <Button variant="ghost" size="sm" className="h-9 gap-2 font-black uppercase text-[10px] text-muted-foreground hover:text-primary transition-all">
+                <Banknote className="h-4 w-4" /> Financial Reports
+             </Button>
+           </Link>
+           <Separator orientation="vertical" className="h-4" />
+           <div className="hidden sm:flex items-center gap-2 bg-secondary/50 px-4 py-1.5 rounded-full border text-[10px] font-black uppercase text-primary">
+              <Activity className="h-3.5 w-3.5 text-accent animate-pulse" /> Live Tracking Board
+           </div>
         </div>
       </header>
 
       <main className="p-4 sm:p-6 space-y-8 container mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black font-headline text-primary uppercase tracking-tight">Financial Intelligence</h2>
-            <p className="text-xs sm:text-sm text-muted-foreground">Revenue tracking and volume analysis across all routes.</p>
-          </div>
+        {/* KPI SUITE */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+           <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-3 opacity-10"><Banknote className="h-16 w-16" /></div>
+              <CardHeader className="pb-1 p-4">
+                 <p className="text-[9px] font-black uppercase opacity-70 tracking-widest">Gross Revenue</p>
+                 <CardTitle className="text-2xl font-black">₱{isMounted ? stats.totalRevenue.toLocaleString() : "---"}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                 <p className="text-[8px] opacity-60 font-bold uppercase">Confirmed & Boarded</p>
+              </CardContent>
+           </Card>
+
+           <Card className="border-none shadow-sm bg-white border-2 border-primary/10">
+              <CardHeader className="pb-1 p-4">
+                 <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Volume Hub</p>
+                 <CardTitle className="text-2xl font-black text-primary">{isMounted ? stats.totalBookings.toLocaleString() : "---"}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                 <p className="text-[8px] text-muted-foreground font-bold uppercase">Total Manifest Records</p>
+              </CardContent>
+           </Card>
+
+           <Card className="border-none shadow-sm bg-white border-2 border-green-600/10">
+              <CardHeader className="pb-1 p-4">
+                 <p className="text-[9px] font-black uppercase text-green-600/60 tracking-widest">Paid Manifest</p>
+                 <CardTitle className="text-2xl font-black text-green-600">{isMounted ? stats.totalPassengers.toLocaleString() : "---"}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                 <p className="text-[8px] text-muted-foreground font-bold uppercase">Confirmed PAX entries</p>
+              </CardContent>
+           </Card>
+
+           <Card className="border-none shadow-sm bg-white border-2 border-orange-500/10">
+              <CardHeader className="pb-1 p-4">
+                 <p className="text-[9px] font-black uppercase text-orange-600/60 tracking-widest">Waitlist Burden</p>
+                 <CardTitle className="text-2xl font-black text-orange-600">{isMounted ? stats.waitlistCount.toLocaleString() : "---"}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                 <p className="text-[8px] text-muted-foreground font-bold uppercase">Unmet Trip Demand</p>
+              </CardContent>
+           </Card>
+
+           <Card className="border-none shadow-sm bg-accent text-primary relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-3 opacity-10"><Zap className="h-16 w-16" /></div>
+              <CardHeader className="pb-1 p-4">
+                 <p className="text-[9px] font-black uppercase text-primary/70 tracking-widest">Avg. Trip Yield</p>
+                 <CardTitle className="text-2xl font-black">₱{isMounted && stats.confirmedCount > 0 ? Math.round(stats.totalRevenue / stats.confirmedCount).toLocaleString() : "0"}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                 <p className="text-[8px] text-primary/60 font-black uppercase">Per Confirmed Seat</p>
+              </CardContent>
+           </Card>
         </div>
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-xl border border-dashed">
-            <Loader2 className="h-10 w-10 animate-spin text-accent" />
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Compiling Financial Data...</p>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Top Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <Card className="border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Total Revenue</p>
-                    <CardTitle className="text-2xl font-black text-primary">
-                      ₱{isMounted ? stats.totalRevenue.toLocaleString() : "---"}
-                    </CardTitle>
-                  </div>
-                  <div className="bg-green-500/10 p-2 rounded-lg text-green-600">
-                    <Banknote className="h-5 w-5" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-green-500" /> Nominal stats
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Total Bookings</p>
-                    <CardTitle className="text-2xl font-black text-primary">
-                      {isMounted ? stats.totalBookings.toLocaleString() : "---"}
-                    </CardTitle>
-                  </div>
-                  <div className="bg-accent/10 p-2 rounded-lg text-primary">
-                    <Ticket className="h-5 w-5" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-[10px] text-muted-foreground">Gross record count</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Paid Passengers</p>
-                    <CardTitle className="text-2xl font-black text-green-600">
-                      {isMounted ? stats.totalPassengers.toLocaleString() : "---"}
-                    </CardTitle>
-                  </div>
-                  <div className="bg-blue-500/10 p-2 rounded-lg text-blue-600">
-                    <Users className="h-5 w-5" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-[10px] text-muted-foreground">Confirmed manifest entries</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Waitlist Burden</p>
-                    <CardTitle className="text-2xl font-black text-orange-600">
-                      {isMounted ? stats.waitlistCount.toLocaleString() : "---"}
-                    </CardTitle>
-                  </div>
-                  <div className="bg-orange-500/10 p-2 rounded-lg text-orange-600">
-                    <ListOrdered className="h-5 w-5" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-[10px] text-muted-foreground">Unmet demand</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Avg. Yield</p>
-                    <CardTitle className="text-2xl font-black text-primary">
-                      ₱{isMounted && stats.confirmedCount > 0 ? Math.round(stats.totalRevenue / stats.confirmedCount).toLocaleString() : "0"}
-                    </CardTitle>
-                  </div>
-                  <div className="bg-secondary p-2 rounded-lg text-muted-foreground">
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-[10px] text-muted-foreground">Per confirmed booking</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="border-none shadow-sm bg-white overflow-hidden p-6">
-                <div className="mb-6 flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-bold text-primary flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-accent" /> Revenue Momentum
+        {/* ANALYTICS PANELS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+           <Card className="border-none shadow-sm bg-white p-6">
+              <div className="mb-10 flex justify-between items-start">
+                 <div>
+                    <h3 className="text-lg font-black text-primary uppercase tracking-tight flex items-center gap-2">
+                       <TrendingUp className="h-5 w-5 text-accent" /> Revenue Velocity
                     </h3>
-                    <p className="text-xs text-muted-foreground">Daily sales performance (last 14 days)</p>
-                  </div>
-                </div>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                    <p className="text-xs text-muted-foreground font-bold">Daily gross confirmed intake (Last 14 Days)</p>
+                 </div>
+              </div>
+              <div className="h-[300px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={dailyRevenueData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                      <XAxis 
-                        dataKey="date" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fontSize: 10, fill: '#888'}}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fontSize: 10, fill: '#888'}}
-                        tickFormatter={(value) => `₱${value >= 1000 ? (value/1000) + 'k' : value}`}
-                      />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                        formatter={(value: any) => [`₱${value.toLocaleString()}`, "Revenue"]}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={4} 
-                        dot={{ r: 4, fill: "hsl(var(--accent))", strokeWidth: 0 }}
-                        activeDot={{ r: 6, fill: "hsl(var(--primary))" }}
-                      />
+                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'black', fill: '#888'}} />
+                       <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#888'}} tickFormatter={(v) => `₱${v/1000}k`} />
+                       <Tooltip cursor={{stroke: 'hsl(var(--primary))', strokeWidth: 2}} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
+                       <Line 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={4} 
+                          dot={{ r: 4, fill: "hsl(var(--accent))", strokeWidth: 0 }}
+                          activeDot={{ r: 6, strokeWidth: 0 }}
+                       />
                     </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+                 </ResponsiveContainer>
+              </div>
+           </Card>
 
-              <Card className="border-none shadow-sm bg-white overflow-hidden p-6">
-                <div className="mb-6 flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-bold text-primary flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-accent" /> Route Volume Analysis
+           <Card className="border-none shadow-sm bg-white p-6">
+              <div className="mb-10 flex justify-between items-start">
+                 <div>
+                    <h3 className="text-lg font-black text-primary uppercase tracking-tight flex items-center gap-2">
+                       <BarChart3 className="h-5 w-5 text-accent" /> Top Shipping Lanes
                     </h3>
-                    <p className="text-xs text-muted-foreground">Top performing connections by passenger count</p>
-                  </div>
-                </div>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={routeVolumeData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                      <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#888'}} />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fontSize: 10, fontWeight: 'bold', fill: '#444'}}
-                        width={80}
-                      />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                        formatter={(value: any) => [`${value} Passengers`, "Volume"]}
-                      />
-                      <Bar dataKey="passengers" radius={[0, 4, 4, 0]} barSize={20}>
-                        {routeVolumeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? "hsl(var(--primary))" : "hsl(var(--primary)/0.6)"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-            </div>
+                    <p className="text-xs text-muted-foreground font-bold">High-volume routes by passenger count</p>
+                 </div>
+              </div>
+              <div className="h-[300px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <RechartsBarChart data={routeVolumeData} layout="vertical">
+                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                       <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#888'}} />
+                       <YAxis 
+                          dataKey="name" 
+                          type="category" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          width={100} 
+                          tick={{fontSize: 9, fontWeight: 'black', fill: '#1e3a8a'}} 
+                       />
+                       <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                       <Bar dataKey="passengers" radius={[0, 4, 4, 0]} barSize={20}>
+                          {routeVolumeData.map((_, index) => (
+                             <Cell key={`cell-${index}`} fill={index === 0 ? "hsl(var(--primary))" : "hsl(var(--primary)/0.6)"} />
+                          ))}
+                       </Bar>
+                    </RechartsBarChart>
+                 </ResponsiveContainer>
+              </div>
+           </Card>
+        </div>
 
-            {/* Voyage Occupancy Tracker */}
-            <Card className="border-none shadow-sm bg-white overflow-hidden">
-              <CardHeader className="bg-secondary/10 py-6">
-                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <CardTitle className="text-lg font-black text-primary uppercase tracking-tight flex items-center gap-2">
-                        <Ship className="h-5 w-5 text-accent" /> Voyage Occupancy Tracker
-                      </CardTitle>
-                      <CardDescription className="text-xs">Physical manifest breakdown per scheduled trip.</CardDescription>
+        {/* VOYAGE OCCUPANCY TRACKER */}
+        <Card className="border-none shadow-sm bg-white overflow-hidden">
+           <CardHeader className="bg-secondary/10 py-6 border-b">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                 <div>
+                    <div className="flex items-center gap-2 mb-1">
+                       <div className="bg-primary/10 p-1.5 rounded-lg"><Ship className="h-5 w-5 text-primary" /></div>
+                       <CardTitle className="text-lg font-black text-primary uppercase tracking-tight">Voyage Occupancy Tracker</CardTitle>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                       <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input 
-                            placeholder="Filter by Trip ID..." 
-                            className="pl-8 h-9 text-xs w-40 bg-white"
-                            value={occupancySearch}
-                            onChange={(e) => setOccupancySearch(e.target.value)}
-                          />
-                       </div>
-                       <div className="flex items-center gap-2">
-                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Date:</Label>
-                          <Input 
-                            type="date" 
-                            className="h-9 text-xs w-36 bg-white font-bold"
-                            value={occupancyDateFilter}
-                            onChange={(e) => setOccupancyDateFilter(e.target.value)}
-                          />
-                       </div>
+                    <CardDescription className="text-xs font-bold uppercase text-muted-foreground">Live inventory pressure per scheduled rotation.</CardDescription>
+                 </div>
+                 <div className="flex flex-wrap items-center gap-4">
+                    <div className="relative">
+                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                       <Input 
+                          placeholder="Search Trip ID..." 
+                          className="pl-9 h-11 bg-white border-none shadow-sm text-sm w-44"
+                          value={occupancySearch}
+                          onChange={(e) => setOccupancySearch(e.target.value)}
+                       />
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <Label className="text-[10px] font-black uppercase text-muted-foreground">Service Date:</Label>
+                       <Input 
+                          type="date" 
+                          className="h-11 bg-white border-none shadow-sm text-sm font-black w-44"
+                          value={occupancyDateFilter}
+                          onChange={(e) => setOccupancyDateFilter(e.target.value)}
+                       />
                     </div>
                  </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                 {tripOccupancyData.length > 0 ? (
-                   <div className="overflow-x-auto">
-                     <Table>
-                        <TableHeader className="bg-secondary/20">
-                          <TableRow>
+              </div>
+           </CardHeader>
+           <CardContent className="p-0">
+              {isLoading ? (
+                <div className="py-20 flex flex-col items-center justify-center opacity-30">
+                   <Loader2 className="h-10 w-10 animate-spin mb-4" />
+                   <p className="text-[10px] font-black uppercase tracking-widest">Querying Trip Nodes...</p>
+                </div>
+              ) : tripOccupancyData.length > 0 ? (
+                <div className="overflow-x-auto">
+                   <Table>
+                      <TableHeader className="bg-secondary/20">
+                         <TableRow>
                             <TableHead className="text-[10px] font-black uppercase">Trip Code</TableHead>
-                            <TableHead className="text-[10px] font-black uppercase">Routing</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase">Shipping Lane</TableHead>
                             <TableHead className="text-[10px] font-black uppercase text-center">Reserved</TableHead>
                             <TableHead className="text-[10px] font-black uppercase text-center">Confirmed</TableHead>
                             <TableHead className="text-[10px] font-black uppercase text-center">Waitlist</TableHead>
-                            <TableHead className="text-[10px] font-black uppercase">Occupancy</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase">Load Factor</TableHead>
                             <TableHead className="text-right"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {tripOccupancyData.map((trip, idx) => (
-                            <TableRow key={`${trip.scheduleId}_${trip.travelDate}`} className="group">
-                              <TableCell>
-                                <div className="space-y-0.5">
-                                   <div className="text-xs font-black text-accent">{trip.tripCode}</div>
-                                   <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                                      <Clock className="h-2.5 w-2.5" /> {trip.departureTime}
-                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-xs font-bold text-primary truncate max-w-[180px]">{trip.routeName}</div>
-                                <div className="text-[9px] text-muted-foreground uppercase font-black">{trip.travelDate}</div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-100 font-black text-[10px] h-6 px-2 min-w-[30px]">
-                                   {trip.reserved}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 font-black text-[10px] h-6 px-2 min-w-[30px]">
-                                   {trip.confirmed + trip.used}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant="outline" className={cn("font-black text-[10px] h-6 px-2 min-w-[30px]", trip.waitlisted > 0 ? "bg-orange-50 text-orange-600 border-orange-100" : "opacity-30")}>
-                                   {trip.waitlisted}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="min-w-[150px]">
-                                <div className="space-y-1.5">
-                                   <div className="flex justify-between items-center text-[10px] font-black">
-                                      <span className={cn(trip.occupancyRate >= 90 ? "text-destructive" : "text-muted-foreground")}>{trip.occupancyRate}%</span>
-                                      <span className="text-primary">{trip.activeTotal} / {trip.capacity}</span>
-                                   </div>
-                                   <Progress value={trip.occupancyRate} className={cn("h-1.5", trip.occupancyRate >= 90 ? "bg-red-100 [&>div]:bg-red-500" : "")} />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                 <Link href={`/admin/manage-bookings?trip=${trip.scheduleId}&date=${trip.travelDate}`}>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-accent hover:text-primary">
-                                       <ArrowRight className="h-4 w-4" />
-                                    </Button>
-                                 </Link>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                     </Table>
-                   </div>
-                 ) : (
-                   <div className="py-20 text-center opacity-30 flex flex-col items-center">
-                      <Ship className="h-12 w-12 mb-2" />
-                      <p className="text-xs font-black uppercase tracking-widest">No trip data matching filters</p>
-                   </div>
-                 )}
-              </CardContent>
-            </Card>
+                         </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                         {tripOccupancyData.map((trip) => {
+                            const isAtRisk = trip.occupancyRate >= 90;
+                            return (
+                               <TableRow key={`${trip.scheduleId}_${trip.travelDate}`} className={cn("group transition-colors", isAtRisk ? "bg-red-50/30" : "hover:bg-secondary/5")}>
+                                  <TableCell>
+                                     <div className="space-y-0.5">
+                                        <div className="text-xs font-black text-accent">{trip.tripCode}</div>
+                                        <div className="text-[9px] font-bold text-muted-foreground flex items-center gap-1">
+                                           <Clock className="h-2.5 w-2.5" /> {trip.departureTime}
+                                        </div>
+                                     </div>
+                                  </TableCell>
+                                  <TableCell>
+                                     <div className="text-xs font-bold text-primary truncate max-w-[200px] uppercase">{trip.routeName}</div>
+                                     <div className="text-[8px] text-muted-foreground uppercase font-black">{trip.travelDate}</div>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                     <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-100 font-black text-[10px] h-6 px-2 min-w-[35px]">
+                                        {trip.reserved}
+                                     </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 font-black text-[10px] h-6 px-2 min-w-[35px]">
+                                        {trip.confirmed + trip.used}
+                                     </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                     <Badge variant="outline" className={cn("font-black text-[10px] h-6 px-2 min-w-[35px]", trip.waitlisted > 0 ? "bg-orange-50 text-orange-600 border-orange-100" : "opacity-30")}>
+                                        {trip.waitlisted}
+                                     </Badge>
+                                  </TableCell>
+                                  <TableCell className="min-w-[180px]">
+                                     <div className="space-y-1.5">
+                                        <div className="flex justify-between items-center text-[9px] font-black">
+                                           <span className={cn(isAtRisk ? "text-destructive" : "text-muted-foreground")}>
+                                              {isAtRisk && <Flame className="h-2.5 w-2.5 inline mr-1 animate-pulse" />}
+                                              {trip.occupancyRate}%
+                                           </span>
+                                           <span className="text-primary">{trip.activeTotal} / {trip.capacity} PAX</span>
+                                        </div>
+                                        <Progress value={trip.occupancyRate} className={cn("h-1.5 bg-secondary shadow-inner", isAtRisk ? "[&>div]:bg-destructive" : "[&>div]:bg-primary")} />
+                                     </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                     <Link href={`/admin/manage-bookings?trip=${trip.scheduleId}&date=${trip.travelDate}`}>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-accent hover:text-primary transition-all rounded-lg">
+                                           <ArrowRight className="h-4 w-4" />
+                                        </Button>
+                                     </Link>
+                                  </TableCell>
+                               </TableRow>
+                            );
+                         })}
+                      </TableBody>
+                   </Table>
+                </div>
+              ) : (
+                <div className="py-32 text-center opacity-30 flex flex-col items-center">
+                   <Ship className="h-16 w-16 mb-4 text-primary" />
+                   <p className="text-sm font-black uppercase tracking-widest">Zero Operations Logged for {occupancyDateFilter}</p>
+                   <p className="text-[10px] font-bold text-muted-foreground mt-1">Adjust date filters to view upcoming or historical rotations.</p>
+                </div>
+              )}
+           </CardContent>
+        </Card>
 
-            {/* Lower Insights Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-               <Card className="lg:col-span-1 border-none shadow-sm bg-white">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Waitlist Status</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                     {bookings?.filter(b => b.status === 'Waitlisted').slice(0, 5).map(b => {
-                        const route = routes?.find(r => r.id === b.routeId);
-                        return (
-                          <div key={b.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                            <div className="space-y-0.5">
-                              <p className="text-xs font-bold text-primary">{b.passengerName}</p>
-                              <p className="text-[10px] text-muted-foreground">{route?.name}</p>
-                            </div>
-                            <Badge variant="outline" className="text-[9px] uppercase font-black text-orange-600 border-orange-200 bg-orange-50">Waitlisted</Badge>
+        {/* BOTTOM ANALYTICS & INSIGHTS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           <Card className="lg:col-span-1 border-none shadow-sm bg-white p-6">
+              <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-6 flex items-center gap-2 border-b pb-2">
+                 <ListOrdered className="h-4 w-4 text-accent" /> Pending Capacity Burden
+              </h3>
+              <div className="space-y-4">
+                 {bookings?.filter(b => b.status === 'Waitlisted').slice(0, 5).map(b => {
+                    const route = routes?.find(r => r.id === b.routeId);
+                    return (
+                      <div key={b.id} className="flex items-center justify-between py-3 border-b border-dashed last:border-0 hover:bg-orange-50/50 px-2 rounded-lg transition-colors">
+                        <div className="space-y-0.5 min-w-0">
+                          <p className="text-xs font-black text-primary truncate uppercase">{b.passengerName}</p>
+                          <div className="flex items-center gap-2 text-[8px] font-bold text-muted-foreground uppercase">
+                             <MapPin className="h-2 w-2" /> {route?.name?.split(' - ')[0]} → {route?.name?.split(' - ')[1]}
                           </div>
-                        );
-                     })}
-                     <Link href="/admin/manage-bookings?tab=waitlisted" className="block w-full">
-                       <Button variant="ghost" className="w-full h-8 text-[10px] font-bold uppercase gap-2">
-                         Manage Waitlist <ArrowRight className="h-3 w-3" />
-                       </Button>
-                     </Link>
-                  </CardContent>
-               </Card>
+                        </div>
+                        <Badge variant="outline" className="text-[8px] uppercase font-black text-orange-600 border-orange-200 bg-orange-50 h-5">Waitlist #{b.id.slice(-4)}</Badge>
+                      </div>
+                    );
+                 })}
+                 <Link href="/admin/manage-bookings?tab=waitlisted" className="block w-full pt-2">
+                   <Button variant="ghost" className="w-full h-10 text-[9px] font-black uppercase gap-2 border-2 border-dashed group">
+                      Review Underserved Demand <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                   </Button>
+                 </Link>
+              </div>
+           </Card>
 
-               <Card className="lg:col-span-2 border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden flex flex-col justify-center p-8">
-                  <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <TrendingUp className="h-64 w-64 -rotate-12 translate-x-16 translate-y-16" />
-                  </div>
-                  <div className="relative z-10 space-y-4">
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Sales Insights</h3>
-                    <p className="text-primary-foreground/80 text-sm leading-relaxed max-w-md">
-                      Current momentum indicates peak performance on weekend inter-island routes. Route volume is up 15% compared to the same period last year. Focus marketing efforts on mid-week schedules to balance vessel load factor.
-                    </p>
-                    <div className="flex gap-4 pt-2">
-                       <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/20">
-                          <p className="text-[9px] uppercase font-bold opacity-60">Avg. Load Factor</p>
-                          <p className="text-lg font-black">84%</p>
-                       </div>
-                       <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/20">
-                          <p className="text-[9px] uppercase font-bold opacity-60">Revenue Yield</p>
-                          <p className="text-lg font-black">+4.2%</p>
+           <Card className="lg:col-span-2 border-none shadow-sm bg-primary text-primary-foreground p-8 relative overflow-hidden flex flex-col justify-center min-h-[280px]">
+              <div className="absolute top-0 right-0 p-6 opacity-5">
+                <BarChart className="h-64 w-64 -rotate-12 translate-x-16 translate-y-16" />
+              </div>
+              <div className="relative z-10 space-y-6">
+                 <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-2 rounded-xl"><Info className="h-6 w-6 text-accent" /></div>
+                    <div>
+                       <h3 className="text-2xl font-black uppercase tracking-tight">Load Factor Summary</h3>
+                       <p className="text-primary-foreground/70 text-xs font-bold uppercase tracking-widest">Fleet-Wide Optimization Metrics</p>
+                    </div>
+                 </div>
+                 
+                 <p className="text-primary-foreground/80 text-sm leading-relaxed max-w-lg">
+                    Current average load factor across all active rotations is <span className="font-black text-white">{avgLoadFactor}%</span>. 
+                    {avgLoadFactor > 80 ? " Operational pressure is high; consider activating standby RoRo vessels for peak relief." : " Asset utilization is within nominal parameters."}
+                 </p>
+                 
+                 <div className="flex flex-wrap gap-4 pt-4">
+                    <div className="bg-white/10 px-6 py-4 rounded-2xl border border-white/20 backdrop-blur-sm space-y-1">
+                       <p className="text-[9px] uppercase font-black text-accent tracking-widest">Avg. Utilization</p>
+                       <div className="flex items-end gap-2">
+                          <p className="text-3xl font-black">{avgLoadFactor}%</p>
+                          <div className={cn("flex items-center gap-0.5 text-[10px] font-bold mb-1", avgLoadFactor > 75 ? "text-green-400" : "text-orange-400")}>
+                             {avgLoadFactor > 75 ? <TrendingUp className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                             {avgLoadFactor > 75 ? "Optimal" : "Slack"}
+                          </div>
                        </div>
                     </div>
-                  </div>
-               </Card>
-            </div>
-          </div>
-        )}
+                    <div className="bg-white/10 px-6 py-4 rounded-2xl border border-white/20 backdrop-blur-sm space-y-1">
+                       <p className="text-[9px] uppercase font-black text-accent tracking-widest">Capacity Reserve</p>
+                       <p className="text-3xl font-black">{isMounted ? Math.max(0, 100 - avgLoadFactor) : "--"}%</p>
+                       <p className="text-[8px] font-medium opacity-50">Physical fleet buffer</p>
+                    </div>
+                 </div>
+              </div>
+           </Card>
+        </div>
       </main>
     </div>
   );
