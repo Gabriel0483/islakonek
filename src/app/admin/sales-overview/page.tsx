@@ -7,22 +7,22 @@ import {
   Users, 
   ListOrdered, 
   ArrowLeft, 
-  Loader2,
-  Calendar,
-  BarChart3,
-  Ticket,
-  ArrowRight,
-  Ship,
-  Search,
-  Filter,
-  Clock,
-  Flame,
-  Info,
-  AlertCircle,
-  CheckCircle2,
-  Activity,
-  Zap,
-  BarChart
+  Loader2, 
+  Calendar, 
+  BarChart3, 
+  Ticket, 
+  ArrowRight, 
+  Ship, 
+  Search, 
+  Filter, 
+  Clock, 
+  Flame, 
+  Info, 
+  AlertCircle, 
+  CheckCircle2, 
+  Activity, 
+  Zap, 
+  BarChart 
 } from "lucide-react";
 import Link from "next/link";
 import { collection } from "firebase/firestore";
@@ -40,8 +40,8 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  CartesianGrid,
-  Cell
+  CartesianGrid, 
+  Cell 
 } from "recharts";
 import { format, parseISO, subDays } from "date-fns";
 import { 
@@ -55,6 +55,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 export default function SalesOverviewPage() {
