@@ -58,8 +58,10 @@ import {
   Line,
   LineChart
 } from "recharts";
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, subMonths, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, isWithinInterval, subMonths, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 
 const COLORS = ['#1e3a8a', '#06b6d4', '#4f46e5', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -117,7 +119,7 @@ export default function SalesReportPage() {
 
       if (b.isFeeWaived) {
          // This represents potential revenue lost due to operational waivers
-         acc.waivedValue += (penalties || 0); // Assuming penalties holds the original calculation even if waived
+         acc.waivedValue += (penalties || 0); 
       }
 
       // Penalty Analytics
