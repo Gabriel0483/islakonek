@@ -387,7 +387,7 @@ export default function VoyageManagementPage() {
       </main>
 
       <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[550px] p-0 overflow-hidden flex flex-col max-h-[95vh] rounded-3xl">
+        <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[550px] p-0 overflow-hidden flex flex-col h-[90vh] max-h-[90vh] rounded-3xl">
           <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">
              <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/20 rounded-2xl shadow-inner">
@@ -402,7 +402,7 @@ export default function VoyageManagementPage() {
              </div>
           </DialogHeader>
           
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="p-6 space-y-10 pb-10">
                <div className="space-y-4">
                   <Label className="text-[10px] font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
