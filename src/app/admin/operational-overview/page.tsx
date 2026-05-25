@@ -62,14 +62,16 @@ export default function OperationalOverviewPage() {
   const vesselsRef = useMemoFirebase(() => db ? collection(db, "vessels") : null, [db]);
   const schedulesRef = useMemoFirebase(() => db ? collection(db, "schedules") : null, [db]);
   const maintenanceRef = useMemoFirebase(() => db ? collection(db, "maintenance") : null, [db]);
+  const voyagesRef = useMemoFirebase(() => db ? collection(db, "voyages") : null, [db]);
 
   const { data: ports, isLoading: isPortsLoading } = useCollection(portsRef);
   const { data: routes, isLoading: isRoutesLoading } = useCollection(routesRef);
   const { data: vessels, isLoading: isVesselsLoading } = useCollection(vesselsRef);
   const { data: schedules, isLoading: isSchedulesLoading } = useCollection(schedulesRef);
   const { data: maintenance, isLoading: isMaintenanceLoading } = useCollection(maintenanceRef);
+  const { data: voyages, isLoading: isVoyagesLoading } = useCollection(voyagesRef);
 
-  const isLoading = isPortsLoading || isRoutesLoading || isVesselsLoading || isSchedulesLoading || isMaintenanceLoading;
+  const isLoading = isPortsLoading || isRoutesLoading || isVesselsLoading || isSchedulesLoading || isMaintenanceLoading || isVoyagesLoading;
 
   const todaySchedules = useMemo(() => {
     if (!schedules || !todayPHT) return [];
@@ -82,8 +84,17 @@ export default function OperationalOverviewPage() {
   }, [schedules, todayPHT]);
 
   const unassignedVoyages = useMemo(() => {
-    return todaySchedules.filter(s => !s.vesselId);
-  }, [todaySchedules]);
+    if (!todaySchedules || !todayPHT) return [];
+    return todaySchedules.filter(s => {
+      // A trip is unassigned if:
+      // 1. It has no default vesselId in the schedule registry
+      // 2. AND there is no override vesselId in the voyages collection for today
+      const voyageId = `${s.id}_${todayPHT}`;
+      const voyageStatus = voyages?.find(v => v.id === voyageId);
+      
+      return !s.vesselId && !voyageStatus?.vesselId;
+    });
+  }, [todaySchedules, voyages, todayPHT]);
 
   const operationalStats = useMemo(() => {
     const totalVessels = vessels?.length || 0;
@@ -91,7 +102,7 @@ export default function OperationalOverviewPage() {
     const maintenanceVessels = vessels?.filter(v => v.status === "Maintenance").length || 0;
     
     const unassignedCount = unassignedVoyages.length;
-    const assignedCount = todaySchedules.length - unassignedCount;
+    const assignedCount = Math.max(0, todaySchedules.length - unassignedCount);
 
     const activeMaintenance = maintenance?.filter(m => m.status !== "Completed").length || 0;
 
