@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, memo, useCallback } from "react";
@@ -40,7 +39,8 @@ import {
   RotateCcw,
   History,
   Building2,
-  Globe
+  Globe,
+  HandCoins
 } from "lucide-react";
 import { 
   collection, 
@@ -312,6 +312,7 @@ export default function ManageBookingsPage() {
   const [isBoardingPassOpen, setIsBoardingPassOpen] = useState(false);
   const [isPurgeDialogOpen, setIsPurgeDialogOpen] = useState(false);
   const [isHistoryPurgeOpen, setIsHistoryPurgeOpen] = useState(false);
+  const [isFeePaymentAlertOpen, setIsFeePaymentAlertOpen] = useState(false);
 
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [editFormData, setEditFormData] = useState({
@@ -473,6 +474,7 @@ export default function ManageBookingsPage() {
     const { booking, status: newStatus } = statusTarget;
     const penaltyAmount = calculateStatusPenalties();
     setIsStatusDialogOpen(false);
+    setIsFeePaymentAlertOpen(false);
 
     try {
       const activeStates = ['Confirmed', 'Reserved', 'Used'];
@@ -566,6 +568,8 @@ export default function ManageBookingsPage() {
     const newVoyageId = `${rebookingData.newScheduleId}_${rebookingData.newTravelDate}`;
 
     let candidateDoc = await findWaitlistedCandidate(selectedBooking.scheduleId, selectedBooking.travelDate);
+    setIsRebookDialogOpen(false);
+    setIsFeePaymentAlertOpen(false);
 
     try {
       await runTransaction(db, async (transaction) => {
@@ -633,11 +637,11 @@ export default function ManageBookingsPage() {
       });
       
       toast({ title: "Rebooked Successfully", description: `Ticket #${bookingId} moved to ${rebookingData.newTravelDate}` });
-      setIsRebookDialogOpen(false);
     } catch (e: any) {
       toast({ variant: "destructive", title: "Rebooking Failed", description: e.message });
     } finally {
       setIsActionProcessing(false);
+      setSelectedBooking(null);
     }
   };
 
@@ -1054,9 +1058,25 @@ export default function ManageBookingsPage() {
               </DialogHeader>
               <div className="p-4 sm:p-6 space-y-4">
                 <div className="flex items-center justify-between p-4 bg-secondary/10 rounded-xl">
-                  <Label>Waive Penalty Fees</Label>
+                   <div className="space-y-0.5">
+                      <Label>Waive Penalty Fees</Label>
+                      <p className="text-[10px] text-muted-foreground">Exempt passenger from cancellation/no-show fees.</p>
+                   </div>
                   <Switch checked={statusActionData.isFeeWaived} onCheckedChange={(checked) => setStatusActionData({...statusActionData, isFeeWaived: checked})} />
                 </div>
+                
+                {statusActionData.isFeeWaived && (
+                  <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
+                    <Label className="text-[10px] font-bold uppercase">Waiver Reason</Label>
+                    <Select value={statusActionData.waiveReason} onValueChange={(val) => setStatusActionData({...statusActionData, waiveReason: val})}>
+                       <SelectTrigger><SelectValue /></SelectTrigger>
+                       <SelectContent>
+                          {["Weather", "Technical", "Force Majeure", "Passenger Request"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                       </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="bg-primary p-5 rounded-xl text-primary-foreground flex justify-between items-center">
                   <p className="text-xs font-black uppercase opacity-70">Penalty Applied</p>
                   <p className="text-2xl font-black">₱{calculateStatusPenalties().toLocaleString()}</p>
@@ -1064,7 +1084,19 @@ export default function ManageBookingsPage() {
               </div>
               <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-col sm:flex-row gap-2">
                 <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-                <Button className="w-full sm:flex-1 bg-primary text-white" onClick={handleConfirmStatusUpdate} disabled={isActionProcessing}>Apply Change</Button>
+                <Button 
+                   className="w-full sm:flex-1 bg-primary text-white font-bold" 
+                   onClick={() => {
+                      if (calculateStatusPenalties() > 0) {
+                         setIsFeePaymentAlertOpen(true);
+                      } else {
+                         handleConfirmStatusUpdate();
+                      }
+                   }} 
+                   disabled={isActionProcessing}
+                >
+                   {calculateStatusPenalties() > 0 ? "Confirm & Collect Fees" : "Apply Change"}
+                </Button>
               </DialogFooter>
             </>
           )}
@@ -1077,26 +1109,99 @@ export default function ManageBookingsPage() {
             <>
               <DialogHeader className="p-4 sm:p-6 border-b">
                 <DialogTitle>Rebook Ticket #{selectedBooking?.id}</DialogTitle>
+                <DialogDescription>Move passenger to a different voyage</DialogDescription>
               </DialogHeader>
-              <div className="p-4 sm:p-6 space-y-4">
-                <div className="space-y-2"><Label>New Date</Label><Input type="date" value={rebookingData.newTravelDate} onChange={(e) => setRebookingData({...rebookingData, newTravelDate: e.target.value, newScheduleId: ""})} /></div>
-                <div className="space-y-2"><Label>New Trip</Label>
-                  <Select value={rebookingData.newScheduleId} onValueChange={(val) => setRebookingData({...rebookingData, newScheduleId: val})}>
-                    <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
-                    <SelectContent>{availableRebookingSchedules?.map(s => <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>)}</SelectContent>
-                  </Select>
+              <div className="p-4 sm:p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase">New Date</Label>
+                      <Input type="date" value={rebookingData.newTravelDate} onChange={(e) => setRebookingData({...rebookingData, newTravelDate: e.target.value, newScheduleId: ""})} />
+                   </div>
+                   <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase">New Trip</Label>
+                      <Select value={rebookingData.newScheduleId} onValueChange={(val) => setRebookingData({...rebookingData, newScheduleId: val})}>
+                        <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
+                        <SelectContent>{availableRebookingSchedules?.map(s => <SelectItem key={s.id} value={s.id}>{s.tripCode} - {s.departureTime}</SelectItem>)}</SelectContent>
+                      </Select>
+                   </div>
                 </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between p-4 bg-secondary/10 rounded-xl">
+                   <div className="space-y-0.5">
+                      <Label>Waive Fees</Label>
+                      <p className="text-[10px] text-muted-foreground">Exempt passenger from rebooking penalties.</p>
+                   </div>
+                  <Switch checked={rebookingData.isFeeWaived} onCheckedChange={(checked) => setRebookingData({...rebookingData, isFeeWaived: checked})} />
+                </div>
+
                 <div className="bg-primary p-4 rounded-xl text-primary-foreground flex justify-between items-center">
-                  <p className="text-xs font-black uppercase">Rebooking Fee</p>
-                  <p className="text-xl font-black">₱{calculateRebookingFees.toLocaleString()}</p>
+                  <div className="space-y-0.5">
+                     <p className="text-[10px] font-black uppercase opacity-70">Rebooking Fee + No-Show</p>
+                     {rebookingData.isFeeWaived && <p className="text-[8px] font-bold text-accent uppercase">Waived</p>}
+                  </div>
+                  <p className="text-2xl font-black">₱{calculateRebookingFees.toLocaleString()}</p>
                 </div>
               </div>
               <DialogFooter className="p-4 sm:p-6 border-t gap-2">
                 <Button variant="outline" onClick={() => setIsRebookDialogOpen(false)}>Cancel</Button>
-                <Button className="flex-1 bg-primary text-white" onClick={handlePerformRebook} disabled={!rebookingData.newScheduleId || isActionProcessing}>Process Rebooking</Button>
+                <Button 
+                   className="flex-1 bg-primary text-white font-bold" 
+                   onClick={() => {
+                      if (calculateRebookingFees > 0) {
+                         setIsFeePaymentAlertOpen(true);
+                      } else {
+                         handlePerformRebook();
+                      }
+                   }} 
+                   disabled={!rebookingData.newScheduleId || isActionProcessing}
+                >
+                   {calculateRebookingFees > 0 ? "Confirm & Collect Fees" : "Process Rebooking"}
+                </Button>
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* FEE COLLECTION ALERT */}
+      <Dialog open={isFeePaymentAlertOpen} onOpenChange={setIsFeePaymentAlertOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[400px] p-0 overflow-hidden rounded-3xl">
+          <DialogHeader className="p-6 bg-orange-600 text-white">
+             <div className="flex items-center gap-4">
+                <div className="bg-white/20 p-3 rounded-2xl shadow-inner">
+                  <HandCoins className="h-7 w-7" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tight leading-none">Collect Penalty</DialogTitle>
+                  <DialogDescription className="text-orange-100 text-[10px] font-black uppercase tracking-widest mt-1">Fee Verification Step</DialogDescription>
+                </div>
+             </div>
+          </DialogHeader>
+          <div className="p-10 space-y-8 text-center">
+             <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Total Penalty to Collect</p>
+                <p className="text-5xl font-black text-primary tracking-tighter">
+                   ₱{(statusTarget ? calculateStatusPenalties() : calculateRebookingFees).toLocaleString()}
+                </p>
+                <div className="bg-secondary/30 p-3 rounded-xl inline-flex items-center gap-2 text-[10px] font-bold text-primary">
+                   <Info className="h-3.5 w-3.5" /> Confirm cash/digital receipt before proceeding.
+                </div>
+             </div>
+          </div>
+          <DialogFooter className="p-6 border-t bg-secondary/5 gap-3">
+             <Button variant="outline" className="flex-1 font-black h-12 rounded-2xl uppercase text-[10px]" onClick={() => setIsFeePaymentAlertOpen(false)}>Not Collected</Button>
+             <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest h-12 rounded-2xl shadow-xl"
+                onClick={() => {
+                   if (statusTarget) handleConfirmStatusUpdate();
+                   else handlePerformRebook();
+                }}
+             >
+               Paid & Proceed
+             </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1184,7 +1289,7 @@ export default function ManageBookingsPage() {
                          <div className="space-y-1">
                             <Label className="text-[10px] uppercase font-bold text-muted-foreground">Primary Email</Label>
                             <p className="text-sm font-bold flex items-center gap-2 truncate">
-                               <Mail className="h-3.5 w-3.5 text-muted-foreground" /> {selectedBooking?.passengerEmail || "N/A"}
+                               <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> {selectedBooking?.passengerEmail || "N/A"}
                             </p>
                          </div>
                          <div className="space-y-1">
@@ -1307,7 +1412,7 @@ export default function ManageBookingsPage() {
                       </div>
                       {selectedBooking?.remarks && (
                          <div className="p-3 bg-orange-50 border-2 border-dashed border-orange-200 rounded-xl flex items-start gap-2">
-                            <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
+                            <AlertTriangle className="h-3.5 w-3.5 text-orange-600 shrink-0 mt-0.5" />
                             <div>
                                <p className="text-[9px] font-black text-orange-800 uppercase">Internal System Remark</p>
                                <p className="text-[10px] text-orange-700 italic">{selectedBooking.remarks}</p>
