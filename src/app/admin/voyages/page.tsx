@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -22,7 +21,8 @@ import {
   Activity,
   AlertTriangle,
   Zap,
-  Check
+  Check,
+  Tag
 } from "lucide-react";
 import { collection, doc } from "firebase/firestore";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
