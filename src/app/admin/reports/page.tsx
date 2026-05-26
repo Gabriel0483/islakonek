@@ -102,15 +102,17 @@ export default function SalesReportPage() {
   const stats = useMemo(() => {
     return reportData.reduce((acc, b) => {
       const fare = b.finalFare || 0;
-      const penalties = b.penaltyFees || 0;
-      const total = fare + penalties;
+      const penalties = b.isFeeWaived ? 0 : (b.penaltyFees || 0);
+      const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
 
-      acc.gross += total;
+      acc.gross += (fare + penalties);
       
-      if (b.status === 'Refunded' || b.status === 'Auto-cancelled') {
+      if (isLiquidated) {
          acc.refunds += fare;
+         // The company "keeps" the penalty fee even if the fare is refunded
+         acc.net += penalties;
       } else {
-         acc.net += total;
+         acc.net += (fare + penalties);
       }
 
       if (b.status === 'Used') {
@@ -118,12 +120,11 @@ export default function SalesReportPage() {
       }
 
       if (b.isFeeWaived) {
-         // This represents potential revenue lost due to operational waivers
-         acc.waivedValue += (penalties || 0); 
+         acc.waivedValue += (b.penaltyFees || 0); 
       }
 
       // Penalty Analytics
-      if (penalties > 0 && !b.isFeeWaived) {
+      if (penalties > 0) {
          if (b.status === 'Suspended') acc.noShowFees += penalties;
          else if (b.rebookedFromId || b.remarks?.toLowerCase().includes('rebook')) acc.rebookingFees += penalties;
          else acc.cancellationFees += penalties;
@@ -131,8 +132,11 @@ export default function SalesReportPage() {
       }
 
       // Source Breakdown
-      if (b.bookingSource === 'Desk') acc.deskRevenue += total;
-      else acc.webRevenue += total;
+      if (b.bookingSource === 'Desk') {
+        acc.deskRevenue += isLiquidated ? penalties : (fare + penalties);
+      } else {
+        acc.webRevenue += isLiquidated ? penalties : (fare + penalties);
+      }
 
       return acc;
     }, { 
@@ -147,7 +151,11 @@ export default function SalesReportPage() {
     const days: Record<string, number> = {};
     reportData.forEach(b => {
        const date = b.travelDate;
-       days[date] = (days[date] || 0) + (b.finalFare || 0) + (b.penaltyFees || 0);
+       const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
+       const fareContributed = isLiquidated ? 0 : (b.finalFare || 0);
+       const penaltiesContributed = b.isFeeWaived ? 0 : (b.penaltyFees || 0);
+       
+       days[date] = (days[date] || 0) + fareContributed + penaltiesContributed;
     });
     return Object.entries(days).map(([name, revenue]) => ({ name: format(parseISO(name), "MMM dd"), revenue }))
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
@@ -158,7 +166,11 @@ export default function SalesReportPage() {
     reportData.forEach(b => {
        const routeName = routes?.find(r => r.id === b.routeId)?.name || "Unknown Route";
        if (!routesMap[routeName]) routesMap[routeName] = { revenue: 0, volume: 0 };
-       routesMap[routeName].revenue += (b.finalFare || 0) + (b.penaltyFees || 0);
+       
+       const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
+       const intakeForThisRecord = (isLiquidated ? 0 : (b.finalFare || 0)) + (b.isFeeWaived ? 0 : (b.penaltyFees || 0));
+       
+       routesMap[routeName].revenue += intakeForThisRecord;
        routesMap[routeName].volume += 1;
     });
     return Object.entries(routesMap).map(([name, data]) => ({ name, revenue: data.revenue, volume: data.volume }))
@@ -172,19 +184,23 @@ export default function SalesReportPage() {
 
   const handleExportCSV = () => {
     if (reportData.length === 0) return;
-    const headers = ["Booking ID", "Travel Date", "Passenger", "Route", "Fare", "Penalties", "Total", "Status", "Source", "Fee Waived"];
-    const rows = reportData.map(b => [
-      b.id,
-      b.travelDate,
-      `"${b.passengerName}"`,
-      `"${routes?.find(r => r.id === b.routeId)?.name || 'Unknown'}"`,
-      b.finalFare,
-      b.penaltyFees || 0,
-      (b.finalFare || 0) + (b.penaltyFees || 0),
-      b.status,
-      b.bookingSource,
-      b.isFeeWaived ? "YES" : "NO"
-    ]);
+    const headers = ["Booking ID", "Travel Date", "Passenger", "Route", "Fare", "Penalties", "Total Intake", "Status", "Source", "Fee Waived"];
+    const rows = reportData.map(b => {
+      const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
+      const intake = (isLiquidated ? 0 : (b.finalFare || 0)) + (b.isFeeWaived ? 0 : (b.penaltyFees || 0));
+      return [
+        b.id,
+        b.travelDate,
+        `"${b.passengerName}"`,
+        `"${routes?.find(r => r.id === b.routeId)?.name || 'Unknown'}"`,
+        b.finalFare,
+        b.penaltyFees || 0,
+        intake,
+        b.status,
+        b.bookingSource,
+        b.isFeeWaived ? "YES" : "NO"
+      ];
+    });
 
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -393,16 +409,16 @@ export default function SalesReportPage() {
                           <div className="space-y-1">
                              <div className="flex justify-between text-[10px] font-bold uppercase opacity-70">
                                 <span>Desk Revenue Share</span>
-                                <span>{isMounted ? Math.round((stats.deskRevenue / (stats.gross || 1)) * 100) : 0}%</span>
+                                <span>{isMounted ? Math.round((stats.deskRevenue / (stats.net || 1)) * 100) : 0}%</span>
                              </div>
-                             <Progress value={isMounted ? (stats.deskRevenue / (stats.gross || 1)) * 100 : 0} className="h-1.5 bg-white/10" />
+                             <Progress value={isMounted ? (stats.deskRevenue / (stats.net || 1)) * 100 : 0} className="h-1.5 bg-white/10" />
                           </div>
                           <div className="space-y-1">
                              <div className="flex justify-between text-[10px] font-bold uppercase opacity-70">
                                 <span>Web Revenue Share</span>
-                                <span>{isMounted ? Math.round((stats.webRevenue / (stats.gross || 1)) * 100) : 0}%</span>
+                                <span>{isMounted ? Math.round((stats.webRevenue / (stats.net || 1)) * 100) : 0}%</span>
                              </div>
-                             <Progress value={isMounted ? (stats.webRevenue / (stats.gross || 1)) * 100 : 0} className="h-1.5 bg-white/10" />
+                             <Progress value={isMounted ? (stats.webRevenue / (stats.net || 1)) * 100 : 0} className="h-1.5 bg-white/10" />
                           </div>
                        </div>
                     </div>
@@ -498,42 +514,49 @@ export default function SalesReportPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {reportData.slice(0, 100).map((b) => (
-                            <TableRow key={b.id} className="text-xs group hover:bg-secondary/5 transition-colors">
-                              <TableCell className="font-mono font-black text-primary">#{b.id}</TableCell>
-                              <TableCell className="font-bold">{b.travelDate}</TableCell>
-                              <TableCell>
-                                 <div className="font-black text-primary uppercase">{b.passengerName}</div>
-                                 <div className="text-[8px] font-bold text-muted-foreground uppercase">{routes?.find(r => r.id === b.routeId)?.name}</div>
-                              </TableCell>
-                              <TableCell className="text-right font-bold">₱{b.finalFare?.toLocaleString()}</TableCell>
-                              <TableCell className={cn("text-right font-black", b.penaltyFees > 0 ? "text-orange-600" : "text-muted-foreground/30")}>
-                                 {b.isFeeWaived ? (
-                                    <span className="text-[8px] text-green-600 uppercase border border-green-200 px-1 rounded bg-green-50">Waived</span>
-                                 ) : (
-                                    <>₱{(b.penaltyFees || 0).toLocaleString()}</>
-                                 )}
-                              </TableCell>
-                              <TableCell className="text-right font-black text-primary">
-                                 ₱{((b.finalFare || 0) + (b.isFeeWaived ? 0 : (b.penaltyFees || 0))).toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                  <Badge variant="outline" className={cn(
-                                    "text-[9px] font-black uppercase h-5 px-2",
-                                    b.status === 'Confirmed' ? "bg-green-50 text-green-700 border-green-200" :
-                                    b.status === 'Used' ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
-                                    b.status === 'Refunded' ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-secondary text-muted-foreground border-transparent"
-                                  )}>{b.status}</Badge>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                 {b.bookingSource === 'Desk' ? (
-                                    <Building2 className="h-3.5 w-3.5 mx-auto text-primary opacity-40" title="Desk Booking" />
-                                 ) : (
-                                    <Globe className="h-3.5 w-3.5 mx-auto text-accent opacity-60" title="Web Booking" />
-                                 )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {reportData.slice(0, 100).map((b) => {
+                            const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
+                            const totalIntake = (isLiquidated ? 0 : (b.finalFare || 0)) + (b.isFeeWaived ? 0 : (b.penaltyFees || 0));
+                            
+                            return (
+                              <TableRow key={b.id} className="text-xs group hover:bg-secondary/5 transition-colors">
+                                <TableCell className="font-mono font-black text-primary">#{b.id}</TableCell>
+                                <TableCell className="font-bold">{b.travelDate}</TableCell>
+                                <TableCell>
+                                   <div className="font-black text-primary uppercase">{b.passengerName}</div>
+                                   <div className="text-[8px] font-bold text-muted-foreground uppercase">{routes?.find(r => r.id === b.routeId)?.name}</div>
+                                </TableCell>
+                                <TableCell className={cn("text-right font-bold", isLiquidated && "text-muted-foreground line-through decoration-destructive")}>
+                                   ₱{b.finalFare?.toLocaleString()}
+                                </TableCell>
+                                <TableCell className={cn("text-right font-black", b.penaltyFees > 0 ? "text-orange-600" : "text-muted-foreground/30")}>
+                                   {b.isFeeWaived ? (
+                                      <span className="text-[8px] text-green-600 uppercase border border-green-200 px-1 rounded bg-green-50">Waived</span>
+                                   ) : (
+                                      <>₱{(b.penaltyFees || 0).toLocaleString()}</>
+                                   )}
+                                </TableCell>
+                                <TableCell className="text-right font-black text-primary">
+                                   ₱{totalIntake.toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    <Badge variant="outline" className={cn(
+                                      "text-[9px] font-black uppercase h-5 px-2",
+                                      b.status === 'Confirmed' ? "bg-green-50 text-green-700 border-green-200" :
+                                      b.status === 'Used' ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                                      b.status === 'Refunded' ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-secondary text-muted-foreground border-transparent"
+                                    )}>{b.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                   {b.bookingSource === 'Desk' ? (
+                                      <Building2 className="h-3.5 w-3.5 mx-auto text-primary opacity-40" title="Desk Booking" />
+                                   ) : (
+                                      <Globe className="h-3.5 w-3.5 mx-auto text-accent opacity-60" title="Web Booking" />
+                                   )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                       </TableBody>
                     </Table>
                   </div>
