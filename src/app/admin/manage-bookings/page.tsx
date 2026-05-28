@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, memo, useCallback } from "react";
@@ -1073,7 +1074,7 @@ export default function ManageBookingsPage() {
                     <Select value={statusActionData.waiveReason} onValueChange={(val) => setStatusActionData({...statusActionData, waiveReason: val})}>
                        <SelectTrigger><SelectValue /></SelectTrigger>
                        <SelectContent>
-                          {["Weather", "Technical", "Force Majeure", "Passenger Request"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                          {["Weather", "Technical", "Force Majeure"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                        </SelectContent>
                     </Select>
                   </div>

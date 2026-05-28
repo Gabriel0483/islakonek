@@ -274,7 +274,7 @@
         "rebookedFromId": { "type": "string", "description": "Original booking ID if this is a rebooked ticket." },
         "penaltyFees": { "type": "number", "default": 0 },
         "isFeeWaived": { "type": "boolean", "default": false },
-        "waiveReason": { "type": "string", "enum": ["Weather", "Technical", "Force Majeure", "Passenger Request"] },
+        "waiveReason": { "type": "string", "enum": ["Weather", "Technical", "Force Majeure"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
