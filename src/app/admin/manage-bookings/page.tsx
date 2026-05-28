@@ -40,7 +40,9 @@ import {
   History,
   Building2,
   Globe,
-  HandCoins
+  HandCoins,
+  ArrowDownCircle,
+  Undo2
 } from "lucide-react";
 import { 
   collection, 
@@ -1056,7 +1058,7 @@ export default function ManageBookingsPage() {
                 <DialogTitle>Update Status</DialogTitle>
                 <DialogDescription>Ticket #{statusTarget?.booking.id} → {statusTarget?.status}</DialogDescription>
               </DialogHeader>
-              <div className="p-4 sm:p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-6">
                 <div className="flex items-center justify-between p-4 bg-secondary/10 rounded-xl">
                    <div className="space-y-0.5">
                       <Label>Waive Penalty Fees</Label>
@@ -1077,9 +1079,35 @@ export default function ManageBookingsPage() {
                   </div>
                 )}
 
-                <div className="bg-primary p-5 rounded-xl text-primary-foreground flex justify-between items-center">
-                  <p className="text-xs font-black uppercase opacity-70">Penalty Applied</p>
-                  <p className="text-2xl font-black">₱{calculateStatusPenalties().toLocaleString()}</p>
+                <div className="space-y-4">
+                   <div className="bg-secondary/5 p-4 rounded-xl border-2 border-dashed space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold text-muted-foreground uppercase">
+                         <span>Penalty Applied</span>
+                         <span className="text-destructive">₱{calculateStatusPenalties().toLocaleString()}</span>
+                      </div>
+                      {(statusTarget?.status === 'Refunded' || statusTarget?.status === 'Auto-cancelled') && (
+                        <>
+                          <div className="flex justify-between items-center text-xs font-bold text-muted-foreground uppercase">
+                             <span>Gross Ticket Fare</span>
+                             <span className="text-primary">₱{statusTarget.booking.finalFare?.toLocaleString()}</span>
+                          </div>
+                          <Separator className="bg-secondary" />
+                          <div className="flex justify-between items-end pt-1">
+                             <div className="space-y-0.5">
+                                <p className="text-[10px] font-black text-primary uppercase">Net Refund to Return</p>
+                                <p className="text-[8px] text-muted-foreground italic">Fare minus applicable penalty</p>
+                             </div>
+                             <p className="text-2xl font-black text-green-600">₱{Math.max(0, (statusTarget.booking.finalFare || 0) - calculateStatusPenalties()).toLocaleString()}</p>
+                          </div>
+                        </>
+                      )}
+                      {statusTarget?.status === 'Suspended' && (
+                        <div className="bg-primary p-4 rounded-xl text-primary-foreground flex justify-between items-center mt-2">
+                          <p className="text-xs font-black uppercase opacity-70">Total to Collect</p>
+                          <p className="text-2xl font-black">₱{calculateStatusPenalties().toLocaleString()}</p>
+                        </div>
+                      )}
+                   </div>
                 </div>
               </div>
               <DialogFooter className="p-4 sm:p-6 border-t bg-secondary/5 flex flex-col sm:flex-row gap-2">
@@ -1174,19 +1202,37 @@ export default function ManageBookingsPage() {
                   <HandCoins className="h-7 w-7" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-black uppercase tracking-tight leading-none">Collect Penalty</DialogTitle>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tight leading-none">
+                    { (statusTarget?.status === 'Refunded' || statusTarget?.status === 'Auto-cancelled') ? "Reconcile Refund" : "Collect Penalty"}
+                  </DialogTitle>
                   <DialogDescription className="text-orange-100 text-[10px] font-black uppercase tracking-widest mt-1">Fee Verification Step</DialogDescription>
                 </div>
              </div>
           </DialogHeader>
           <div className="p-10 space-y-8 text-center">
-             <div className="space-y-4">
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Total Penalty to Collect</p>
-                <p className="text-5xl font-black text-primary tracking-tighter">
-                   ₱{(statusTarget ? calculateStatusPenalties() : calculateRebookingFees).toLocaleString()}
-                </p>
+             <div className="space-y-6">
+                {(statusTarget?.status === 'Refunded' || statusTarget?.status === 'Auto-cancelled') ? (
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Net Amount to Return</p>
+                    <p className="text-6xl font-black text-green-600 tracking-tighter">
+                       ₱{Math.max(0, (statusTarget.booking.finalFare || 0) - calculateStatusPenalties()).toLocaleString()}
+                    </p>
+                    <div className="flex justify-center gap-4 text-[10px] font-bold text-muted-foreground uppercase bg-secondary/30 p-2 rounded-lg">
+                      <span className="flex items-center gap-1"><Banknote className="h-3 w-3" /> Fare: ₱{statusTarget.booking.finalFare?.toLocaleString()}</span>
+                      <span className="flex items-center gap-1 text-destructive"><AlertCircle className="h-3 w-3" /> Fee: -₱{calculateStatusPenalties().toLocaleString()}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Total Penalty to Collect</p>
+                    <p className="text-5xl font-black text-primary tracking-tighter">
+                       ₱{(statusTarget ? calculateStatusPenalties() : calculateRebookingFees).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                
                 <div className="bg-secondary/30 p-3 rounded-xl inline-flex items-center gap-2 text-[10px] font-bold text-primary">
-                   <Info className="h-3.5 w-3.5" /> Confirm cash/digital receipt before proceeding.
+                   <Info className="h-3.5 w-3.5" /> Confirm cash/digital transaction before proceeding.
                 </div>
              </div>
           </div>
@@ -1199,7 +1245,7 @@ export default function ManageBookingsPage() {
                    else handlePerformRebook();
                 }}
              >
-               Paid & Proceed
+               { (statusTarget?.status === 'Refunded' || statusTarget?.status === 'Auto-cancelled') ? "Refund Reconciled" : "Paid & Proceed"}
              </Button>
           </DialogFooter>
         </DialogContent>
