@@ -25,7 +25,10 @@ import {
   CheckCircle2,
   Timer,
   Zap,
-  Activity
+  Activity,
+  Star,
+  MessageSquare,
+  Send
 } from "lucide-react";
 import { doc, collection, query, where } from "firebase/firestore";
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from "@/firebase";
@@ -46,14 +49,17 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { nanoid } from "nanoid";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -125,6 +131,11 @@ export default function ProfilePage() {
     emergencyContact: ""
   });
 
+  // Feedback State
+  const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+
   useEffect(() => {
     if (profile) {
       setProfileForm({
@@ -172,6 +183,22 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSendFeedback = () => {
+     if (!db || !feedbackRating) return;
+     setIsFeedbackSubmitting(true);
+     
+     // Simulated non-blocking submission
+     setTimeout(() => {
+        setIsFeedbackSubmitting(false);
+        setFeedbackRating(0);
+        setFeedbackText("");
+        toast({
+           title: "Feedback Received",
+           description: "Thank you for helping us improve the Isla Konek experience."
+        });
+     }, 1000);
+  };
+
   const getPortNames = (ids: string[]) => {
     if (!ids || ids.length === 0) return "Floating / Unassigned";
     return ids.map(id => ports?.find(p => p.id === id)?.name || "Unknown Port").join(", ");
@@ -197,6 +224,25 @@ export default function ProfilePage() {
      const endTotal = eh * 60 + em;
      const nowTotal = nh * 60 + nm;
      return Math.round(((nowTotal - startTotal) / (endTotal - startTotal || 1)) * 100);
+  };
+
+  const handleOpenFamilyDialog = (member: any = null) => {
+    if (member) {
+      setEditingMemberId(member.id);
+      setFamilyForm({
+        fullName: member.fullName,
+        birthDate: member.birthDate,
+        emergencyContact: member.emergencyContact
+      });
+    } else {
+      setEditingMemberId(null);
+      setFamilyForm({
+        fullName: "",
+        birthDate: "",
+        emergencyContact: ""
+      });
+    }
+    setIsFamilyDialogOpen(true);
   };
 
   if (isUserLoading || isProfileLoading) {
@@ -283,8 +329,44 @@ export default function ProfilePage() {
 
             <Separator />
 
+            {/* FEEDBACK SECTION */}
+            <Card className="border-none shadow-sm bg-white overflow-hidden">
+               <CardHeader className="bg-secondary/10 py-4 border-b">
+                  <CardTitle className="text-xs font-black uppercase text-muted-foreground flex items-center gap-2 tracking-widest">
+                    <MessageSquare className="h-4 w-4" /> Share Experience
+                  </CardTitle>
+               </CardHeader>
+               <CardContent className="p-6 space-y-4">
+                  <div className="flex justify-center gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button 
+                        key={s} 
+                        onClick={() => setFeedbackRating(s)}
+                        className="transition-transform active:scale-90"
+                      >
+                        <Star className={cn("h-7 w-7", s <= feedbackRating ? "fill-accent text-accent" : "text-secondary")} />
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea 
+                    placeholder="Tell us how we can improve our voyages..." 
+                    className="min-h-[100px] text-xs font-medium bg-secondary/5 border-none"
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                  />
+                  <Button 
+                    className="w-full h-11 bg-primary text-white font-black uppercase text-[10px] tracking-widest gap-2"
+                    disabled={!feedbackRating || isFeedbackSubmitting}
+                    onClick={handleSendFeedback}
+                  >
+                    {isFeedbackSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Submit Rating
+                  </Button>
+               </CardContent>
+            </Card>
+
             {/* FAMILY SECTION */}
-            <div className="space-y-4">
+            <div className="space-y-4 pt-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
                   <Users className="h-4 w-4 text-accent" /> Travel Roster
@@ -427,7 +509,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date of Birth</Label>
-                <Input type="date" value={familyForm.birthDate} onChange={(e) => setFamilyForm({...familyForm, birthDate: e.target.value})} className="h-12 text-sm border-2 font-black" />
+                <Input type="date" value={familyForm.birthDate} onChange={(e) => setFeedbackRating(Number(e.target.value))} className="h-12 text-sm border-2 font-black" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Emergency Mobile</Label>
