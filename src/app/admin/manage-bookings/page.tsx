@@ -1402,17 +1402,21 @@ export default function ManageBookingsPage() {
                       <div className="space-y-3">
                          <div className="flex justify-between items-center text-sm p-2 rounded-lg hover:bg-secondary/20 transition-colors">
                             <div className="flex flex-col">
-                               <span className="text-muted-foreground text-[10px] font-bold uppercase">Base Voyage Fare</span>
+                               <span className="text-muted-foreground text-[10px] font-bold uppercase">Ticket Fare</span>
                                <span className="font-bold text-primary">{selectedBooking?.segmentLabel || "Regular"} Segment</span>
                             </div>
-                            <span className="font-black">₱{selectedBooking?.finalFare?.toLocaleString()}</span>
+                            <span className={cn("font-black", (selectedBooking?.status === 'Refunded' || selectedBooking?.status === 'Auto-cancelled') && "text-muted-foreground line-through")}>
+                               ₱{selectedBooking?.finalFare?.toLocaleString()}
+                            </span>
                          </div>
                          
                          {selectedBooking?.penaltyFees > 0 && (
                             <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-destructive/5 text-destructive">
                                <div className="flex flex-col">
-                                  <span className="text-[10px] font-bold uppercase opacity-70">Applicable Fees / Penalties</span>
-                                  <span className="text-[10px] font-bold italic">Rebooking/No-show adjustments</span>
+                                  <span className="text-[10px] font-bold uppercase opacity-70">Penalty Fees</span>
+                                  <span className="text-[10px] font-bold italic">
+                                     {selectedBooking?.status === 'Suspended' ? 'No-Show' : 'Cancellation/Rebooking'}
+                                  </span>
                                </div>
                                <span className="font-black">+ ₱{selectedBooking.penaltyFees.toLocaleString()}</span>
                             </div>
@@ -1423,20 +1427,30 @@ export default function ManageBookingsPage() {
                                <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
                                <div>
                                   <p className="text-[10px] font-black text-green-800 uppercase">Penalty Fees Waived</p>
-                                  <p className="text-[10px] text-green-700">Reason: {selectedBooking.waiveReason || "Operational Discretion"}</p>
+                                  <p className="text-[10px] text-green-700 font-medium">Reason: {selectedBooking.waiveReason || "Operational Discretion"}</p>
                                </div>
                             </div>
                          )}
 
-                         <div className="bg-primary p-4 rounded-2xl text-primary-foreground flex justify-between items-end mt-2">
-                            <div className="space-y-1">
-                               <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Total Transaction Value</p>
-                               {selectedBooking?.boardingSequenceNumber && (
-                                  <p className="text-[10px] font-black text-accent uppercase">Assigned Sequence: #{selectedBooking.boardingSequenceNumber}</p>
-                               )}
+                         {(selectedBooking?.status === 'Refunded' || selectedBooking?.status === 'Auto-cancelled') ? (
+                            <div className="bg-green-600 p-4 rounded-2xl text-white flex justify-between items-end mt-2 shadow-lg">
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Net Refund Returned</p>
+                                  <p className="text-[8px] font-bold italic opacity-60">Fare minus penalty recovery</p>
+                               </div>
+                               <p className="text-3xl font-black">₱{Math.max(0, (selectedBooking?.finalFare || 0) - (selectedBooking?.penaltyFees || 0)).toLocaleString()}</p>
                             </div>
-                            <p className="text-3xl font-black">₱{((selectedBooking?.finalFare || 0) + (selectedBooking?.penaltyFees || 0)).toLocaleString()}</p>
-                         </div>
+                         ) : (
+                            <div className="bg-primary p-4 rounded-2xl text-primary-foreground flex justify-between items-end mt-2 shadow-lg">
+                               <div className="space-y-1">
+                                  <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Total Transaction Intake</p>
+                                  {selectedBooking?.boardingSequenceNumber && (
+                                     <p className="text-[10px] font-black text-accent uppercase">Assigned Sequence: #{selectedBooking.boardingSequenceNumber}</p>
+                                  )}
+                               </div>
+                               <p className="text-3xl font-black">₱{((selectedBooking?.finalFare || 0) + (selectedBooking?.penaltyFees || 0)).toLocaleString()}</p>
+                            </div>
+                         )}
                       </div>
                    </section>
 
