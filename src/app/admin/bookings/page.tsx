@@ -182,13 +182,24 @@ export default function DeskBookingsPage() {
     return allBookings.reduce((acc, b) => {
       const isToday = b.travelDate === dateRange.min;
       if (isToday) {
+        // Track volumes
         if (b.bookingSource === 'Desk') {
           acc.counterPax++;
-          if (b.status === 'Confirmed' || b.status === 'Used') {
-            acc.cashOnHand += (b.finalFare || 0);
-          }
         } else {
           acc.webPax++;
+        }
+
+        // Tally Cash-on-Hand (Net Liquid Intake)
+        // Confirmed means it was paid (either desk walk-in or web verification today)
+        // Used means it was boarded
+        // Refunded/Cancelled means the fare is gone, but the penalty fee is intake
+        const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
+        const fareContributed = isLiquidated ? 0 : (b.finalFare || 0);
+        const penaltiesContributed = b.isFeeWaived ? 0 : (b.penaltyFees || 0);
+
+        // We only count cash for records that have been physically handled or finalized at the terminal
+        if (['Confirmed', 'Used', 'Refunded', 'Auto-cancelled', 'Suspended'].includes(b.status)) {
+           acc.cashOnHand += (fareContributed + penaltiesContributed);
         }
       }
       return acc;
@@ -940,7 +951,7 @@ export default function DeskBookingsPage() {
                                   name={`passengers.${index}.birthDate`} 
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</FormLabel>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</Label>
                                       <FormControl>
                                         <Input type="date" {...field} className="h-11 bg-white border-2 font-bold" />
                                       </FormControl>
