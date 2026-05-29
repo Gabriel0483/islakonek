@@ -190,14 +190,10 @@ export default function DeskBookingsPage() {
         }
 
         // Tally Cash-on-Hand (Net Liquid Intake)
-        // Confirmed means it was paid (either desk walk-in or web verification today)
-        // Used means it was boarded
-        // Refunded/Cancelled means the fare is gone, but the penalty fee is intake
         const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
         const fareContributed = isLiquidated ? 0 : (b.finalFare || 0);
         const penaltiesContributed = b.isFeeWaived ? 0 : (b.penaltyFees || 0);
 
-        // We only count cash for records that have been physically handled or finalized at the terminal
         if (['Confirmed', 'Used', 'Refunded', 'Auto-cancelled', 'Suspended'].includes(b.status)) {
            acc.cashOnHand += (fareContributed + penaltiesContributed);
         }
@@ -351,7 +347,6 @@ export default function DeskBookingsPage() {
            throw new Error(`Ticket is already ${currentStatus}.`);
         }
 
-        // Apply any edits made by the agent
         const selectedFare = allFares?.find(f => f.id === onlineEditData.fareId);
         const updatePayload: any = {
           ...onlineEditData,
@@ -605,7 +600,6 @@ export default function DeskBookingsPage() {
         </div>
       </main>
 
-      {/* ONLINE PROCESSING DIALOG */}
       <Dialog open={isOnlineSearchDialogOpen} onOpenChange={setIsOnlineSearchDialogOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[700px] p-0 overflow-hidden rounded-3xl h-[90vh] flex flex-col">
           <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">
@@ -797,7 +791,6 @@ export default function DeskBookingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* WALK-IN BOOKING DIALOG */}
       <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[850px] p-0 overflow-hidden h-[95vh] flex flex-col rounded-3xl">
           <DialogHeader className="p-6 border-b bg-white shrink-0">
@@ -951,7 +944,7 @@ export default function DeskBookingsPage() {
                                   name={`passengers.${index}.birthDate`} 
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</Label>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</FormLabel>
                                       <FormControl>
                                         <Input type="date" {...field} className="h-11 bg-white border-2 font-bold" />
                                       </FormControl>
