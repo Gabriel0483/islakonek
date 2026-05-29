@@ -2,8 +2,8 @@
 
 /**
  * FIRESTORE SECURITY RULES
- * Version: 6.0
- * Update: Implemented Staff Scheduling Permissions.
+ * Version: 7.0
+ * Update: Added permissions for Global Settings collection.
  */
 
 rules_version = '2';
@@ -31,7 +31,8 @@ service cloud.firestore {
     match /schedules/{scheduleId} { allow read: if true; allow write: if isStaff(); }
     match /voyages/{voyageId} { allow read: if true; allow write: if isStaff(); }
     
-    // Advisories: Public read, Staff write
+    // Settings & Advisories: Public read, Staff write
+    match /settings/{settingId} { allow read: if true; allow write: if isStaff(); }
     match /advisories/{advisoryId} { allow read: if true; allow write: if isStaff(); }
 
     // Staff Management Hierarchy
