@@ -26,7 +26,8 @@ import {
   CalendarClock,
   BarChart3,
   ListOrdered,
-  AlertTriangle
+  AlertTriangle,
+  Settings
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -36,8 +37,8 @@ import { collection } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports", "settings"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports", "settings"],
   "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories", "staff-schedules"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
@@ -115,6 +116,7 @@ export default function AdminDashboard() {
     { id: "fares", title: "Fare Management", description: "Pricing rules and discount tiers.", icon: Banknote, link: "/admin/fares", color: "text-green-500" },
     { id: "fleet", title: "Fleet & Maintenance", description: "Vessel registry and maintenance logs.", icon: Wrench, link: "/admin/fleet", color: "text-orange-500" },
     { id: "schedules", title: "Trip Schedules", description: "Daily and special trip timetables.", icon: CalendarDays, link: "/admin/schedules", color: "text-primary" },
+    { id: "settings", title: "App Settings", description: "Branding and public portal configuration.", icon: Settings, link: "/admin/settings", color: "text-primary" },
   ];
 
   const currentRole = isSuperAdmin ? "SuperAdmin" : (myStaffRecord?.role || "Restricted");

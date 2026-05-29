@@ -79,22 +79,26 @@ const MODULE_LIST = [
   { id: "desk", label: "Desk Bookings" },
   { id: "bookings", label: "Manage Bookings" },
   { id: "sales", label: "Sales Overview" },
+  { id: "reports", label: "Financial Reports" },
   { id: "ops", label: "Operational Overview" },
+  { id: "advisories", label: "Public Advisories" },
   { id: "ports", label: "Port Registry" },
   { id: "routes", label: "Route Management" },
   { id: "fares", label: "Fare Management" },
   { id: "fleet", label: "Fleet & Maintenance" },
   { id: "schedules", label: "Trip Schedules" },
   { id: "staff", label: "Staff Management" },
+  { id: "staff-schedules", label: "Personnel Scheduling" },
+  { id: "settings", label: "App Settings" },
 ];
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff"],
-  "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "reports", "ops", "advisories", "ports", "routes", "fares", "fleet", "schedules", "staff", "staff-schedules", "settings"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "reports", "ops", "advisories", "ports", "routes", "fares", "fleet", "schedules", "staff", "staff-schedules", "settings"],
+  "Port Officer": ["voyages", "boarding", "desk", "ops", "advisories", "schedules", "staff", "staff-schedules"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
-  "Finance/Accounting": ["fares", "bookings", "sales"]
+  "Finance/Accounting": ["fares", "bookings", "sales", "reports"]
 };
 
 const HIERARCHY_MAP: Record<string, string[]> = {
