@@ -12,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
-import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
 import { signOut } from "firebase/auth";
-import { collection } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 
 export function Navbar() {
   const { user } = useUser();
@@ -36,16 +36,26 @@ export function Navbar() {
   const { data: allStaff } = useCollection(staffRef);
   const isAuthorizedStaff = isSuperAdmin || allStaff?.some(s => s.email === user?.email && s.status === 'Active');
 
+  const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
+  const { data: appSettings } = useDoc(settingsRef);
+
+  const companyName = appSettings?.companyName || "Isla Konek";
+  const logoUrl = appSettings?.logoUrl;
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 mx-auto">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="bg-primary p-1.5 rounded-lg">
-              <Ship className="h-6 w-6 text-primary-foreground" />
+            <div className="bg-primary p-1.5 rounded-lg h-9 w-9 flex items-center justify-center overflow-hidden">
+               {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="max-h-full max-w-full" />
+               ) : (
+                  <Ship className="h-6 w-6 text-primary-foreground" />
+               )}
             </div>
-            <span className="text-xl font-headline font-bold tracking-tight text-primary">
-              Isla Konek
+            <span className="text-xl font-headline font-bold tracking-tight text-primary uppercase">
+              {companyName}
             </span>
           </Link>
 

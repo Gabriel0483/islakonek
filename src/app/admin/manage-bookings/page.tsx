@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, memo, useCallback } from "react";
@@ -57,7 +56,7 @@ import {
   increment,
   writeBatch 
 } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
 import { 
   updateDocumentNonBlocking
 } from "@/firebase/non-blocking-updates";
@@ -276,6 +275,9 @@ export default function ManageBookingsPage() {
     return () => clearInterval(timer);
   }, []);
 
+  const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
+  const { data: appSettings } = useDoc(settingsRef);
+
   const routesRef = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, "routes");
@@ -306,6 +308,8 @@ export default function ManageBookingsPage() {
   const { data: schedules } = useCollection(schedulesRef);
   const { data: fares } = useCollection(faresRef);
   const { data: vessels } = useCollection(vesselsRef);
+
+  const companyName = appSettings?.companyName || "Isla Konek";
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
@@ -1232,7 +1236,7 @@ export default function ManageBookingsPage() {
                   </div>
                 )}
                 
-                <div className="bg-secondary/30 p-3 rounded-xl inline-flex items-center gap-2 text-[10px] font-bold text-primary">
+                <div className="bg-secondary/30 p-3 rounded-xl inline-center items-center gap-2 text-[10px] font-bold text-primary">
                    <Info className="h-3.5 w-3.5" /> Confirm cash/digital transaction before proceeding.
                 </div>
              </div>
@@ -1516,7 +1520,7 @@ export default function ManageBookingsPage() {
                   </div>
                 </div>
                 <h2 className="text-lg font-black font-headline uppercase tracking-tight leading-none">Boarding Pass</h2>
-                <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">Official Internal Copy</p>
+                <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">Official Internal Copy - {companyName}</p>
               </div>
               
               <div className="p-4 space-y-4">
@@ -1540,7 +1544,7 @@ export default function ManageBookingsPage() {
                     <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Departure</p>
                     <p className="font-bold text-xs text-primary leading-none">{getDeparture(selectedBooking?.scheduleId)}</p>
                   </div>
-                  <div className="col-span-2 space-y-0.5 bg-secondary/10 p-2 rounded-lg border border-secondary/50">
+                  <div className="col-span-2 space-y-0.5 bg-secondary/10 p-2 rounded-lg border border-secondary/50 text-left">
                     <p className="text-[7px] text-muted-foreground uppercase font-black tracking-widest">Date & Routing</p>
                     <p className="font-bold text-[10px] text-primary leading-tight">{selectedBooking?.travelDate} • {getRouteName(selectedBooking?.routeId)}</p>
                   </div>

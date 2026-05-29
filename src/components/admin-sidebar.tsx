@@ -28,9 +28,18 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const db = useFirestore();
+  
+  const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
+  const { data: appSettings } = useDoc(settingsRef);
+
+  const companyName = appSettings?.companyName || "Isla Konek";
+  const logoUrl = appSettings?.logoUrl;
 
   const menuItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
@@ -51,11 +60,15 @@ export function AdminSidebar() {
     <Sidebar variant="inset" collapsible="icon" className="border-r-0 bg-sidebar text-sidebar-foreground">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="bg-accent p-1.5 rounded-lg shrink-0">
-            <Ship className="h-6 w-6 text-primary" />
+          <div className="bg-accent p-1.5 rounded-lg shrink-0 h-9 w-9 flex items-center justify-center overflow-hidden">
+             {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="max-h-full max-w-full" />
+             ) : (
+                <Ship className="h-6 w-6 text-primary" />
+             )}
           </div>
-          <span className="font-headline font-bold text-white truncate text-lg group-data-[collapsible=icon]:hidden">
-            Isla Konek <span className="text-accent">Admin</span>
+          <span className="font-headline font-bold text-white truncate text-lg group-data-[collapsible=icon]:hidden uppercase tracking-tight">
+            {companyName} <span className="text-accent text-xs">ADMIN</span>
           </span>
         </div>
       </SidebarHeader>
@@ -119,10 +132,10 @@ export function AdminSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings" className="hover:bg-accent/10">
+            <SidebarMenuButton asChild tooltip="Settings" isActive={pathname === "/admin/settings"} className="hover:bg-accent/10">
               <Link href="/admin/settings">
                 <Settings />
-                <span>Settings</span>
+                <span>Global Settings</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

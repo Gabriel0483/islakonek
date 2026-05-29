@@ -5,8 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, Calendar, Ship, MapPin } from "lucide-react";
-import { collection } from "firebase/firestore";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { collection, doc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,8 +26,11 @@ export default function Home() {
   const { user } = useUser();
   const [year, setYear] = useState<number | null>(null);
   const [dateLimits, setDateLimits] = useState({ min: "", max: "" });
-  const heroImage = PlaceHolderImages.find(img => img.id === "hero-ferry");
+  const defaultHero = PlaceHolderImages.find(img => img.id === "hero-ferry");
   
+  const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
+  const { data: appSettings } = useDoc(settingsRef);
+
   const portsRef = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, "ports");
@@ -82,14 +85,19 @@ export default function Home() {
     router.push(`/trips?${params.toString()}`);
   };
 
+  const companyName = appSettings?.companyName || "Isla Konek";
+  const heroTitle = appSettings?.heroTitle || "Islands Within Reach";
+  const heroDescription = appSettings?.heroDescription || "The leading digital maritime bridge in the Philippines. Connecting islands, simplified.";
+  const heroImageUrl = appSettings?.heroImageUrl || defaultHero?.imageUrl || "";
+
   return (
     <div className="min-h-screen flex flex-col font-body">
       <Navbar />
       
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
         <Image
-          src={heroImage?.imageUrl || ""}
-          alt="Modern ferry"
+          src={heroImageUrl}
+          alt="Atmosphere"
           fill
           className="object-cover"
           priority
@@ -99,10 +107,10 @@ export default function Home() {
         
         <div className="container relative z-10 px-4 mx-auto text-white">
           <div className="max-w-2xl mx-auto space-y-6 text-center">
-            <h1 className="text-4xl md:text-6xl font-black font-headline mb-6 drop-shadow-lg">
-              Islands Within Reach
+            <h1 className="text-4xl md:text-6xl font-black font-headline mb-6 drop-shadow-lg uppercase tracking-tight">
+              {heroTitle}
             </h1>
-            <Card className="bg-white/95 backdrop-blur p-6 shadow-2xl border-none text-foreground">
+            <Card className="bg-white/95 backdrop-blur p-6 shadow-2xl border-none text-foreground rounded-3xl">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                 <div className="space-y-2 text-left">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -112,7 +120,7 @@ export default function Home() {
                     value={searchData.originPortId} 
                     onValueChange={(val) => setSearchData({...searchData, originPortId: val})}
                   >
-                    <SelectTrigger className="border-none bg-secondary h-12 focus:ring-accent">
+                    <SelectTrigger className="border-none bg-secondary h-12 focus:ring-accent rounded-xl">
                       <SelectValue placeholder="Select Departure Port" />
                     </SelectTrigger>
                     <SelectContent>
@@ -134,20 +142,20 @@ export default function Home() {
                     min={dateLimits.min}
                     max={dateLimits.max}
                     onChange={(e) => setSearchData({...searchData, date: e.target.value})}
-                    className="border-none bg-secondary h-12 focus-visible:ring-accent w-full" 
+                    className="border-none bg-secondary h-12 focus-visible:ring-accent w-full rounded-xl" 
                   />
                 </div>
 
                 <div className="md:col-span-2 lg:col-span-1">
                   <Button 
                     onClick={handleSearch}
-                    className="w-full h-12 gap-2 font-bold bg-accent hover:bg-accent/90 text-primary"
+                    className="w-full h-12 gap-2 font-black uppercase text-xs tracking-widest bg-accent hover:bg-accent/90 text-primary rounded-xl shadow-lg"
                   >
                     <Search className="h-4 w-4" /> Find Trips
                   </Button>
                 </div>
               </div>
-              <p className="mt-4 text-[10px] text-muted-foreground uppercase font-bold tracking-widest text-center">
+              <p className="mt-4 text-[10px] text-muted-foreground uppercase font-black tracking-[0.2em] text-center">
                 Check real-time island schedules and availability
               </p>
             </Card>
@@ -161,10 +169,10 @@ export default function Home() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Ship className="h-6 w-6 text-accent" />
-                <span className="text-xl font-headline font-bold text-primary">Isla Konek</span>
+                <span className="text-xl font-headline font-black text-primary uppercase tracking-tight">{companyName}</span>
               </div>
-              <p className="text-muted-foreground text-sm">
-                The leading digital maritime bridge in the Philippines. Connecting islands, simplified.
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {heroDescription}
               </p>
             </div>
             <div>
@@ -194,7 +202,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-12 pt-8 border-t text-center text-xs text-muted-foreground">
-            © {year} Isla Konek Maritime Services. All rights reserved.
+            © {year} {companyName} Maritime Services. All rights reserved.
           </div>
         </div>
       </footer>

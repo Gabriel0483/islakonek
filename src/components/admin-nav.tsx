@@ -25,7 +25,8 @@ import {
   CalendarClock,
   BarChart3,
   ChevronDown,
-  LayoutGrid
+  LayoutGrid,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,13 +38,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { useAuth, useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useAuth, useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
 import { signOut } from "firebase/auth";
-import { collection } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
-  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports"],
+  "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports", "settings"],
+  "Operations Manager": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports", "settings"],
   "Port Officer": ["voyages", "boarding", "desk", "ops", "schedules", "staff", "advisories", "staff-schedules"],
   "Desk Agent": ["boarding", "desk", "bookings"],
   "Crew": ["boarding"],
@@ -72,6 +73,7 @@ const configItems = [
   { id: "fares", label: "Fare Tables", icon: Banknote, href: "/admin/fares" },
   { id: "fleet", label: "Fleet Registry", icon: Wrench, href: "/admin/fleet" },
   { id: "schedules", label: "Trip Timetables", icon: CalendarDays, href: "/admin/schedules" },
+  { id: "settings", label: "App Settings", icon: Settings, href: "/admin/settings" },
 ];
 
 export function AdminNav() {
@@ -83,6 +85,9 @@ export function AdminNav() {
 
   const staffRef = useMemoFirebase(() => (db && user) ? collection(db, "staff") : null, [db, user]);
   const { data: allStaff } = useCollection(staffRef);
+
+  const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
+  const { data: appSettings } = useDoc(settingsRef);
 
   const isSuperAdmin = user?.email === 'rielmagpantay@gmail.com';
   const myStaffRecord = allStaff?.find(s => s.email === user?.email);
@@ -103,20 +108,29 @@ export function AdminNav() {
   const filteredAnalyticItems = analyticItems.filter(m => permissions.includes(m.id));
   const filteredConfigItems = configItems.filter(m => permissions.includes(m.id));
 
+  const companyName = appSettings?.companyName || "Isla Konek";
+  const logoUrl = appSettings?.logoUrl;
+
   return (
     <nav className="bg-primary text-white border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/admin" className="flex items-center gap-2 mr-2">
-             <div className="bg-accent p-1 rounded-md shrink-0"><Ship className="h-5 w-5 text-primary" /></div>
-             <span className="font-headline font-bold text-base hidden sm:inline">Isla Konek</span>
+             <div className="bg-accent p-1 rounded-md shrink-0 flex items-center justify-center overflow-hidden h-7 w-7">
+                {logoUrl ? (
+                   <img src={logoUrl} alt="Logo" className="max-h-full max-w-full" />
+                ) : (
+                   <Ship className="h-5 w-5 text-primary" />
+                )}
+             </div>
+             <span className="font-headline font-bold text-base hidden sm:inline uppercase tracking-tight">{companyName}</span>
           </Link>
           
           <div className="hidden lg:flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-4 font-bold text-xs gap-2">
-                  <LayoutGrid className="h-4 w-4" /> Admin Modules <ChevronDown className="h-3 w-3 opacity-50" />
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-4 font-bold text-xs gap-2 uppercase tracking-widest">
+                  <LayoutGrid className="h-4 w-4" /> Modules <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64 max-h-[85vh] overflow-y-auto shadow-2xl rounded-xl">
@@ -167,8 +181,8 @@ export function AdminNav() {
         
         <div className="flex items-center gap-2">
            <Link href="/" className="hidden sm:block">
-             <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-3 font-bold text-xs gap-2">
-               <Globe className="h-4 w-4" /> Public Site
+             <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 h-9 px-3 font-bold text-[10px] gap-2 uppercase tracking-widest">
+               <Globe className="h-3.5 w-3.5" /> Public Site
              </Button>
            </Link>
 

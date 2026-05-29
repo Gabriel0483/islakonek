@@ -22,8 +22,8 @@ import {
   Building2,
   Globe
 } from "lucide-react";
-import { collection, query, where } from "firebase/firestore";
-import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
+import { useFirestore, useCollection, useUser, useMemoFirebase, useDoc } from "@/firebase";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ export default function MyBookingsPage() {
   const [isPassOpen, setIsPassOpen] = useState(false);
 
   // Queries
+  const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
   const routesRef = useMemoFirebase(() => db ? collection(db, "routes") : null, [db]);
   const schedulesRef = useMemoFirebase(() => db ? collection(db, "schedules") : null, [db]);
   const bookingsQuery = useMemoFirebase(() => {
@@ -59,9 +60,12 @@ export default function MyBookingsPage() {
     );
   }, [db, user?.uid]);
 
+  const { data: appSettings } = useDoc(settingsRef);
   const { data: routes } = useCollection(routesRef);
   const { data: schedules } = useCollection(schedulesRef);
   const { data: userBookings, isLoading: isBookingsLoading } = useCollection(bookingsQuery);
+
+  const companyName = appSettings?.companyName || "Isla Konek";
 
   const filteredBookings = useMemo(() => {
     if (!userBookings) return [];
@@ -277,7 +281,7 @@ export default function MyBookingsPage() {
               <h2 className="text-lg font-black font-headline uppercase tracking-tight leading-none">
                 {['Confirmed', 'Used'].includes(selectedBooking?.status) ? 'Digital Pass' : 'Ticket Summary'}
               </h2>
-              <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">Isla Konek Maritime</p>
+              <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">{companyName} Maritime</p>
             </div>
 
             <div className="p-4 space-y-4">

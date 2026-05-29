@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -7,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 interface TripItineraryProps {
   booking: {
@@ -26,6 +27,11 @@ interface TripItineraryProps {
 }
 
 export function TripItinerary({ booking }: TripItineraryProps) {
+  const db = useFirestore();
+  const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
+  const { data: appSettings } = useDoc(settingsRef);
+
+  const companyName = appSettings?.companyName || "Isla Konek";
   const isConfirmed = booking.status === 'Confirmed' || booking.status === 'Used';
 
   if (!booking) return null;
@@ -44,7 +50,7 @@ export function TripItinerary({ booking }: TripItineraryProps) {
         <h2 className="text-lg font-black font-headline uppercase tracking-tight">
           {isConfirmed ? 'Official Itinerary' : 'Booking Summary'}
         </h2>
-        <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">Isla Konek Maritime Services</p>
+        <p className="text-[7px] opacity-80 font-bold uppercase tracking-[0.2em]">{companyName} Maritime Services</p>
       </div>
 
       <div className="p-4 space-y-4">
@@ -131,10 +137,10 @@ export function TripItinerary({ booking }: TripItineraryProps) {
 
       <div className="bg-secondary/30 p-2 flex gap-2 print:hidden border-t">
         <Button className="flex-1 bg-primary text-white font-bold h-9 text-xs" onClick={() => window.print()} disabled={!isConfirmed}>
-          <Printer className="h-3.5 w-3.5 mr-1" /> Print
+          <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
         </Button>
         <Button variant="outline" className="flex-1 font-bold h-9 text-xs bg-white border-primary/20 text-primary">
-          <Download className="h-3.5 w-3.5 mr-1" /> Save
+          <Download className="h-3.5 w-3.5 mr-1.5" /> Save
         </Button>
       </div>
     </div>
