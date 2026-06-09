@@ -35,7 +35,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { AdminNav } from "@/components/admin-nav";
-import { collection } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
 
         {/* SYSTEM PERFORMANCE & EVALUATION SECTION */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-           <Card className="lg:col-span-2 border-none shadow-sm bg-primary text-primary-foreground p-6 relative overflow-hidden flex flex-col justify-center">
+           <Card className="lg:col-span-3 border-none shadow-sm bg-primary text-primary-foreground p-6 relative overflow-hidden flex flex-col justify-center">
               <div className="absolute top-0 right-0 p-6 opacity-5">
                 <ShieldCheck className="h-48 w-48 -rotate-12 translate-x-12 translate-y-12" />
               </div>
@@ -212,31 +212,6 @@ export default function AdminDashboard() {
                     </div>
                  </div>
               </div>
-           </Card>
-
-           <Card className="border-none shadow-sm bg-white p-6 flex flex-col justify-between group">
-              <div className="space-y-4">
-                 <div className="flex justify-between items-start">
-                    <div className="bg-accent/10 p-2 rounded-xl text-primary"><Star className="h-5 w-5 fill-accent text-accent" /></div>
-                    <Badge variant="outline" className="text-[8px] font-black uppercase border-accent/30 text-accent">System Evaluation</Badge>
-                 </div>
-                 <h3 className="text-lg font-black text-primary uppercase tracking-tight">AI Prototyper Rating</h3>
-                 <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
-                       <span>Public Persona</span>
-                       <span className="text-primary">4.2 / 5.0</span>
-                    </div>
-                    <Progress value={84} className="h-1 bg-secondary [&>div]:bg-accent" />
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground pt-1">
-                       <span>Admin Persona</span>
-                       <span className="text-primary">4.9 / 5.0</span>
-                    </div>
-                    <Progress value={98} className="h-1 bg-secondary [&>div]:bg-primary" />
-                 </div>
-              </div>
-              <p className="text-[9px] text-muted-foreground italic mt-4 group-hover:text-primary transition-colors">
-                "Operational tools are robust; next phase should focus on integrated digital payments."
-              </p>
            </Card>
         </section>
 
