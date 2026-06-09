@@ -38,6 +38,7 @@ import { AdminNav } from "@/components/admin-nav";
 import { collection } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   "SuperAdmin": ["voyages", "boarding", "desk", "bookings", "sales", "ops", "ports", "routes", "fares", "fleet", "schedules", "staff", "advisories", "staff-schedules", "reports", "settings"],
@@ -153,7 +154,7 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap gap-4">
             {/* FLEET HEALTH INDICATOR */}
             <div className="px-6 py-3 rounded-2xl border-2 bg-white border-secondary/50 flex items-center gap-4">
-              <div className={cn("p-2 rounded-xl", fleetReadiness > 80 ? "bg-green-500 text-white" : "bg-orange-500 text-white")}>
+              <div className={cn("p-2 rounded-xl", fleetReadiness > 80 ? "bg-green-50 text-white" : "bg-orange-50 text-white")}>
                 <Zap className="h-5 w-5" />
               </div>
               <div>
