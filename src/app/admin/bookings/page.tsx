@@ -806,7 +806,7 @@ export default function DeskBookingsPage() {
           <ScrollArea className="flex-1">
             <div className="p-6 space-y-10 pb-20">
               <Form {...form}>
-                <form className="space-y-10">
+                <form className="space-y-10" onSubmit={(e) => e.preventDefault()}>
                   <section className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-secondary/5 p-6 rounded-3xl border-2 border-dashed border-secondary/50">
                     <FormField
                       control={form.control}
@@ -944,7 +944,7 @@ export default function DeskBookingsPage() {
                                   name={`passengers.${index}.birthDate`} 
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</FormLabel>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</Label>
                                       <FormControl>
                                         <Input type="date" {...field} className="h-11 bg-white border-2 font-bold" />
                                       </FormControl>
@@ -1093,7 +1093,7 @@ export default function DeskBookingsPage() {
           <DialogFooter className="p-6 border-t bg-secondary/5 shrink-0 items-center flex flex-row justify-between">
             <Button variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="px-8 font-black uppercase text-xs h-12 rounded-xl">Discard</Button>
             <div className="flex items-center gap-6">
-               <div className="flex flex-col items-end">
+               <div className="flex items-col items-end">
                   <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Total Transaction</p>
                   <p className="text-2xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
                </div>

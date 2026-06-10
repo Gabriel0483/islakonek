@@ -509,7 +509,12 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date of Birth</Label>
-                <Input type="date" value={familyForm.birthDate} onChange={(e) => setFeedbackRating(Number(e.target.value))} className="h-12 text-sm border-2 font-black" />
+                <Input 
+                   type="date" 
+                   value={familyForm.birthDate} 
+                   onChange={(e) => setFamilyForm({...familyForm, birthDate: e.target.value})} 
+                   className="h-12 text-sm border-2 font-black" 
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Emergency Mobile</Label>

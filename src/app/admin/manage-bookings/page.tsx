@@ -1236,7 +1236,7 @@ export default function ManageBookingsPage() {
                   </div>
                 )}
                 
-                <div className="bg-secondary/30 p-3 rounded-xl inline-center items-center gap-2 text-[10px] font-bold text-primary">
+                <div className="bg-secondary/30 p-3 rounded-xl inline-flex items-center gap-2 text-[10px] font-bold text-primary">
                    <Info className="h-3.5 w-3.5" /> Confirm cash/digital transaction before proceeding.
                 </div>
              </div>
