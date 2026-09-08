@@ -103,9 +103,6 @@ type BookingStatus = "Reserved" | "Waitlisted" | "Confirmed" | "Used" | "Suspend
 
 const ITEMS_PER_PAGE = 50;
 
-/**
- * MEMOIZED ROW COMPONENT
- */
 const BookingRow = memo(({ 
   booking, 
   isMounted, 
@@ -161,10 +158,10 @@ const BookingRow = memo(({
       </TableCell>
       <TableCell>{getStatusBadge(booking.status)}</TableCell>
       <TableCell>
-        <div className="font-black text-primary text-sm">₱{isMounted ? booking.finalFare?.toLocaleString() : "---"}</div>
+        <div className="font-black text-primary text-sm">₱{isMounted ? (booking.finalFare || 0).toLocaleString() : "---"}</div>
         {booking.penaltyFees > 0 && (
           <div className="text-[9px] text-destructive font-bold uppercase mt-1">
-            + ₱{isMounted ? booking.penaltyFees.toLocaleString() : "---"}
+            + ₱{isMounted ? (booking.penaltyFees || 0).toLocaleString() : "---"}
           </div>
         )}
         {booking.boardingSequenceNumber && (
@@ -238,7 +235,6 @@ export default function ManageBookingsPage() {
   const [todayPHT, setTodayPHT] = useState("");
   const [currentTimePHT, setCurrentTimePHT] = useState("");
 
-  // Filter States
   const [search, setSearch] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterScheduleId, setFilterScheduleId] = useState("all");
@@ -265,43 +261,14 @@ export default function ManageBookingsPage() {
     return () => clearInterval(interval);
   }, []);
   
-  useEffect(() => {
-    const checkBodyLock = () => {
-      if (!document.querySelector('[role="dialog"]') && !document.querySelector('[role="menu"]')) {
-        document.body.style.pointerEvents = 'auto';
-      }
-    };
-    const timer = setInterval(checkBodyLock, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const settingsRef = useMemoFirebase(() => db ? doc(db, "settings", "app") : null, [db]);
   const { data: appSettings } = useDoc(settingsRef);
 
-  const routesRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "routes");
-  }, [db]);
-
-  const bookingsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(300));
-  }, [db]);
-
-  const schedulesRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "schedules");
-  }, [db]);
-
-  const faresRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "fares");
-  }, [db]);
-
-  const vesselsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, "vessels");
-  }, [db]);
+  const routesRef = useMemoFirebase(() => db ? collection(db, "routes") : null, [db]);
+  const bookingsRef = useMemoFirebase(() => db ? query(collection(db, "bookings"), orderBy("createdAt", "desc"), limit(300)) : null, [db]);
+  const schedulesRef = useMemoFirebase(() => db ? collection(db, "schedules") : null, [db]);
+  const faresRef = useMemoFirebase(() => db ? collection(db, "fares") : null, [db]);
+  const vesselsRef = useMemoFirebase(() => db ? collection(db, "vessels") : null, [db]);
 
   const { data: routes } = useCollection(routesRef);
   const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsRef);
@@ -376,7 +343,6 @@ export default function ManageBookingsPage() {
       const [curH, curM] = currentTimePHT.split(':').map(Number);
       const depTotal = depH * 60 + depM;
       const curTotal = curH * 60 + curM;
-      // Consistent with 60-minute hold policy
       return (depTotal - curTotal) <= 60;
     });
   }, [bookings, schedules, todayPHT, currentTimePHT]);
@@ -453,8 +419,6 @@ export default function ManageBookingsPage() {
        penalty = booking.status === 'Suspended' ? (route?.noShowFee || 0) + (route?.cancellationFee || 0) : (route?.cancellationFee || 0);
     } else if (status === 'Suspended') {
        penalty = route?.noShowFee || 0;
-    } else if (status === 'Reserved') {
-       penalty = 0;
     }
     return penalty;
   }, [statusTarget, routes, statusActionData.isFeeWaived]);
@@ -977,7 +941,6 @@ export default function ManageBookingsPage() {
         </Tabs>
       </main>
 
-      {/* DIALOGS */}
       <Dialog open={isHistoryPurgeOpen} onOpenChange={setIsHistoryPurgeOpen}>
         <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-destructive text-destructive-foreground">
@@ -1088,13 +1051,13 @@ export default function ManageBookingsPage() {
                    <div className="bg-secondary/5 p-4 rounded-xl border-2 border-dashed space-y-2">
                       <div className="flex justify-between items-center text-xs font-bold text-muted-foreground uppercase">
                          <span>Penalty Applied</span>
-                         <span className="text-destructive">₱{calculateStatusPenalties().toLocaleString()}</span>
+                         <span className="text-destructive">₱{(calculateStatusPenalties() || 0).toLocaleString()}</span>
                       </div>
                       {(statusTarget?.status === 'Refunded' || statusTarget?.status === 'Auto-cancelled') && (
                         <>
                           <div className="flex justify-between items-center text-xs font-bold text-muted-foreground uppercase">
                              <span>Gross Ticket Fare</span>
-                             <span className="text-primary">₱{statusTarget.booking.finalFare?.toLocaleString()}</span>
+                             <span className="text-primary">₱{(statusTarget.booking.finalFare || 0).toLocaleString()}</span>
                           </div>
                           <Separator className="bg-secondary" />
                           <div className="flex justify-between items-end pt-1">
@@ -1109,7 +1072,7 @@ export default function ManageBookingsPage() {
                       {statusTarget?.status === 'Suspended' && (
                         <div className="bg-primary p-4 rounded-xl text-primary-foreground flex justify-between items-center mt-2">
                           <p className="text-xs font-black uppercase opacity-70">Total to Collect</p>
-                          <p className="text-2xl font-black">₱{calculateStatusPenalties().toLocaleString()}</p>
+                          <p className="text-2xl font-black">₱{(calculateStatusPenalties() || 0).toLocaleString()}</p>
                         </div>
                       )}
                    </div>
@@ -1174,7 +1137,7 @@ export default function ManageBookingsPage() {
                      <p className="text-[10px] font-black uppercase opacity-70">Rebooking Fee + No-Show</p>
                      {rebookingData.isFeeWaived && <p className="text-[8px] font-bold text-accent uppercase">Waived</p>}
                   </div>
-                  <p className="text-2xl font-black">₱{calculateRebookingFees.toLocaleString()}</p>
+                  <p className="text-2xl font-black">₱{(calculateRebookingFees || 0).toLocaleString()}</p>
                 </div>
               </div>
               <DialogFooter className="p-4 sm:p-6 border-t gap-2">
@@ -1198,7 +1161,6 @@ export default function ManageBookingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* FEE COLLECTION ALERT */}
       <Dialog open={isFeePaymentAlertOpen} onOpenChange={setIsFeePaymentAlertOpen}>
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[400px] p-0 overflow-hidden rounded-3xl">
           <DialogHeader className="p-6 bg-orange-600 text-white">
@@ -1223,8 +1185,8 @@ export default function ManageBookingsPage() {
                        ₱{Math.max(0, (statusTarget.booking.finalFare || 0) - calculateStatusPenalties()).toLocaleString()}
                     </p>
                     <div className="flex justify-center gap-4 text-[10px] font-bold text-muted-foreground uppercase bg-secondary/30 p-2 rounded-lg">
-                      <span className="flex items-center gap-1"><Banknote className="h-3 w-3" /> Fare: ₱{statusTarget.booking.finalFare?.toLocaleString()}</span>
-                      <span className="flex items-center gap-1 text-destructive"><AlertCircle className="h-3 w-3" /> Fee: -₱{calculateStatusPenalties().toLocaleString()}</span>
+                      <span className="flex items-center gap-1"><Banknote className="h-3 w-3" /> Fare: ₱{(statusTarget.booking.finalFare || 0).toLocaleString()}</span>
+                      <span className="flex items-center gap-1 text-destructive"><AlertCircle className="h-3 w-3" /> Fee: -₱{(calculateStatusPenalties() || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 ) : (
@@ -1321,7 +1283,6 @@ export default function ManageBookingsPage() {
               
               <ScrollArea className="flex-1">
                 <div className="p-6 space-y-8">
-                   {/* PASSENGER IDENTITY */}
                    <section className="space-y-4">
                       <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
                          <User className="h-3.5 w-3.5 text-accent" /> Passenger Identity
@@ -1358,7 +1319,6 @@ export default function ManageBookingsPage() {
                       </div>
                    </section>
 
-                   {/* VOYAGE ITINERARY */}
                    <section className="space-y-4">
                       <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
                          <Ship className="h-3.5 w-3.5 text-accent" /> Voyage Itinerary
@@ -1388,13 +1348,12 @@ export default function ManageBookingsPage() {
                             <div className="flex items-center gap-2 pt-1">
                                <Badge variant="outline" className="text-[8px] font-black uppercase text-primary border-primary/20 bg-white">
                                   Vessel: {getVesselName(selectedBooking?.scheduleId)}
-                               </Badge>
+                                </Badge>
                             </div>
                          </div>
                       </div>
                    </section>
 
-                   {/* FINANCIAL LEDGER */}
                    <section className="space-y-4">
                       <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
                          <Banknote className="h-3.5 w-3.5 text-accent" /> Financial Ledger
@@ -1406,7 +1365,7 @@ export default function ManageBookingsPage() {
                                <span className="font-bold text-primary">{selectedBooking?.segmentLabel || "Regular"} Segment</span>
                             </div>
                             <span className={cn("font-black", (selectedBooking?.status === 'Refunded' || selectedBooking?.status === 'Auto-cancelled') && "text-muted-foreground line-through")}>
-                               ₱{selectedBooking?.finalFare?.toLocaleString()}
+                               ₱{(selectedBooking?.finalFare || 0).toLocaleString()}
                             </span>
                          </div>
                          
@@ -1418,7 +1377,7 @@ export default function ManageBookingsPage() {
                                      {selectedBooking?.status === 'Suspended' ? 'No-Show' : 'Cancellation/Rebooking'}
                                   </span>
                                </div>
-                               <span className="font-black">+ ₱{selectedBooking.penaltyFees.toLocaleString()}</span>
+                               <span className="font-black">+ ₱{(selectedBooking.penaltyFees || 0).toLocaleString()}</span>
                             </div>
                          )}
 
@@ -1454,7 +1413,6 @@ export default function ManageBookingsPage() {
                       </div>
                    </section>
 
-                   {/* OPERATIONAL METADATA */}
                    <section className="space-y-4">
                       <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest border-b pb-2">
                          <Info className="h-3.5 w-3.5 text-accent" /> Operational History

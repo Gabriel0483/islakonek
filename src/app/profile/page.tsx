@@ -131,7 +131,6 @@ export default function ProfilePage() {
     emergencyContact: ""
   });
 
-  // Feedback State
   const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackText, setFeedbackText] = useState("");
@@ -186,8 +185,6 @@ export default function ProfilePage() {
   const handleSendFeedback = () => {
      if (!db || !feedbackRating) return;
      setIsFeedbackSubmitting(true);
-     
-     // Simulated non-blocking submission
      setTimeout(() => {
         setIsFeedbackSubmitting(false);
         setFeedbackRating(0);
@@ -197,11 +194,6 @@ export default function ProfilePage() {
            description: "Thank you for helping us improve the Isla Konek experience."
         });
      }, 1000);
-  };
-
-  const getPortNames = (ids: string[]) => {
-    if (!ids || ids.length === 0) return "Floating / Unassigned";
-    return ids.map(id => ports?.find(p => p.id === id)?.name || "Unknown Port").join(", ");
   };
 
   const getStatusBadge = (status: string) => {
@@ -277,7 +269,6 @@ export default function ProfilePage() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* LEFT: ACCOUNT */}
           <div className="lg:col-span-4 space-y-6">
             <Card className="border-none shadow-sm bg-white overflow-hidden">
               <div className="h-2 bg-primary" />
@@ -329,7 +320,6 @@ export default function ProfilePage() {
 
             <Separator />
 
-            {/* FEEDBACK SECTION */}
             <Card className="border-none shadow-sm bg-white overflow-hidden">
                <CardHeader className="bg-secondary/10 py-4 border-b">
                   <CardTitle className="text-xs font-black uppercase text-muted-foreground flex items-center gap-2 tracking-widest">
@@ -365,7 +355,6 @@ export default function ProfilePage() {
                </CardContent>
             </Card>
 
-            {/* FAMILY SECTION */}
             <div className="space-y-4 pt-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
@@ -394,7 +383,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* RIGHT: DUTY ROSTER */}
           <div className="lg:col-span-8 space-y-6">
             <section id="duty-roster" className="space-y-6">
                <div className="flex items-center justify-between border-b pb-4">
@@ -484,7 +472,6 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      {/* FAMILY DIALOG */}
       <Dialog open={isFamilyDialogOpen} onOpenChange={setIsFamilyDialogOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[500px] p-0 overflow-hidden rounded-3xl">
           <DialogHeader className="p-6 bg-primary text-primary-foreground">

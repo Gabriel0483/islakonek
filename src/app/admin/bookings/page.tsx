@@ -102,13 +102,11 @@ export default function DeskBookingsPage() {
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
   
-  // UI Dialog States
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [isOnlineSearchDialogOpen, setIsOnlineSearchDialogOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [isPaymentCollectionAlertOpen, setIsPaymentCollectionAlertOpen] = useState(false);
   
-  // Processing States
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
   const [isReserving, setIsReserving] = useState(false);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
@@ -182,14 +180,12 @@ export default function DeskBookingsPage() {
     return allBookings.reduce((acc, b) => {
       const isToday = b.travelDate === dateRange.min;
       if (isToday) {
-        // Track volumes
         if (b.bookingSource === 'Desk') {
           acc.counterPax++;
         } else {
           acc.webPax++;
         }
 
-        // Tally Cash-on-Hand (Net Liquid Intake)
         const isLiquidated = b.status === 'Refunded' || b.status === 'Auto-cancelled';
         const fareContributed = isLiquidated ? 0 : (b.finalFare || 0);
         const penaltiesContributed = b.isFeeWaived ? 0 : (b.penaltyFees || 0);
@@ -593,7 +589,7 @@ export default function DeskBookingsPage() {
                  <div className="bg-green-50 p-2.5 rounded-xl"><Banknote className="h-5 w-5 text-green-600" /></div>
                  <div>
                     <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cash-on-Hand</p>
-                    <p className="text-lg font-black text-green-700">₱{deskStats.cashOnHand.toLocaleString()}</p>
+                    <p className="text-lg font-black text-green-700">₱{(deskStats.cashOnHand || 0).toLocaleString()}</p>
                  </div>
               </div>
            </div>
@@ -677,7 +673,7 @@ export default function DeskBookingsPage() {
                                      <SelectTrigger className="bg-white h-11 border-2"><SelectValue placeholder="Select Segment" /></SelectTrigger>
                                      <SelectContent>
                                         {onlineAvailableFares.map(f => (
-                                          <SelectItem key={f.id} value={f.id}>{f.segmentLabel} (₱{f.finalFare})</SelectItem>
+                                          <SelectItem key={f.id} value={f.id}>{f.segmentLabel} (₱{(f.finalFare || 0).toLocaleString()})</SelectItem>
                                         ))}
                                      </SelectContent>
                                   </Select>
@@ -775,7 +771,7 @@ export default function DeskBookingsPage() {
                 <div className="flex items-center gap-6">
                    <div className="flex flex-col items-end">
                       <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Payable Amount</p>
-                      <p className="text-3xl font-black text-primary">₱{currentOnlineTotal.toLocaleString()}</p>
+                      <p className="text-3xl font-black text-primary">₱{(currentOnlineTotal || 0).toLocaleString()}</p>
                    </div>
                    <Button 
                       onClick={() => setIsPaymentCollectionAlertOpen(true)}
@@ -1018,7 +1014,7 @@ export default function DeskBookingsPage() {
                                         <SelectContent>
                                           {availableFares.map(f => (
                                             <SelectItem key={f.id} value={f.segmentLabel}>
-                                              {f.segmentLabel} (₱{f.finalFare})
+                                              {f.segmentLabel} (₱{(f.finalFare || 0).toLocaleString()})
                                             </SelectItem>
                                           ))}
                                         </SelectContent>
@@ -1027,7 +1023,7 @@ export default function DeskBookingsPage() {
                                       {currentFarePrice > 0 && (
                                         <div className="flex items-center gap-1.5 pt-2">
                                            <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                                           <p className="text-[10px] font-black text-primary uppercase">Segment Fare Applied: ₱{currentFarePrice.toLocaleString()}</p>
+                                           <p className="text-[10px] font-black text-primary uppercase">Segment Fare Applied: ₱{(currentFarePrice || 0).toLocaleString()}</p>
                                         </div>
                                       )}
                                     </FormItem>
@@ -1077,7 +1073,7 @@ export default function DeskBookingsPage() {
                                <div className="bg-green-600 p-1.5 rounded-full"><Check className="h-4 w-4 text-white" /></div>
                                <div>
                                  <p className="text-sm font-black text-green-700 uppercase">Cash/Funds Verified</p>
-                                 <p className="text-[10px] text-green-600 font-bold uppercase">Transaction of ₱{currentTotalPrice.toLocaleString()} marked as received.</p>
+                                 <p className="text-[10px] text-green-600 font-bold uppercase">Transaction of ₱{(currentTotalPrice || 0).toLocaleString()} marked as received.</p>
                                </div>
                             </div>
                           )}
@@ -1093,9 +1089,9 @@ export default function DeskBookingsPage() {
           <DialogFooter className="p-6 border-t bg-secondary/5 shrink-0 items-center flex flex-row justify-between">
             <Button variant="outline" onClick={() => setIsBookingDialogOpen(false)} className="px-8 font-black uppercase text-xs h-12 rounded-xl">Discard</Button>
             <div className="flex items-center gap-6">
-               <div className="flex items-col items-end">
+               <div className="flex flex-col items-end">
                   <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Total Transaction</p>
-                  <p className="text-2xl font-black text-primary">₱{currentTotalPrice.toLocaleString()}</p>
+                  <p className="text-2xl font-black text-primary">₱{(currentTotalPrice || 0).toLocaleString()}</p>
                </div>
                <Button 
                  onClick={form.handleSubmit(handleFinalReserve)} 
@@ -1111,7 +1107,6 @@ export default function DeskBookingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* PAYMENT ALERT */}
       <Dialog open={isPaymentCollectionAlertOpen} onOpenChange={setIsPaymentCollectionAlertOpen}>
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[450px] p-0 overflow-hidden rounded-3xl">
           <DialogHeader className="p-6 bg-orange-600 text-white">
@@ -1129,7 +1124,7 @@ export default function DeskBookingsPage() {
              <div className="text-center space-y-4">
                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em]">Total Amount to Collect</p>
                 <p className="text-6xl font-black text-primary tracking-tighter">
-                   ₱{(foundBooking ? currentOnlineTotal : currentTotalPrice).toLocaleString()}
+                   ₱{(foundBooking ? currentOnlineTotal : currentTotalPrice || 0).toLocaleString()}
                 </p>
                 <div className="bg-secondary/30 p-3 rounded-xl inline-flex items-center gap-2 text-xs font-bold text-primary">
                    <Info className="h-4 w-4" /> Ensure exact change for cash payments.
@@ -1156,7 +1151,6 @@ export default function DeskBookingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* CONFIRMATION / ITINERARY */}
       <Dialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen}>
         <DialogContent className="w-[calc(100%-1rem)] sm:max-w-[550px] p-0 overflow-hidden bg-transparent border-none shadow-none">
           <DialogHeader className="sr-only">

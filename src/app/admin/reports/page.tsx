@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -76,7 +75,7 @@ export default function SalesReportPage() {
   useEffect(() => {
     setIsMounted(true);
     const end = new Date();
-    const start = subMonths(end, 1); // Default to last 30 days
+    const start = subMonths(end, 1); 
     setDateFrom(format(start, "yyyy-MM-dd"));
     setDateTo(format(end, "yyyy-MM-dd"));
   }, []);
@@ -109,7 +108,6 @@ export default function SalesReportPage() {
       
       if (isLiquidated) {
          acc.refunds += fare;
-         // The company "keeps" the penalty fee even if the fare is refunded
          acc.net += penalties;
       } else {
          acc.net += (fare + penalties);
@@ -123,7 +121,6 @@ export default function SalesReportPage() {
          acc.waivedValue += (b.penaltyFees || 0); 
       }
 
-      // Penalty Analytics
       if (penalties > 0) {
          if (b.status === 'Suspended') acc.noShowFees += penalties;
          else if (b.rebookedFromId || b.remarks?.toLowerCase().includes('rebook')) acc.rebookingFees += penalties;
@@ -131,7 +128,6 @@ export default function SalesReportPage() {
          acc.totalPenalties += penalties;
       }
 
-      // Source Breakdown
       if (b.bookingSource === 'Desk') {
         acc.deskRevenue += isLiquidated ? penalties : (fare + penalties);
       } else {
@@ -157,8 +153,13 @@ export default function SalesReportPage() {
        
        days[date] = (days[date] || 0) + fareContributed + penaltiesContributed;
     });
-    return Object.entries(days).map(([name, revenue]) => ({ name: format(parseISO(name), "MMM dd"), revenue }))
-      .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+    
+    return Object.entries(days)
+      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+      .map(([date, revenue]) => ({ 
+        name: format(parseISO(date), "MMM dd"), 
+        revenue 
+      }));
   }, [reportData]);
 
   const routePerformanceData = useMemo(() => {
@@ -222,7 +223,7 @@ export default function SalesReportPage() {
            <div className="bg-primary/10 p-2 rounded-lg">
              <BarChart3 className="h-5 w-5 text-primary" />
            </div>
-           <h1 className="text-lg font-black font-headline text-primary uppercase tracking-tight">Financial Intelligence</h1>
+           <h1 className="text-lg font-bold font-headline text-primary uppercase tracking-tight">Financial Intelligence</h1>
         </div>
         <Button 
           onClick={handleExportCSV} 
@@ -234,7 +235,6 @@ export default function SalesReportPage() {
       </header>
 
       <main className="p-4 sm:p-6 space-y-8 container mx-auto">
-        {/* PARAMETERS */}
         <Card className="border-none shadow-sm bg-white overflow-hidden">
            <CardHeader className="bg-secondary/10 py-4 flex flex-row items-center justify-between">
               <CardTitle className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-2 tracking-widest">
@@ -275,13 +275,12 @@ export default function SalesReportPage() {
           </div>
         ) : (
           <>
-            {/* REVENUE PERFORMANCE TIERS */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-10"><Banknote className="h-24 w-24" /></div>
                   <CardHeader className="pb-1">
                      <p className="text-[10px] font-black uppercase opacity-70 tracking-[0.2em]">Gross Manifest</p>
-                     <CardTitle className="text-4xl font-black">₱{isMounted ? stats.gross.toLocaleString() : "---"}</CardTitle>
+                     <CardTitle className="text-4xl font-black">₱{(stats.gross || 0).toLocaleString()}</CardTitle>
                   </CardHeader>
                   <CardContent>
                      <p className="text-[9px] opacity-60 italic font-bold">Total book value across all active reservations.</p>
@@ -293,7 +292,7 @@ export default function SalesReportPage() {
                         <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Net Reconciled</p>
                         <Badge className="bg-green-600 text-white font-black text-[8px] uppercase h-4 px-2">Liquid</Badge>
                      </div>
-                     <CardTitle className="text-4xl font-black text-green-600">₱{isMounted ? stats.net.toLocaleString() : "---"}</CardTitle>
+                     <CardTitle className="text-4xl font-black text-green-600">₱{(stats.net || 0).toLocaleString()}</CardTitle>
                   </CardHeader>
                   <CardContent>
                      <p className="text-[9px] text-muted-foreground italic font-bold">Realized intake after cancellations and refunds.</p>
@@ -303,7 +302,7 @@ export default function SalesReportPage() {
                   <div className="absolute top-0 right-0 p-4 opacity-10"><HandCoins className="h-24 w-24" /></div>
                   <CardHeader className="pb-1">
                      <p className="text-[10px] font-black uppercase text-primary/70 tracking-[0.2em]">Earned Yield</p>
-                     <CardTitle className="text-4xl font-black">₱{isMounted ? stats.earned.toLocaleString() : "---"}</CardTitle>
+                     <CardTitle className="text-4xl font-black">₱{(stats.earned || 0).toLocaleString()}</CardTitle>
                   </CardHeader>
                   <CardContent>
                      <p className="text-[9px] text-primary/60 font-black italic">Recognized only upon physical passenger boarding.</p>
@@ -312,7 +311,7 @@ export default function SalesReportPage() {
                <Card className="border-none shadow-sm bg-white border-2 border-orange-500/10">
                   <CardHeader className="pb-1">
                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Penalties Collected</p>
-                     <CardTitle className="text-4xl font-black text-orange-600">₱{isMounted ? stats.totalPenalties.toLocaleString() : "---"}</CardTitle>
+                     <CardTitle className="text-4xl font-black text-orange-600">₱{(stats.totalPenalties || 0).toLocaleString()}</CardTitle>
                   </CardHeader>
                   <CardContent>
                      <div className="flex items-center gap-2">
@@ -323,7 +322,6 @@ export default function SalesReportPage() {
                </Card>
             </div>
 
-            {/* CHARTS & PENALTY ANALYTICS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                <Card className="lg:col-span-2 border-none shadow-sm bg-white p-6">
                   <div className="mb-10 flex justify-between items-start">
@@ -332,12 +330,6 @@ export default function SalesReportPage() {
                          <TrendingUp className="h-5 w-5 text-accent" /> Revenue Velocity
                       </h3>
                       <p className="text-xs text-muted-foreground font-bold">Daily gross intake trend for selected period.</p>
-                    </div>
-                    <div className="bg-secondary/20 p-2 rounded-xl flex items-center gap-3">
-                       <div className="flex items-center gap-1">
-                          <div className="h-2 w-2 rounded-full bg-primary" />
-                          <span className="text-[9px] font-black uppercase text-muted-foreground">Intake</span>
-                       </div>
                     </div>
                   </div>
                   <div className="h-[320px] w-full">
@@ -371,21 +363,21 @@ export default function SalesReportPage() {
                              <div className="h-2.5 w-2.5 rounded-full bg-orange-600" />
                              <span className="text-xs font-bold text-muted-foreground uppercase">Rebooking Fees</span>
                           </div>
-                          <span className="font-black text-primary">₱{stats.rebookingFees.toLocaleString()}</span>
+                          <span className="font-black text-primary">₱{(stats.rebookingFees || 0).toLocaleString()}</span>
                        </div>
                        <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                              <div className="h-2.5 w-2.5 rounded-full bg-red-600" />
                              <span className="text-xs font-bold text-muted-foreground uppercase">No-Show Penalties</span>
                           </div>
-                          <span className="font-black text-primary">₱{stats.noShowFees.toLocaleString()}</span>
+                          <span className="font-black text-primary">₱{(stats.noShowFees || 0).toLocaleString()}</span>
                        </div>
                        <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                              <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
                              <span className="text-xs font-bold text-muted-foreground uppercase">Cancellation Fees</span>
                           </div>
-                          <span className="font-black text-primary">₱{stats.cancellationFees.toLocaleString()}</span>
+                          <span className="font-black text-primary">₱{(stats.cancellationFees || 0).toLocaleString()}</span>
                        </div>
                        <Separator />
                        <div className="bg-red-50 p-4 rounded-xl border border-red-100 space-y-1">
@@ -393,7 +385,7 @@ export default function SalesReportPage() {
                             <span className="text-[10px] font-black text-red-700 uppercase">Waived Value</span>
                             <Badge variant="outline" className="text-[8px] font-black border-red-200 text-red-600">Opportunity Loss</Badge>
                           </div>
-                          <p className="text-2xl font-black text-red-700">₱{stats.waivedValue.toLocaleString()}</p>
+                          <p className="text-2xl font-black text-red-700">₱{(stats.waivedValue || 0).toLocaleString()}</p>
                           <p className="text-[9px] text-red-600 italic">Total penalties forgiven by staff override.</p>
                        </div>
                     </div>
@@ -426,7 +418,6 @@ export default function SalesReportPage() {
                </div>
             </div>
 
-            {/* ROUTE PERFORMANCE & SOURCE BREAKDOWN */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                <Card className="border-none shadow-sm bg-white p-6">
                   <div className="mb-8">
@@ -490,7 +481,6 @@ export default function SalesReportPage() {
                </Card>
             </div>
 
-            {/* AUDIT READY LEDGER */}
             <section className="space-y-4">
                <div className="flex items-center justify-between border-b-2 border-secondary pb-3">
                   <h2 className="text-sm font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
@@ -527,7 +517,7 @@ export default function SalesReportPage() {
                                    <div className="text-[8px] font-bold text-muted-foreground uppercase">{routes?.find(r => r.id === b.routeId)?.name}</div>
                                 </TableCell>
                                 <TableCell className={cn("text-right font-bold", isLiquidated && "text-muted-foreground line-through decoration-destructive")}>
-                                   ₱{b.finalFare?.toLocaleString()}
+                                   ₱{(b.finalFare || 0).toLocaleString()}
                                 </TableCell>
                                 <TableCell className={cn("text-right font-black", b.penaltyFees > 0 ? "text-orange-600" : "text-muted-foreground/30")}>
                                    {b.isFeeWaived ? (
@@ -537,7 +527,7 @@ export default function SalesReportPage() {
                                    )}
                                 </TableCell>
                                 <TableCell className="text-right font-black text-primary">
-                                   ₱{totalIntake.toLocaleString()}
+                                   ₱{(totalIntake || 0).toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <Badge variant="outline" className={cn(
