@@ -856,7 +856,7 @@ export default function DeskBookingsPage() {
                         <div>
                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Atomic Seat Inventory</p>
                            <p className={cn("text-2xl font-black uppercase", 
-                             inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? "text-orange-600" : "text-green-700")}>
+                             inventoryStats.isFull ? "text-red-600" : inventoryStats.isWaitlistOnly ? `WAITLIST ACTIVE (${inventoryStats.waitlistSpotsRemaining} left)` : `${inventoryStats.remaining} Seats Remaining`)}>
                              {inventoryStats.isFull ? "VOYAGE FULL" : inventoryStats.isWaitlistOnly ? `WAITLIST ACTIVE (${inventoryStats.waitlistSpotsRemaining} left)` : `${inventoryStats.remaining} Seats Remaining`}
                            </p>
                         </div>
@@ -940,7 +940,7 @@ export default function DeskBookingsPage() {
                                   name={`passengers.${index}.birthDate`} 
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</Label>
+                                      <FormLabel className="text-[10px] font-black uppercase text-muted-foreground">Date of Birth</FormLabel>
                                       <FormControl>
                                         <Input type="date" {...field} className="h-11 bg-white border-2 font-bold" />
                                       </FormControl>
